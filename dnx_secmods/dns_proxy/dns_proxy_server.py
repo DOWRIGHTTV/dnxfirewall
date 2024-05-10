@@ -10,7 +10,7 @@ from random import randint
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_SEND
-from dnx_gentools.def_enums import PROTO, DNS
+from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_UDP, PROTO_DNS, PROTO_DNS_TLS, DNS
 from dnx_gentools.standard_tools import dnx_queue
 
 from dnx_iptools.cprotocol_tools import itoip
@@ -56,9 +56,9 @@ SUPPORTED_RECORD_TYPES = [DNS.A, DNS.NS]
 
 INVALID_RESPONSE: tuple[None, None] = (None, None)
 
-RELAY_MAP: dict[PROTO, Callable[[DNS_SEND], None]] = {
-    PROTO.UDP: UDPRelay.relay.add,
-    PROTO.DNS_TLS: TLSRelay.relay.add
+RELAY_MAP: dict[NETWORK_PROTOCOL, Callable[[DNS_SEND], None]] = {
+    PROTO_UDP: UDPRelay.relay.add,
+    PROTO_DNS_TLS: TLSRelay.relay.add
 }
 
 # ======================
@@ -146,7 +146,7 @@ class DNSServer(ServerConfiguration, Listener):
         l_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         l_sock.setblocking(False)
 
-        l_sock.bind((itoip(intf_ip), PROTO.DNS))
+        l_sock.bind((itoip(intf_ip), PROTO_DNS))
 
         return l_sock
 
@@ -181,7 +181,7 @@ class DNSServer(ServerConfiguration, Listener):
         if (dns_id == DNS.KEEPALIVE):
             return
 
-        client_query: ClientQuery = REQUEST_MAP_POP(dns_id, None)
+        client_query: Optional[ClientQuery] = REQUEST_MAP_POP(dns_id, None)
         if (client_query is None):
             return
 

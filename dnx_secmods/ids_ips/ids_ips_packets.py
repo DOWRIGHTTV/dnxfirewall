@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dnx_gentools.def_typing import ByteString
 # from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import PROTO
+from dnx_gentools.def_enums import PROTO_ICMP
 
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 from dnx_iptools.interface_ops import load_interfaces
@@ -47,7 +47,7 @@ class IPSPacket(NFPacket):
     def _before_exit(self, mark: int) -> None:
 
         self.tracked_ip = self.src_ip
-        if (self.protocol is not PROTO.ICMP):
+        if (self.protocol is not PROTO_ICMP):
             self.target_port = self.dst_port
 
 class IPSResponse(RawResponse):

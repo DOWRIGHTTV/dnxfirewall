@@ -319,7 +319,7 @@ class InterfaceManager:
         elif (intf_type is INTF.EXTENDED):
             self._intf_cfg_path = f'{NETPLAN_PATH}/{self._intf_extended}'
 
-    def __enter__(self):
+    def __enter__(self) -> InterfaceManager:
         self._interfaces_lock = acquire_lock(self.config_lock_path)
 
         self.log.debug(f'Config file lock acquired for {self._intf_cfg_path}.')
@@ -338,7 +338,7 @@ class InterfaceManager:
 
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         if (exc_type is None):
             updated_config = json_to_yaml(self.config_data)
 

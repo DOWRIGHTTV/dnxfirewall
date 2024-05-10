@@ -13,6 +13,7 @@ web_module_load_callout(__file__)
 from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, ppt
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration
+from dnx_gentools.system_info import System
 
 from dnx_iptools.interface_ops import InterfaceManager
 from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
@@ -295,7 +296,7 @@ def intrusion_ips(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'ips'])
 
     page_action = standard_page_logic(
-        dnx_ips, page_settings, 'ips_settings', page_name='intrusion/ips.html'
+        dnx_ips, page_settings, 'ips_settings', page_name='intrusion/ids_ips.html'
     )
 
     return page_action
@@ -545,8 +546,8 @@ def dnx_blocked() -> str:
     # if a domain block event is not associated with the request (user navigated to this page manually) then a not
     #  authorized page will be served.
     # If the domain is not valid (regex) then the request will be redirected back to the blocked page without a domain.
-    # NOTE: this is a crazy bit of code that should be tested much more as it is possible to do a sql injection here
-    #  if the validations below are bypassed.
+    # !security: this is a crazy bit of code that should be tested much more as it is possible to do a sql injection
+    #  here if the validations below are bypassed.
     blocked_domain = request.args.get('dom', None)
     if (not blocked_domain):
         session.pop('user', None)
@@ -578,7 +579,6 @@ def dnx_blocked() -> str:
 
 # --------------------------------------------- #
 # --------------------------------------------- #
-
 @app.post('/refresh/session')
 @user_restrict('user', 'admin')
 def refresh_session(session_info: dict):
@@ -613,11 +613,16 @@ def internal_server_error(error):
 # lower level functions residing in each page's module
 def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key: str, *, page_name: str) -> str:
 
+    # todo: err_as_value semantic will make bypass the application error exception and show it in std_error.
+    #  we should check the error type and send application error page if it is a ConfigurationError.
+    #  this also means we should return the exception itself and not the message string.
     if (request.method == 'POST'):
         try:
             error, err_msg = dnx_page.update(request.form)
         except ConfigurationError as ce:
-            return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+            return render_template(
+                application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+            )
 
         std_error = f'{err_msg} code={error}' if err_msg else ''
 
@@ -629,7 +634,9 @@ def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key
     try:
         page_settings[data_key] = dnx_page.load(request.form)
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+        return render_template(
+            application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+        )
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
@@ -639,7 +646,9 @@ def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: s
         try:
             error, selected = dnx_page.update(request.form)
         except ConfigurationError as ce:
-            return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+            return render_template(
+                application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+            )
 
         page_settings.update({
             'tab': validate.get_convert_int(request.form, 'tab'),
@@ -650,7 +659,9 @@ def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: s
     try:
         page_settings[data_key] = dnx_page.load(page_settings['selected'])
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+        return render_template(
+            application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+        )
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
@@ -663,7 +674,9 @@ def log_page_logic(log_page: LogWebPage, page_settings: dict, *, page_name: str)
     try:
         table, menu, table_data = log_page.update(request.form)
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+        return render_template(
+            application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+        )
 
     page_settings.update({
         'table': table,
@@ -678,7 +691,9 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
         try:
             error, menu_option = dnx_page.update(request.form)
         except ConfigurationError as ce:
-            return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+            return render_template(
+                application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+            )
 
         page_settings.update({
             'tab': validate.get_convert_int(request.args, 'tab'),
@@ -689,7 +704,9 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
     try:
         page_settings['category_settings'] = dnx_page.load(page_settings['menu'])
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+        return render_template(
+            application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+        )
 
     return render_template('intrusion/domain/categories.html', theme=context_global.theme, **page_settings)
 
@@ -702,7 +719,10 @@ def handle_system_action(page_settings: dict):
 
         response = request.form.get(f'system_{action}', '')
         if (not response):
-            return render_template(application_error_page, application_error='device action invalid.', theme=context_global.theme, **page_settings)
+            return render_template(
+                application_error_page, application_error='device action invalid.',
+                theme=context_global.theme, **page_settings
+            )
 
         if (response == 'YES'):
             page_settings.pop('control', None)
@@ -818,6 +838,7 @@ import source.messenger.msg_main
 # JINJA2 API - CUSTOM TEMPLATES
 # =================================
 app.jinja_env.filters['itoip'] = itoip
+app.jinja_env.filters['ts_format_offset'] = System.offset_and_format
 
 # =================================
 # LABEL: DEVELOPMENT_ONLY_CODE

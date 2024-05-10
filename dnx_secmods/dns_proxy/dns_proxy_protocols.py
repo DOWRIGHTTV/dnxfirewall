@@ -9,7 +9,7 @@ from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import PROTO
+from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_UDP, PROTO_DNS, PROTO_DNS_TLS
 from dnx_gentools.def_namedtuples import RELAY_CONN, DNS_SEND
 from dnx_gentools.standard_tools import dnx_queue
 
@@ -30,7 +30,7 @@ NULL_SOCK = RELAY_CONN('', _sock, _sock.send, _sock.recv, '')
 
 
 class UDPRelay(ProtoRelay):
-    _protocol: ClassVar[PROTO] = PROTO.UDP
+    _protocol: ClassVar[NETWORK_PROTOCOL] = PROTO_UDP
 
     __slots__ = (
         '_relay_conn',
@@ -50,7 +50,7 @@ class UDPRelay(ProtoRelay):
         for dns_server in self._dns_server.public_resolvers:
 
             # skip downed servers
-            if (not dns_server[PROTO.UDP]):
+            if (not dns_server[PROTO_UDP]):
                 continue
 
             self._relay_conn = self._connect_udp(dns_server['ip_address'])
@@ -90,7 +90,7 @@ class UDPRelay(ProtoRelay):
         dns_sock: Socket_T = socket(AF_INET, SOCK_DGRAM)
 
         # udp connect allows 'send' method to be used, but does not actually have an underlying connection
-        dns_sock.connect((server_ip, PROTO.DNS))
+        dns_sock.connect((server_ip, PROTO_DNS))
         dns_sock.settimeout(RELAY_TIMEOUT)
 
         return RELAY_CONN(server_ip, dns_sock, dns_sock.send, dns_sock.recv, 'UDP')
@@ -100,7 +100,7 @@ class UDPRelay(ProtoRelay):
 # TLS sender/receiver
 # ============================
 class TLSRelay(ProtoRelay):
-    _protocol: ClassVar[PROTO] = PROTO.DNS_TLS
+    _protocol: ClassVar[NETWORK_PROTOCOL] = PROTO_DNS_TLS
 
     __slots__ = (
         '_tls_context', '_keepalive_status',
@@ -152,7 +152,7 @@ class TLSRelay(ProtoRelay):
         for tls_server in self._dns_server.public_resolvers:
 
             # skipping over known down server.
-            if (not tls_server[PROTO.DNS_TLS]):
+            if (not tls_server[PROTO_DNS_TLS]):
                 continue
 
             # attempting to connect via tls.
@@ -264,7 +264,7 @@ class TLSRelay(ProtoRelay):
 
         dot_sock = self._tls_context.wrap_socket(sock, server_hostname=tls_server)
         try:
-            dot_sock.connect((tls_server, PROTO.DNS_TLS))
+            dot_sock.connect((tls_server, PROTO_DNS_TLS))
         except OSError:
             Log.error(f'[{tls_server}/{self._protocol.name}] Failed to connect to {tls_server}.')
 

@@ -35,7 +35,7 @@ __all__ = (
 
     'convert_int', 'get_convert_int',
     'convert_bint', 'get_convert_bint',
-    'get_convert_in_range',
+    'get_convert_in_range', 'convert_in_range',
     'standard', 'full_field',
 
     'mac_address',
@@ -170,8 +170,8 @@ def check_bint(s: str) -> Optional[ValidationError]:
 def get_convert_int(form: Union[Form, Args], key: str) -> Union[int, DATA]:
     '''gets string value from submitted form then converts into an integer and returns.
 
-    If key is not present or string cannot be converted, an IntEnum representing the error will be returned.'''
-
+    If the key is not present or string cannot be converted, an IntEnum representing the error will be returned.
+    '''
     value = form.get(key, DATA.MISSING)
     try:
         return value if value == DATA.MISSING else int(value)
@@ -181,14 +181,14 @@ def get_convert_int(form: Union[Form, Args], key: str) -> Union[int, DATA]:
 def get_convert_bint(form: Form, key: str) -> Union[int, DATA]:
     '''convenience wrapper around convert_bint().
 
-    calls val = form.get(key) and returns the result of convert_bint(val).
+    calls val = form.get(key) then returns the result of convert_bint(val).
     '''
     value = form.get(key, None)
 
     return convert_bint(value)
 
-def get_convert_in_range(form: Form, key: str, bounds: tuple[int, int] = (0, 1)) -> Union[int, DATA]:
-    '''gets value for specified key, converts to an int, then returns if the resulting int is withing specified range.
+def get_convert_in_range(form: Form | JSON, key: str, *, bounds: tuple[int, int] = (0, 1)) -> int | DATA:
+    '''gets value for specified key, converts to an int, then returns if the resulting int is within specified range.
 
         note: both ends of the bounds are inclusive.
     '''
@@ -225,10 +225,22 @@ def convert_float(num: str) -> Union[float, DATA]:
 def convert_int(num: Union[str, bool]) -> Union[int, DATA]:
     '''converts argument into an integer, then returns.
 
-    if optional default arg is provided, it will be returned on error, otherwise DATA.INVALID (-1) will be returned.
+    DATA.INVALID (-1) is returned on error.
     '''
     try:
         return int(num)
+    except:
+        return DATA.INVALID
+
+def convert_in_range(num: str, bounds: tuple[int, int] = (0, 1)) -> int | DATA:
+    '''converts argument into an integer, then returns if it falls within the specified range.
+
+    DATA.INVALID (-1) is returned on error.
+
+        note: both ends of the bounds are inclusive.
+    '''
+    try:
+        return int(num) if int(num) in range(bounds[0], bounds[1] + 1) else DATA.INVALID
     except:
         return DATA.INVALID
 

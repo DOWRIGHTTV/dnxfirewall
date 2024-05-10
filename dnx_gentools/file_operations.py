@@ -57,7 +57,7 @@ class ConfigurationError(DNXError):
 ACQUIRE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_EX)
 RELEASE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_UN)
 
-def acquire_lock(file: str) -> TextIO:
+def acquire_lock(file: FileLock) -> TextIO:
     '''opens passed in filepath and acquires a file lock.
 
     the file object is returned.
@@ -229,8 +229,8 @@ def calculate_file_hash(
 
     return file_hash
 
-def cfg_read_poller(
-        watch_file: str, *, ext: str = 'cfg', cfg_type: str = '', filepath: str = 'dnx_profile/data', class_method: bool = False):
+def cfg_read_poller(watch_file: str, *, profiles: tuple[int, int] = None, ext: str = 'cfg',
+        cfg_type: str = '', filepath: str = 'dnx_profile/data', class_method: bool = False):
     '''Automate Class configuration file poll decorator.
 
     apply this decorator to all functions that will update configurations loaded in memory from json files.
@@ -242,11 +242,32 @@ def cfg_read_poller(
     if not isinstance(watch_file, str):
         raise TypeError('watch file must be a string.')
 
+    if (profiles is not None):
+        if (watch_file != 'profiles/profile_x'):
+            raise ValueError('profile watch is only compatible with the profiles/profile_x file.')
+
+        if not isinstance(profiles, tuple):
+            raise TypeError('profiles must be a tuple of two integers.')
+
+        if (profiles[0] >= profiles[1]):
+            raise ValueError('the profile start value must be less than the end value.')
+
+        if (profiles[0] not in range(1, 15)):
+            raise ValueError('profile start value must be between 1 and 14.')
+
+        if (profiles[1] not in range(2,16)):
+            raise ValueError('profile end value must be between 2 and 15.')
+
     def decorator(function_to_wrap):
         @wraps(function_to_wrap)
         def wrapper(*args):
             watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
-            watcher.watch(*args)
+
+            if (profiles):
+                watcher.profile_watch(*args, profiles_range=profiles)
+
+            else:
+                watcher.watch(*args)
 
         if (class_method):
             wrapper = classmethod(wrapper)
@@ -486,7 +507,7 @@ class ConfigurationManager:
     obtained or block until it can acquire the lock and return the class object to the caller.
     '''
     log: LogHandler_T = None
-    config_lock_file: ConfigLock = f'{HOME_DIR}/dnx_profile/data/config.lock'
+    config_lock_file: IPTablesLock = f'{HOME_DIR}/dnx_profile/data/config.lock'
 
     __slots__ = (
         '_name', '_ext', '_cfg_type', '_filename',
@@ -519,7 +540,7 @@ class ConfigurationManager:
 
         # initialization isn't required if config file is not specified.
         if (not name):
-            # make debug log complete if in lock only mode
+            # make debug log complete if in lock-only mode
             self._filename = self.__class__.__name__
 
         else:
@@ -588,6 +609,8 @@ class ConfigurationManager:
             if (not self._err_as_value):
                 raise self.error
 
+        return True
+
     # will load json data from file, convert it to a ConfigChain
     def load_configuration(self, *, strict: bool = True) -> ConfigChain:
         '''returns python dictionary of configuration file contents.
@@ -626,6 +649,7 @@ class Watcher:
     )
 
     def __init__(self, watch_file: str, ext: str, cfg_type: str, filepath: str, *, callback: Callable_T):
+
         self._watch_file = watch_file
 
         self._ext      = ext
@@ -681,6 +705,42 @@ class Watcher:
             return True
 
         return False
+
+    def profile_watch(self, *args, profiles_range: tuple[int, int]) -> None:
+
+        # expanding the range to include the end value
+        file_tracker = {k: 0.0 for k in range(profiles_range[0], profiles_range[1]+1)}
+
+        for _ in RUN_FOREVER:
+
+            for profile_num, last_modified in file_tracker.items():
+
+                profile_name = f'profile_{profile_num}'
+
+                if modified_time := self._profile_is_modified(profile_name, last_modified):
+
+                    file_tracker[profile_num] = modified_time
+
+                    config_chain: ConfigChain = load_configuration(
+                        profile_name, self._ext, cfg_type=self._cfg_type, filepath=self._filepath, strict=False)
+
+                    self._callback(*args, profile_name, config_chain)
+
+            else:
+                fast_sleep(FILE_POLL_TIMER)
+
+    def _profile_is_modified(self, profile_name, last_modified) -> Union[float | int]:
+        profile_full_path = self._full_path.replace('profile_x', profile_name)
+
+        if not file_exists(profile_full_path):
+
+            return 1 if not last_modified else 0
+
+        modified_time = os.stat(profile_full_path).st_mtime
+        if (modified_time != last_modified):
+            return modified_time
+
+        return 0
 
 # ====================================== #
 # CONFIGURATION CONVERSION FUNCTIONS

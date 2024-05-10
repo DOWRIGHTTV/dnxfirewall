@@ -10,6 +10,8 @@ from os import replace
 from ast import literal_eval
 from enum import IntEnum
 
+from source.web_typing import *
+
 from source.web_validate import ValidationError
 
 from dnx_gentools.def_constants import HOME_DIR
@@ -47,8 +49,6 @@ DISK_BUFFER = f'{DATA_DIR}/usr/disk_buffer'
 
 SYSTEM_DB = f'{DATA_DIR}/system/firewall_objects.db'
 USER_DB   = f'{DATA_DIR}/usr/firewall_objects.db'
-
-DB_LOCK = f'{DATA_DIR}/system/firewall_objects.lock'
 
 BUILTIN_RANGE = (1, 9999)  # probably not necessary
 USER_RANGE = (10000, 999999)
@@ -166,7 +166,9 @@ def convert_object(obj: FW_OBJECT, /) -> Union[int, list[int], list[list]]:
     return INVALID_OBJECT
 
 
+# !bug: firewall geolocation objects are not synced with the signature database
 class FWObjectManager:
+    fwdb_lock_file: FirewallDBLock = f'{DATA_DIR}/system/firewall_objects.lock'
 
     def __init__(self, *, lookup: bool = False):
         self.lookup_set: bool = lookup
@@ -175,7 +177,7 @@ class FWObjectManager:
         self.full_db = {}
 
     def __enter__(self) -> FWObjectManager:
-        self._db_lock = acquire_lock(DB_LOCK)
+        self._db_lock = acquire_lock(self.fwdb_lock_file)
 
         self.user_database = self._load()
 

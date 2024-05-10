@@ -101,7 +101,7 @@ class RECORD_CONTAINER(_NamedTuple):
 SYSLOG_SERVERS = _namedtuple('syslog_servers', 'primary secondary')
 
 # DNS PROXY
-DNS_WHITELIST = _namedtuple('whitelist', 'dns ip')
+DNS_WHITELIST = _namedtuple('whitelist', 'dns')
 DNS_BLACKLIST = _namedtuple('blacklist', 'dns')
 class DNS_SERVERS(_NamedTuple):
     primary:   dict[_Union[str, _PROTO], _Optional[bool]]

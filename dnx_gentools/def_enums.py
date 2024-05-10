@@ -37,21 +37,6 @@ class SOCK(_IntEnum):
     TCP = 6
     UDP = 17
 
-class PROTO(_IntEnum):
-    NOT_SET = 0
-
-    # IP
-    ANY     = 0  # alias
-    ICMP    = 1
-    TCP     = 6
-    UDP     = 17
-
-    # TCP/UDP
-    DNS      = 53
-    DHCP_SVR = 67
-    HTTPS    = 443
-    DNS_TLS  = 853
-
 # syslog/logging
 class LOG(_IntEnum):
     SYSTEM = 3
@@ -277,6 +262,42 @@ class DNXEnum(int):
         return self._name
 
 # ----------------------
+# NETWORK PROTOCOLS
+# ----------------------
+class PROTO(_IntEnum):
+    NOT_SET  = 0
+
+    # IP
+    ANY      = 0  # alias
+    ICMP     = 1
+    TCP      = 6
+    UDP      = 17
+
+    # TCP/UDP
+    DNS      = 53
+    DHCP_SVR = 67
+    HTTPS    = 443
+    DNS_TLS  = 853
+
+
+class NETWORK_PROTOCOL(DNXEnum):
+
+        _members = {x.value: x.name for x in PROTO}
+
+
+PROTO_NOT_SET  = NETWORK_PROTOCOL(PROTO.NOT_SET)
+# IP PROTOCOLS
+PROTO_ANY      = NETWORK_PROTOCOL(PROTO.ANY)  # alias
+PROTO_ICMP     = NETWORK_PROTOCOL(PROTO.ICMP)
+PROTO_TCP      = NETWORK_PROTOCOL(PROTO.TCP)
+PROTO_UDP      = NETWORK_PROTOCOL(PROTO.UDP)
+# TCP/UDP PROTOCOLS
+PROTO_DNS      = NETWORK_PROTOCOL(PROTO.DNS)
+PROTO_DHCP_SVR = NETWORK_PROTOCOL(PROTO.DHCP_SVR)
+PROTO_HTTPS    = NETWORK_PROTOCOL(PROTO.HTTPS)
+PROTO_DNS_TLS  = NETWORK_PROTOCOL(PROTO_DNS_TLS)
+
+# ----------------------
 # PACKET DECISIONS
 # ----------------------
 class CONN(_IntEnum):
@@ -285,6 +306,7 @@ class CONN(_IntEnum):
     INSPECT = -1  # drop with full inspection
     DROP    = 0
     ACCEPT  = 1
+
 
 class DECISION(DNXEnum):
 
@@ -307,6 +329,7 @@ class DIR(_IntFlag):
     BOTH     = 3
     ON       = 4
     ALL      = 5
+
 
 class DIRECTION(DNXEnum):
 

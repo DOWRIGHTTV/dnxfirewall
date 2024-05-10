@@ -253,7 +253,7 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
 
     not thread safe within a single ping object, but is thread safe between multiple ping objects.
     '''
-    ping_sock = socket(AF_INET, SOCK_RAW, PROTO.ICMP)
+    ping_sock = socket(AF_INET, SOCK_RAW, PROTO_ICMP)
     ping_sock.settimeout(timeout)
 
     ping_send = ping_sock.sendto

@@ -47,15 +47,15 @@ def create_tab(active_tab: int, cur_tab: int, href: str) -> str:
 
 @app.template_global()
 def create_button_with_modal(
-        classes: str, icon: str, index: int, num: int, tab: int, btn_name: str, btn_value: str, message: str) -> str:
+        classes: str, icon: str, modal_idx: int, iter: int, tab: int, btn_name: str, btn_value: str, message: str) -> str:
 
     btn_classes = f'{classes} waves-effect waves-light modal-trigger'
 
     # hidden input for button value is to add forward compatibility with the new form validation system
 
     button = (
-        f'<a class="{btn_classes}" href="#modal{index}-{num}"><i class="material-icons">{icon}</i></a>'
-        f'<div id="modal{index}-{num}" class="modal">'
+        f'<a class="{btn_classes}" href="#modal{modal_idx}-{iter}"><i class="material-icons">{icon}</i></a>'
+        f'<div id="modal{modal_idx}-{iter}" class="modal">'
           f'<div class="modal-content"><h5 class="{context_global.theme["modal_text"]}">{message}</h5></div>'
           f'<form method="POST">'
             f'<input type="hidden" name="tab" value="{tab}">'

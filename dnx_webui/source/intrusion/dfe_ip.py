@@ -20,14 +20,15 @@ class WebPage(StandardWebPage):
     available methods: load, update, handle_ajax
     '''
     @staticmethod
-    def load(form: Form) -> dict[str, Any]:
-        proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
+    def load(form: Form) -> WebLoadResponse:
+        # this will be validated by update method if it is present
+        # on a direct page load, the profile will be set to the default (1).
+        sec_profile = form.get('security_profile', 1)
+
+        proxy_profile: ConfigChain = load_configuration(f'profiles/profile_{sec_profile}', cfg_type='security/ip')
         proxy_global: ConfigChain = load_configuration('global', cfg_type='security/ip')
 
         # country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
-
-        # TODO: get selected security profile setting and render accordingly. start with converting current config to
-        #  use "profile 1", with proxy set for profiles. once that is good then we can expand to more profiles.
 
         # controlling whether to load defaults or user selected view.
         # NOTE: These are validated by the update function, so it is safe to assume types.
@@ -83,7 +84,7 @@ class WebPage(StandardWebPage):
         }
 
         ipp_settings = {
-            'security_profile': 1,
+            'security_profile': sec_profile,
             'profile_name': proxy_profile['name'],
             'profile_desc': proxy_profile['description'],
             'reputation': proxy_profile.get_items('reputation->built-in'),
@@ -102,13 +103,29 @@ class WebPage(StandardWebPage):
         return ipp_settings
 
     @staticmethod
-    def update(form: Form) -> tuple[int, str]:
+    def update(form: Form) -> WebUpdateError:
 
-        # prevents errors while in dev mode.
         if ('security_profile' in form):
-            return -1, 'temporarily limited to profile 1.'
+            sec_profile = get_convert_in_range(form, 'security_profile', bounds=(1, 15))
+            if (sec_profile in [DATA.MISSING, DATA.INVALID]):
+                return -1, 'unknown security profile selection.'
 
-        if ('change_geo_view' in form):
+        elif ('change_security_profile_ident' in form):
+            sp_ident = config(**{
+                'idx': get_convert_in_range(form, 'security_profile', bounds=(1, 15)),
+                'name': form.get('security_profile_name', DATA.MISSING),
+                'desc': form.get('security_profile_desc', DATA.MISSING)
+            })
+
+            if ([x for x in [DATA.MISSING, DATA.INVALID] if x in sp_ident.values()]):
+                return -2, INVALID_FORM
+
+            if error := validate_security_profile_ident(sp_ident):
+                return -3, error.message
+
+            configure_security_profile_ident(sp_ident)
+
+        elif ('change_geo_view' in form):
             geo_direction = convert_int(form.get('menu_dir', DATA.MISSING))
 
             if (geo_direction not in range(6)):
@@ -118,31 +135,32 @@ class WebPage(StandardWebPage):
             if (form.get('region') not in valid_regions):
                 return 2, INVALID_FORM
 
-        elif ('restriction_enable' in form):
-            tr_settings = config(**{
-                'enabled': get_convert_int(form, 'restriction_enable')
-            })
-            if (DATA.INVALID in tr_settings.values()):
-                return 3, INVALID_FORM
-
-            configure_time_restriction(tr_settings, 'enabled')
-
-        elif ('time_res_update' in form):
-            tr_settings = config(**{
-                'hour': get_convert_int(form, 'hour'),
-                'minutes': get_convert_int(form, 'minutes'),
-                'suffix': form.get('time_suffix', DATA.MISSING),
-                'hour_len': get_convert_int(form, 'length_hour'),
-                'min_len': get_convert_int(form, 'length_minutes')
-            })
-
-            if any([x in [DATA.MISSING, DATA.INVALID] for x in tr_settings.values()]):
-                return 4, INVALID_FORM
-
-            if error := validate_time_restriction(tr_settings):
-                return 5, error.message
-
-            configure_time_restriction(tr_settings, 'all')
+        # deprecated:: time restriction will ultimately be merged with quotas.
+        # elif ('restriction_enable' in form):
+        #     tr_settings = config(**{
+        #         'enabled': get_convert_int(form, 'restriction_enable')
+        #     })
+        #     if (DATA.INVALID in tr_settings.values()):
+        #         return 3, INVALID_FORM
+        #
+        #     configure_time_restriction(tr_settings, 'enabled')
+        #
+        # elif ('time_res_update' in form):
+        #     tr_settings = config(**{
+        #         'hour': get_convert_int(form, 'hour'),
+        #         'minutes': get_convert_int(form, 'minutes'),
+        #         'suffix': form.get('time_suffix', DATA.MISSING),
+        #         'hour_len': get_convert_int(form, 'length_hour'),
+        #         'min_len': get_convert_int(form, 'length_minutes')
+        #     })
+        #
+        #     if any([x in [DATA.MISSING, DATA.INVALID] for x in tr_settings.values()]):
+        #         return 4, INVALID_FORM
+        #
+        #     if error := validate_time_restriction(tr_settings):
+        #         return 5, error.message
+        #
+        #     configure_time_restriction(tr_settings, 'all')
 
         elif ('continent' in form):
             return 69, 'Bulk actions not available.'
@@ -156,6 +174,7 @@ class WebPage(StandardWebPage):
     def handle_ajax(json_data: Form) -> WebAjaxResponse:
 
         category = config(**{
+            'profile': json_data.get('security_profile', DATA.MISSING),
             'type': json_data.get('type', DATA.MISSING),
             'name': json_data.get('category', DATA.MISSING),
             'region': json_data.get('region', DATA.MISSING),
@@ -187,8 +206,22 @@ class WebPage(StandardWebPage):
 # ==============
 # VALIDATION
 # ==============
+def validate_security_profile_ident(sp_ident: config) -> Optional[ValidationError]:
+    if (not sp_ident.name.isalpha()):
+        return ValidationError('Security profile name can only contain characters in the alphabet.')
+
+    if (len(sp_ident.name) > 12):
+        return ValidationError('Security profile name must be less than 12 characters.')
+
+    description = sp_ident.desc.split()
+    if ([x for x in description if not x.isalpha()]):
+        return ValidationError('Security profile description can only contain characters in the alphabet or spaces.')
+
+    if (len(sp_ident.desc) > 32):
+        return ValidationError('Security profile name must be less than 32 characters.')
+
 def validate_reputation(category: config) -> Optional[ValidationError]:
-    ip_proxy = load_configuration('profiles/profile_1', cfg_type='security/ip')
+    ip_proxy = load_configuration(f'profiles/profile_{category.profile}', cfg_type='security/ip')
 
     valid_categories = ip_proxy.get_list('reputation->built-in')
 
@@ -219,23 +252,31 @@ def validate_geolocation(category: config, rtype: str = 'country') -> Optional[V
     else:
         return ValidationError(INVALID_FORM)
 
-# TODO: time restriction should probably be moved out of ip proxy. this will ultimately be merged with quotas.
-def validate_time_restriction(tr: config, /) -> Optional[ValidationError]:
-
-    if (tr.hour not in range(1, 13) or tr.min not in [00, 15, 30, 45]):
-        return ValidationError('Restriction settings are not valid.')
-
-    if (tr.hour_len not in range(1, 13) and tr.min_len not in [00, 15, 30, 45]):
-        return ValidationError('Restriction settings are not valid.')
-
-    if (tr.suffix not in ['AM', 'PM']):
-        return ValidationError('Restriction settings are not valid.')
-
+# deprecated:: time restriction should probably be moved out of ip proxy. this will ultimately be merged with quotas.
+# def validate_time_restriction(tr: config, /) -> Optional[ValidationError]:
+#
+#     if (tr.hour not in range(1, 13) or tr.min not in [00, 15, 30, 45]):
+#         return ValidationError('Restriction settings are not valid.')
+#
+#     if (tr.hour_len not in range(1, 13) and tr.min_len not in [00, 15, 30, 45]):
+#         return ValidationError('Restriction settings are not valid.')
+#
+#     if (tr.suffix not in ['AM', 'PM']):
+#         return ValidationError('Restriction settings are not valid.')
 # ==============
 # CONFIGURATION
 # ==============
+def configure_security_profile_ident(sp_ident: config) -> None:
+    with ConfigurationManager(f'profiles/profile_{sp_ident.idx}', cfg_type='security/ip') as dnx:
+        security_profile_settings: ConfigChain = dnx.load_configuration()
+
+        security_profile_settings['name'] = sp_ident.name
+        security_profile_settings['description'] = sp_ident.desc
+
+        dnx.write_configuration(security_profile_settings.expanded_user_data)
+
 def configure_reputation(category: config) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as dnx:
+    with ConfigurationManager(f'profiles/profile_{category.profile}', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         ip_proxy_settings[f'reputation->built-in->{category.name}'] = category.direction
@@ -243,7 +284,7 @@ def configure_reputation(category: config) -> None:
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
 def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as dnx:
+    with ConfigurationManager(f'profiles/profile_{category.profile}', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         # setting the individual country to user set value
@@ -257,6 +298,7 @@ def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
 
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
+# deprecated:: time restriction should probably be moved out of ip proxy. this will ultimately be merged with quotas.
 def configure_time_restriction(tr: config, /, field) -> None:
     with ConfigurationManager('global', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()

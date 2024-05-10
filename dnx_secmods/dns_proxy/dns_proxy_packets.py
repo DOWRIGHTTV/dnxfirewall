@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import PROTO, DNS, DNS_MASK
+from dnx_gentools.def_enums import DNS, DNS_MASK
+from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_UDP, PROTO_DNS_TLS
 from dnx_gentools.def_namedtuples import QNAME_RECORD, QNAME_RECORD_UPDATE, RESOURCE_RECORD
 from dnx_gentools.def_exceptions import ProtocolError
 
@@ -145,7 +146,7 @@ class ClientQuery:
 
         return send_data
 
-    def generate_dns_query(self, dns_id: int, protocol: PROTO) -> bytearray:
+    def generate_dns_query(self, dns_id: int, protocol: NETWORK_PROTOCOL) -> bytearray:
         # setting additional data flag in dns header if detected
         arc = 1 if self.additional_records else 0
 
@@ -158,7 +159,7 @@ class ClientQuery:
         send_data += self.additional_records
 
         # ternary looked gross so using standard if statement
-        if (protocol is PROTO.DNS_TLS):
+        if (protocol is PROTO_DNS_TLS):
             send_data[:2] = short_pack(len(send_data)-2)
         else:
             send_data = send_data[2:]
@@ -184,7 +185,7 @@ class ClientQuery:
 
         # keepalive are TLS only so we can hardcode the protocol.
         if (keepalive):
-            return self.generate_dns_query(DNS.KEEPALIVE, PROTO.DNS_TLS)
+            return self.generate_dns_query(DNS.KEEPALIVE, PROTO_DNS_TLS)
 
         return self
 
@@ -193,7 +194,7 @@ class ClientQuery:
 # PROXY - FULL INSPECTION, DIRECT SOCKET
 # ======================================
 ip_hdr_template: Structure_T = PR_IP_HDR(
-    (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('protocol', PROTO.UDP))
+    (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('protocol', PROTO_UDP))
 )
 udp_hdr_template: Structure_T = PR_UDP_HDR(
     (('checksum', 0),)

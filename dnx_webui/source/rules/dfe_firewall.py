@@ -349,9 +349,9 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
         'ips_profile': convert_int(fw_rule.sec3_prof)
     }
 
-    # SECURITY PROFILE VALIDATIONS - currently restricted to 0/1
-    if any([rule[profile] not in [0, 1] for profile in ['ipp_profile', 'dns_profile', 'ips_profile']]):
-        raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
+    # SECURITY PROFILE VALIDATIONS
+    if error := [prof for prof in ['ipp_profile', 'dns_profile', 'ips_profile'] if rule[prof] not in range(1, 16)]:
+        raise ValidationError(f'Invalid security profile for rule #{rule_num} -> {error}.')
 
     # OBJECT VALIDATIONS
     for obj in ['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service']:

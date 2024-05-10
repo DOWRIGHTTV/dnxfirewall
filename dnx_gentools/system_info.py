@@ -270,13 +270,17 @@ class System:
         return backups
 
     @staticmethod
-    def ips_passively_blocked(*, table: str = 'raw', block_length: int = NO_DELAY) -> list[tuple[int, int]]:
+    def ips_passively_blocked(
+            *, table: str = 'raw', profile_idx: int = 0, block_length: int = NO_DELAY) -> list[tuple[int, int, int]]:
         '''return list of currently blocked hosts in the specific iptables table.
 
         the default table is 'raw'.
 
-        if block_length is defined, only hosts that have reached point of expiration will be returned.
-        block_length should be an integer value of the number of seconds that represent the time to expire.
+        if profile_idx is defined, only rules within the matching profile will be returned.
+        profile_idx of 0 will return all rules.
+
+        if block_length is defined, only hosts that have reached the point of expiration will be returned.
+        block_length is an integer value in seconds that represents the length of time a host will be blocked.
 
             blocked_hosts = System.ips_passivley_blocked(block_length=100)
         '''
@@ -288,14 +292,18 @@ class System:
         for line in output[2:]:
             line = line.split()
 
-            blocked_host, timestamp = iptoi(line[3]), int(line[6])
+            blocked_host, comment = iptoi(line[3]), line[6]
+
+            profile, timestamp = (int(x) for x in comment.split('-'))
+            if (profile != profile_idx and profile_idx != 0):
+                continue
 
             # check whether the host rule has reach point of expiration. if not, loop will continue. for NO_DELAY
             # this condition will eval to False immediately, which marks rule for deletion.
             if (timestamp + block_length > current_time):
                 continue
 
-            host_list.append((blocked_host, timestamp))
+            host_list.append((blocked_host, profile, timestamp))
 
         return host_list
 

@@ -10,8 +10,8 @@ from random import randint
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration
-from dnx_gentools.file_operations import calculate_file_hash, load_data
+from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration, write_configuration
+from dnx_gentools.file_operations import calculate_file_hash  # load_data
 
 from dnx_routines.logging.log_client import Log
 
@@ -38,7 +38,7 @@ ACTIVE_COPY_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active_copy.firewall'
 
 ConfigurationManager.set_log_reference(Log)
 
-def convert_ruleset(sections: list[str], firewall_rules: dict, *, name_only: bool = False) -> None:
+def convert_ruleset(sections: tuple[str, str, str], firewall_rules: dict, *, name_only: bool = False) -> None:
     '''inplace replacement of firewall objects from id to value.
     '''
     kwargs = {'name_only': True} if name_only else {'convert': True}
@@ -61,6 +61,7 @@ def convert_ruleset(sections: list[str], firewall_rules: dict, *, name_only: boo
 # =========================================
 # Control - used by webui
 # =========================================
+# :bug: potential issue if you commit changes, restart the webui, and then push changes [from a different section].
 class FirewallControl:
     '''intermediary between frontend and underlying C rules code.
 
@@ -74,10 +75,10 @@ class FirewallControl:
     __slots__ = ()
 
     # store the main instances reference here, so it can be accessed throughout webui
-    cfirewall: FirewallControl
+    cfirewall: ClassVar[FirewallControl]
 
-    versions: list[str, str] = ['pending', 'active']
-    sections: list[str, str, str] = ['BEFORE', 'MAIN', 'AFTER']
+    versions: ClassVar[tuple[str, str]] = ('pending', 'active')
+    sections: ClassVar[tuple[str, str, str]] = ('BEFORE', 'MAIN', 'AFTER')
 
     def commit(self, section: str, updated_rules: dict) -> None:
         '''Updates pending configuration file with sent in firewall rules section data.
@@ -94,20 +95,19 @@ class FirewallControl:
 
             dnx_fw.write_configuration(fw_rules_copy)
 
-    def push(self) -> bool:
+    def push(self) -> Optional[ConfigurationError]:
         '''Copy the pending configuration to the active state.
 
         file changes are being monitored by Control class to load into cfirewall.
         '''
-        push_error = True
-
         # ==============================
         # OBJECT ID > VALUE CONVERSIONS
         # ==============================
-        with ConfigurationManager():
+        configuration_manager = ConfigurationManager(err_as_value=True)
+        with configuration_manager:
 
             # using standalone functions due to ConfigManager not being compatible with these operations
-            # -> file swapping across multiple files to retain plain and encoding version of the rules
+            # -> file swapping across multiple files to retain a raw and encoded version of the rules
             fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath=DEFAULT_PATH, strict=False)
 
             fw_rules_copy: dict[str, Any] = fw_rules.get_dict()
@@ -120,9 +120,7 @@ class FirewallControl:
 
             shutil.copy(PENDING_RULE_FILE, ACTIVE_COPY_FILE)
 
-            push_error = False
-
-        return push_error
+        return configuration_manager.error
 
     def revert(self):
         '''Copies active configuration to pending, which effectively wipes any unpushed changes.
@@ -212,7 +210,7 @@ class FirewallControl:
 
         ids_in_use = set()
 
-        # first pass gets all currently used ids
+        # the initial pass gets all currently used ids
         for rules in firewall_rules.values():
 
             for rule in rules.values():
@@ -221,7 +219,7 @@ class FirewallControl:
 
                 ids_in_use.add(rule['id'])
 
-        # second pass will assign an id to all new rules
+        # the second pass will assign an id to all new rules
         for rule in firewall_rules[section].values():
 
             if (rule['id']): continue

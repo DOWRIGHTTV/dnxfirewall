@@ -6,7 +6,8 @@ from threading import Thread
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import UINT16_MAX, RUN_FOREVER
-from dnx_gentools.def_enums import PROTO, Queue
+from dnx_gentools.def_enums import Queue
+from dnx_gentools.def_enums import PROTO_ICMP, PROTO_UDP, PROTO_DNS
 from dnx_gentools.def_enums import GEOLOCATION, GEO_ID_TO_STRING, REPUTATION, REP_ID_TO_STRING
 from dnx_gentools.def_enums import DIRECTION, DIR_OFF, DIR_OUTBOUND, DIR_INBOUND, DIR_BOTH
 from dnx_gentools.def_enums import DECISION, CONN_REJECT, CONN_INSPECT, CONN_DROP, CONN_ACCEPT
@@ -16,7 +17,7 @@ from dnx_iptools.packet_classes import NFQueue
 
 from ip_proxy_packets import IPPPacket, ProxyResponse
 # from ip_proxy_restrict import LanRestrict
-from ip_proxy_automate import ProxyConfiguration
+from ip_proxy_automate import ProxyConfiguration, CFG_PROFILE
 from ip_proxy_log import Log
 
 __all__ = (
@@ -48,7 +49,9 @@ class IPProxy(ProxyConfiguration, NFQueue):
         for _ in RUN_FOREVER:
             packet: IPPPacket = inspection_queue_get()
 
-            results = inspect(packet)
+            inspection_profile: CFG_PROFILE = CFG_PROFILES[packet.ipp_profile]
+
+            results = inspect(packet, inspection_profile)
 
             forward_packet(packet, packet.direction, results.action)
 
@@ -69,7 +72,7 @@ def forward_packet(packet: IPPPacket, direction: DIRECTION, action: DECISION) ->
     # dropped packets still need to be processed for ddos/portscan profiling
     # if ips profile is set on a rule for outbound traffic, it will be ignored.
     # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
-    if (packet.ips_profile and direction == DIR_INBOUND):
+    if (packet.ids_profile and direction == DIR_INBOUND):
         packet.nfqueue.update_mark(packet.mark & UINT16_MAX)
 
         packet.nfqueue.forward(Queue.IDS_IPS)
@@ -85,7 +88,7 @@ def forward_packet(packet: IPPPacket, direction: DIRECTION, action: DECISION) ->
     # --------------------
     # DNS PROXY FORWARD
     # --------------------
-    elif (packet.dns_profile and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
+    elif (packet.dns_profile and packet.protocol is PROTO_UDP and packet.dst_port == PROTO_DNS):
         packet.nfqueue.forward(Queue.DNS_PROXY)
 
     # ====================
@@ -103,16 +106,18 @@ def forward_packet(packet: IPPPacket, direction: DIRECTION, action: DECISION) ->
 REP_LOOKUP: Callable[[int], int] = NotImplemented
 
 # direct references to proxy class data structure methods
-_reputation_settings = IPProxy.reputation_settings
-_geolocation_settings = IPProxy.geolocation_settings
+# _reputation_settings = IPProxy.reputation_settings
+# _geolocation_settings = IPProxy.geolocation_settings
 
 # _tor_whitelist = IPProxy.tor_whitelist
 
-def inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
+CFG_PROFILES = IPProxy.cfg_profiles
 
-    # if category match and country is configured to block in direction of conn/packet
+def inspect(packet: IPPPacket, inspection_profile: CFG_PROFILE) -> IPP_INSPECTION_RESULTS:
+
+    # category match and country set for blocking in the direction of conn/packet
     if country_id := packet.tracked_geo:
-        action, country_name = _country_action(country_id, packet)
+        action, country_name = _country_action(country_id, packet, inspection_profile)
 
     else:
         action, country_name = CONN_ACCEPT, GEO_ID_TO_STRING[country_id]  # GEO.NONE
@@ -122,16 +127,15 @@ def inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
         return IPP_INSPECTION_RESULTS((country_name, REP_ID_TO_STRING[-1]), action)  # REP.DNL
 
     if reputation_id := REP_LOOKUP(packet.tracked_ip):
-        action, reputation_name = _reputation_action(reputation_id, packet)
+        action, reputation_name = _reputation_action(reputation_id, packet, inspection_profile)
 
     else:
         reputation_name = REP_ID_TO_STRING[reputation_id]  # REP.NONE
 
     return IPP_INSPECTION_RESULTS((country_name, reputation_name), action)
 
-# TODO: expand for profiles. reputation_settings[profile][category]
-# category setting lookup. will match packet direction with configured dir for category/category group.
-def _reputation_action(reputation_id: int, packet: IPPPacket) -> tuple[DECISION, REPUTATION]:
+# category setting lookup. comparing  the packet direction with the configured direction for a category/category group.
+def _reputation_action(reputation_id: int, packet: IPPPacket, inspection_profile: CFG_PROFILE) -> tuple[DECISION, REPUTATION]:
 
     # flooring cat to its group id for easier matching
     rep_group = REP_ID_TO_STRING[(reputation_id // 10) * 10]
@@ -140,14 +144,14 @@ def _reputation_action(reputation_id: int, packet: IPPPacket) -> tuple[DECISION,
     if (rep_group == 'TOR'):
         rep_group = REP_ID_TO_STRING[reputation_id]
 
-    block_direction = _reputation_settings[rep_group]
+    block_direction = inspection_profile.reputation_settings[rep_group]
     # --------------------
     # BLOCKING ACTIONS
     # --------------------
     # dir enum is _Flag with bitwise ops for easier/faster comparison.
     if (packet.direction & block_direction):
-        # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
-        if (packet.protocol is PROTO.ICMP):
+        # hardcoded for icmp to drop and tcp/udp to reject. # idea:: consider making this configurable.
+        if (packet.protocol is PROTO_ICMP):
             return CONN_DROP, rep_group
 
         return CONN_REJECT, rep_group
@@ -156,19 +160,18 @@ def _reputation_action(reputation_id: int, packet: IPPPacket) -> tuple[DECISION,
     # default action
     return CONN_ACCEPT, rep_group
 
-# TODO: expand for profiles. geolocation_settings[profile][category]
-def _country_action(country_id: int, packet: IPPPacket) -> tuple[DECISION, GEOLOCATION]:
+def _country_action(country_id: int, packet: IPPPacket, inspection_profile: CFG_PROFILE) -> tuple[DECISION, GEOLOCATION]:
 
     country_name = GEO_ID_TO_STRING[country_id]
 
-    block_direction = _geolocation_settings[country_name]
+    block_direction = inspection_profile.geolocation_settings[country_name]
     # --------------------
     # BLOCKING ACTIONS
     # --------------------
     # dir enum is _Flag with bitwise ops for easier/faster comparison.
     if (packet.direction & block_direction):
-        # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
-        if (packet.protocol is PROTO.ICMP):
+        # hardcoded for icmp to drop and tcp/udp to reject. # idea:: consider making this configurable.
+        if (packet.protocol is PROTO_ICMP):
             return CONN_DROP, country_name
 
         return CONN_REJECT, country_name

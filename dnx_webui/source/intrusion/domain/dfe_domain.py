@@ -24,14 +24,17 @@ class WebPage(StandardWebPage):
     available methods: load, update, handle_ajax
     '''
     @staticmethod
-    # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.
-    def load(_: Form) -> dict[str, Any]:
-        proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
+    def load(form: Form) -> WebLoadResponse:
+        # this will be validated by update method if it is present
+        # on a direct page load, the profile will be set to the default (1).
+        sec_profile = form.get('security_profile', 1)
+
+        proxy_profile: ConfigChain = load_configuration(f'profiles/profile_{sec_profile}', cfg_type='security/dns')
 
         builtins = proxy_profile.get_items('categories->built-in')
 
         domain_settings = {
-            'security_profile': 1,
+            'security_profile': sec_profile,
             'profile_name': proxy_profile['name'],
             'profile_desc': proxy_profile['description'],
             'built-in': builtins,
@@ -42,18 +45,35 @@ class WebPage(StandardWebPage):
         return domain_settings
 
     @staticmethod
-    def update(form: Form) -> tuple[int, str]:
-
-        # prevents errors while in dev mode.
+    def update(form: Form) -> WebUpdateError:
         if ('security_profile' in form):
-            return -1, 'temporarily limited to profile 1.'
+            sec_profile = get_convert_in_range(form, 'security_profile', bounds=(1, 15))
+            if (sec_profile in [DATA.MISSING, DATA.INVALID]):
+                return -1, 'unknown security profile selection.'
+
+        elif ('change_security_profile_ident' in form):
+            sp_ident = config(**{
+                'idx': get_convert_in_range(form, 'security_profile', bounds=(1, 15)),
+                'name': form.get('security_profile_name', DATA.MISSING),
+                'desc': form.get('security_profile_desc', DATA.MISSING)
+            })
+
+            if ([x for x in [DATA.MISSING, DATA.INVALID] if x in sp_ident.values()]):
+                return -2, INVALID_FORM
+
+            if error := validate_security_profile_ident(sp_ident):
+                return -3, error.message
+
+            configure_security_profile_ident(sp_ident)
+
+        else: return 99, INVALID_FORM
 
         return NO_STANDARD_ERROR
 
     @staticmethod
-    def handle_ajax(form: Form) -> tuple[bool, WebError]:
+    def handle_ajax(form: JSON) -> WebAjaxResponse:
 
-        ruleset = form.get('type', DATA.MISSING)
+        ruleset: str | DATA = form.get('type', DATA.MISSING)
         if (ruleset is DATA.MISSING):
             return False, {'error': 1, 'message': INVALID_FORM}
 
@@ -78,6 +98,20 @@ class WebPage(StandardWebPage):
 # ==============
 # VALIDATION
 # ==============
+def validate_security_profile_ident(sp_ident: config) -> Optional[ValidationError]:
+    if (not sp_ident.name.isalpha()):
+        return ValidationError('Security profile name can only contain characters in the alphabet.')
+
+    if (len(sp_ident.name) > 12):
+        return ValidationError('Security profile name must be less than 12 characters.')
+
+    description = sp_ident.desc.split()
+    if ([x for x in description if not x.isalpha()]):
+        return ValidationError('Security profile description can only contain characters in the alphabet or spaces.')
+
+    if (len(sp_ident.desc) > 32):
+        return ValidationError('Security profile name must be less than 32 characters.')
+
 # it is easier and safer to match on the cases we want to see and error on everything else
 def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tuple[int, ValidationError]]:
 
@@ -130,7 +164,16 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
 # ==============
 # CONFIGURATION
 # ==============
-# im being very explicit on the if statements because i would rather get the logic more right than pretty.
+def configure_security_profile_ident(sp_ident: config) -> None:
+    with ConfigurationManager(f'profiles/profile_{sp_ident.idx}', cfg_type='security/dns') as dnx:
+        security_profile_settings: ConfigChain = dnx.load_configuration()
+
+        security_profile_settings['name'] = sp_ident.name
+        security_profile_settings['description'] = sp_ident.desc
+
+        dnx.write_configuration(security_profile_settings.expanded_user_data)
+
+# im being very explicit on the if statements because I would rather get the logic right before pretty.
 def configure_domain_categories(category: config, *, ruleset: str):
     with ConfigurationManager('profiles/profile_1', cfg_type='security/dns') as dnx:
         # TODO: does this need to be strict?

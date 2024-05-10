@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast, Type, NewType, Literal, Protocol, Callable, Generator, Iterator, Iterable
 from typing import ClassVar, Union, Optional, Any, NoReturn, ByteString, TextIO
 
+import dnx_gentools
+
+
 _DISABLED = False
 
 # NOTE: splitting if statements as import organization
@@ -26,16 +29,22 @@ if (TYPE_CHECKING and not _DISABLED):
     IntAddress: TypeAlias = tuple[int, int]
 
     Wrapper: TypeAlias = Callable[[Any], None]
-    Callable_T: TypeAlias = Callable[[Any, ...], Any]
+    Callable_T: TypeAlias = Callable[..., Any]
 
-    ConfigLock = NewType('ConfigLock', type('FileLock'))
-    IPTableLock = NewType('IPTableLock', type('FileLock'))
+    StructUnpack: TypeAlias = tuple[int, ...]
+
+    ConfigLock   = NewType('ConfigLock', type('FileLock'))
+    IPTablesLock = NewType('IPTablesLock', type('FileLock'))
+    FirewallDBLock = NewType('FirewallDBLock', type('FileLock'))
+
+    FileLock: TypeAlias = Union[ConfigLock, IPTablesLock, FirewallDBLock]
 
     # dnx class imports for use as Types
 
     # module packs
     from dnx_gentools.file_operations import ConfigChain, config
     from dnx_gentools.def_namedtuples import L_SOCK as _L_SOCK
+    # from dnx_gentools.def_enums import PROTO
     # from dnx_iptools import *
     # from dnx_routines import *
 
@@ -61,7 +70,7 @@ if (TYPE_CHECKING and not _DISABLED):
 
     DNSListHandler: TypeAlias = Callable[[Any, str, int], int]
 
-    StructUnpack: TypeAlias = tuple[int, ...]
+    OPEN_WAN_PORTS: TypeAlias = dict[PROTO, dict[int, int]]
 
     from dnx_gentools.def_namedtuples import INF_EVENT_LOG as _INF_EVENT_LOG
     from dnx_gentools.def_namedtuples import IPP_EVENT_LOG as _IPP_EVENT_LOG

@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from functools import wraps
+
+# ================
+# TYPING IMPORTS
+# ================
+if (TYPE_CHECKING):
+    from dnx_routines.logging import LogHandler_T
 
 
 class DNXError(Exception):
@@ -41,3 +47,16 @@ def err_as_value(exc_type):
         return wrapper
 
     return decorator
+
+
+def dnx_assert(condition: bool, message: str, *, logger: LogHandler_T = None) -> None:
+    '''DNX assertion function.
+
+    If an assertion fails and a logger is provided, the message is logger prior to raising the exception.
+    '''
+    if (condition): return
+
+    if (logger):
+        logger.emergency(message)
+
+    raise AssertionError(message)

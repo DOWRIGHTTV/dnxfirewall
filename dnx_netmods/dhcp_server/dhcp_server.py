@@ -155,7 +155,7 @@ class DHCPServer(ServerConfiguration, Listener):
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf_ident}\0'.encode('utf-8'))
-        l_sock.bind((itoip(INADDR_ANY), PROTO.DHCP_SVR))
+        l_sock.bind((itoip(INADDR_ANY), PROTO_DHCP_SVR))
 
         Log.debug(
             f'[{intf_ident}][{sock_fd}] {self.__class__.__name__} interface bound: {self.interfaces[intf_ident]}'

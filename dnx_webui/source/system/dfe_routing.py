@@ -131,12 +131,6 @@ def configure_route_add(route: config) -> Optional[ConfigurationError]:
     return interface_manager.error
 
 def configure_route_del(route: config) -> Optional[ConfigurationError]:
-    # new_route = Route(
-    #     next_hop_route.intf, route.net_id, str(masktocidr(route.net_mask)), route.gateway, route.adm_distance
-    # )
-
-    print(route.route_obj)
-
     interface_manager = InterfaceManager()
     with interface_manager:
         interface_manager.del_route(route.route_obj)

@@ -49,4 +49,7 @@ if (TYPE_CHECKING):
     LogWebPage: TypeAlias = Type[_LogWebPage]
     RulesWebPage: TypeAlias = Type[_RulesWebPage]
 
+    from dnx_gentools.def_typing import FirewallDBLock
+
+    # todo: should this be here?
     from dnx_gentools.file_operations import ConfigChain

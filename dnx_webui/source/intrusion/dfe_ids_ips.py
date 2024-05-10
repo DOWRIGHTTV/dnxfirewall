@@ -9,7 +9,7 @@ web_module_load_callout(__file__)
 from source.web_validate import *
 
 from dnx_gentools.def_enums import CFG, DATA
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
+from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration, config
 from dnx_gentools.system_info import System
 
 from dnx_iptools.cprotocol_tools import iptoi, itoip
@@ -24,8 +24,12 @@ class WebPage(StandardWebPage):
     available methods: load, update
     '''
     @staticmethod
-    def load(_: Form) -> dict[str, Any]:
-        ips_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ids_ips')
+    def load(form: Form) -> WebLoadResponse:
+        # this will be validated by update method if it is present
+        # on a direct page load, the profile will be set to the default (1).
+        sec_profile = form.get('security_profile', 1)
+
+        ips_profile: ConfigChain = load_configuration(f'profiles/profile_{sec_profile}', cfg_type='security/ids_ips')
         ips_global: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')
 
         passive_block_ttl = ips_profile['passive_block_ttl']
@@ -51,12 +55,12 @@ class WebPage(StandardWebPage):
 
         # converting standard timestamp to a frontend-readable string format
         passively_blocked_hosts = []
-        pbh = System.ips_passively_blocked()
-        for host, timestamp in pbh:
-            passively_blocked_hosts.append((itoip(host), timestamp, System.offset_and_format(timestamp)))
+        for blocked_host in System.ips_passively_blocked():
+
+            passively_blocked_hosts.append((*blocked_host, System.offset_and_format(blocked_host[2])))
 
         return {
-            'security_profile': 1,
+            'security_profile': sec_profile,
             'profile_name': ips_profile['name'],
             'profile_desc': ips_profile['description'],
             'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
@@ -68,12 +72,29 @@ class WebPage(StandardWebPage):
         }
 
     @staticmethod
-    def update(form: Form) -> tuple[int, str]:
-        # prevents errors while in dev mode.
-        if ('security_profile' in form):
-            return -1, 'temporarily limited to profile 1.'
+    def update(form: Form) -> WebUpdateError:
 
-        if ('ddos_enabled' in form):
+        if ('security_profile' in form):
+            sec_profile = get_convert_in_range(form, 'security_profile', bounds=(1, 15))
+            if (sec_profile in [DATA.MISSING, DATA.INVALID]):
+                return -1, 'unknown security profile selection.'
+
+        elif ('change_security_profile_ident' in form):
+            sp_ident = config(**{
+                'idx': get_convert_in_range(form, 'security_profile', bounds=(1, 15)),
+                'name': form.get('security_profile_name', DATA.MISSING),
+                'desc': form.get('security_profile_desc', DATA.MISSING)
+            })
+
+            if ([x for x in [DATA.MISSING, DATA.INVALID] if x in sp_ident.values()]):
+                return -2, INVALID_FORM
+
+            if error := validate_security_profile_ident(sp_ident):
+                return -3, error.message
+
+            configure_security_profile_ident(sp_ident)
+
+        elif ('ddos_enabled' in form):
 
             ddos = config(**{
                 'enabled': get_convert_bint(form, 'ddos_enabled')
@@ -163,7 +184,7 @@ class WebPage(StandardWebPage):
 
         elif ('ips_wl_remove' in form):
             whitelist = config(**{
-                'ip': form.get('ips_wl_ip', DATA.MISSING)
+                'ip': form.get('ips_wl_remove', DATA.MISSING)
             })
             if (DATA.MISSING in whitelist.values()):
                 return 12, INVALID_FORM
@@ -191,16 +212,19 @@ class WebPage(StandardWebPage):
                 return 15, INVALID_FORM
 
             try:
-                host_ip, timestamp = host_info.split('/')
+                host_ip, profile, timestamp = host_info.split('/')
 
                 ip_address(host_ip)
             except:
                 return 16, INVALID_FORM
 
-            if (convert_int(timestamp) is DATA.INVALID):
+            if (prof := convert_in_range(profile, (1, 15))) is DATA.INVALID:
                 return 17, INVALID_FORM
 
-            pbl_remove_notify(iptoi(host_ip), int(timestamp))
+            if (ts := convert_int(timestamp)) is DATA.INVALID:
+                return 18, INVALID_FORM
+
+            pbl_remove_notify(iptoi(host_ip), prof, ts)
 
         else:
             return 99, INVALID_FORM
@@ -210,8 +234,22 @@ class WebPage(StandardWebPage):
 # ==============
 # VALIDATION
 # ==============
+def validate_security_profile_ident(sp_ident: config) -> Optional[ValidationError]:
+    if (not sp_ident.name.isalpha()):
+        return ValidationError('Security profile name can only contain characters in the alphabet.')
+
+    if (len(sp_ident.name) > 12):
+        return ValidationError('Security profile name must be less than 12 characters.')
+
+    description = sp_ident.desc.split()
+    if ([x for x in description if not x.isalpha()]):
+        return ValidationError('Security profile description can only contain characters in the alphabet or spaces.')
+
+    if (len(sp_ident.desc) > 32):
+        return ValidationError('Security profile name must be less than 32 characters.')
+
 def validate_portscan_reject(settings: config, /) -> Optional[ValidationError]:
-    ips: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ids_ips')
+    ips: ConfigChain = load_configuration(f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips')
 
     current_prevention = ips['port_scan->enabled']
     if (settings.reject and not current_prevention):
@@ -224,8 +262,17 @@ def validate_passive_block_length(settings: config, /) -> Optional[ValidationErr
 # ==============
 # CONFIGURATION
 # ==============
+def configure_security_profile_ident(sp_ident: config) -> None:
+    with ConfigurationManager(f'profiles/profile_{sp_ident.idx}', cfg_type='security/ids_ips') as dnx:
+        security_profile_settings: ConfigChain = dnx.load_configuration()
+
+        security_profile_settings['name'] = sp_ident.name
+        security_profile_settings['description'] = sp_ident.desc
+
+        dnx.write_configuration(security_profile_settings.expanded_user_data)
+
 def configure_ddos(ddos: CFG) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager(f'profiles/profile_{ddos.profile}', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         ips_settings['ddos->enabled'] = ddos.enabled
@@ -233,7 +280,7 @@ def configure_ddos(ddos: CFG) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_ddos_limits(ddos_limits: config) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager(f'profiles/profile_{ddos_limits.profile}', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         for protocol, limit in ddos_limits.items():
@@ -242,7 +289,7 @@ def configure_ddos_limits(ddos_limits: config) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_portscan(portscan: config, *, field: str) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager(f'profiles/profile_{portscan.profile}', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         if (field == 'enabled'):
@@ -257,7 +304,7 @@ def configure_portscan(portscan: config, *, field: str) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_general_settings(settings: config, /, field) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager(f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         if (field == 'pb_length'):
@@ -269,7 +316,7 @@ def configure_general_settings(settings: config, /, field) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager(f'profiles/profile_{whitelist.profile}', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         if (action is CFG.ADD):
@@ -281,7 +328,7 @@ def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_dns_whitelist(settings: config, /) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager(f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         ips_settings['whitelist->dns_servers'] = settings.action
@@ -289,19 +336,20 @@ def configure_dns_whitelist(settings: config, /) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 # error condition should never be met, but just for initial implementation and piece of mind
-def pbl_remove_notify(host: int, timestamp: int) -> None:
+def pbl_remove_notify(host: int, profile_idx: int, timestamp: int) -> None:
     error = True
     with IPTablesManager() as iptables:
-        iptables.remove_passive_block(host, timestamp)
+        iptables.remove_passive_block(host, profile_idx, timestamp)
 
         error = False
 
-    if error: return
+    if (error):
+        raise ConfigurationError('Failed to remove passive block rule. see logs for more info.')
 
     with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
         ips_global_settings: ConfigChain = dnx.load_configuration(strict=False)
 
-        ips_global_settings[f'pbl_remove->{host}'] = timestamp
+        ips_global_settings[f'pbl_remove->{host}'] = [profile_idx, timestamp]
 
         dnx.write_configuration(ips_global_settings.expanded_user_data)
 

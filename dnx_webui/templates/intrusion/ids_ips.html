@@ -144,27 +144,15 @@
               </tr>
               </thead>
               <tbody>
+              {% set message = 'Are you sure you want to remove the IPS whitelist rule?' %}
               {% for ip_address, name in ips_settings.ip_whitelist %}
                 <tr>
                   <td>
-                    <a class="btn-floating btn-small red waves-effect waves-light modal-trigger"
-                       href="#ips-modal3-{{loop.index}}"><i class="material-icons">remove</i></a>
-                    <div id="ips-modal3-{{loop.index}}" class="modal">
-                      <div class="modal-content">
-                        <h5 class="{{modal_text_style}}">Are you sure you want to remove the IPS whitelist rule?</h5>
-                      </div>
-                      <form method="POST">
-                        <input type="hidden" name="tab" value="2">
-                        <input type="hidden" name="ips_wl_ip" value="{{ip_address}}">
-                        <div class="modal-footer">
-                          <button class="btn waves-effect waves-light" name="ips_wl_remove">YES</button>
-                          <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                        </div>
-                      </form>
-                    </div>
+                    {{ create_button_with_modal('btn-floating btn-small red',
+                        'remove', 1, loop.index, 2, 'ips_wl_remove', ip_address, message)|safe }}
                   </td>
-                  <td>{{ip_address}}</td>
-                  <td>{{name}}</td>
+                  <td>{{ ip_address }}</td>
+                  <td>{{ name }}</td>
                 </tr>
               {% else %}
                 <tr>
@@ -189,35 +177,27 @@
             <table class="striped centered">
               <thead>
               <tr>
-                <th style="width:25%"></th>
-                <th style="width:50%">Host IP Address</th>
+                <th style="width:20%"></th>
+                <th style="width:15%">Profile</th>
+                <th style="width:40%">Host IP Address</th>
                 <th style="width:25%">Time Entered</th>
               </tr>
               </thead>
               <tbody>
-              {% for host, timestamp, ftime in ips_settings.passively_blocked_hosts %}
+              {% set message = 'Are you sure you want to remove the passively blocked host?' %}
+              {% for host, profile, timestamp in ips_settings.passively_blocked_hosts %}
                 <tr>
                   <td>
-                    <a class="btn-floating btn-small red waves-effect waves-light modal-trigger"
-                       href="#ips-modal4-{{loop.index}}"><i class="material-icons">remove</i></a>
-                    <div id="ips-modal4-{{loop.index}}" class="modal">
-                      <div class="modal-content">
-                        <h5 class="{{modal_text_style}}">Are you sure you want to remove the passively blocked host?</h5>
-                      </div>
-                      <form method="POST">
-                        <input type="hidden" name="tab" value="3">
-                        <div class="modal-footer">
-                          <button class="btn waves-effect waves-light" name="ips_pbl_remove" value="{{host}}/{{timestamp}}">YES</button>
-                          <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                        </div>
-                      </form>
-                    </div>
-                  </td>
-                  <td>{{host}}</td>
-                  <td>{{ftime}}</td>
+                    {% set val = host|itoip + '/' + profile + '/' + timestamp %}
+                    {{ create_button_with_modal('btn-floating btn-small red',
+                        'remove', 2, loop.index, 3, 'ips_wl_remove', val, message)|safe }}
+                  <td>{{ profile }}</td>
+                  <td>{{ host|itoip }}</td>
+                  <td>{{ timestamp|ts_offset_format }}</td>
                 </tr>
               {% else %}
                 <tr>
+                  <td></td>
                   <td></td>
                   <td></td>
                   <td></td>

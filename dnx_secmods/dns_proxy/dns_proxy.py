@@ -12,7 +12,7 @@ from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS
 from dnx_iptools.packet_classes import NFQueue
 
 from dns_proxy_server import DNSServer
-from dns_proxy_automate import ProxyConfiguration
+from dns_proxy_automate import ProxyConfiguration, CFG_PROFILE
 from dns_proxy_packets import DNSPacket, ProxyResponse
 from dns_proxy_log import Log
 
@@ -88,15 +88,16 @@ CAT_LOOKUP: Callable[[int], int] = NotImplemented
 LOCAL_RECORD: Callable[[str], ...] = DNSServer.dns_records.get
 
 # direct references to proxy class data structure methods
-_ip_whitelist_get = DNSProxy.whitelist.ip.get
-_tld_get = DNSProxy.signatures.tld.get
-_enabled_categories = DNSProxy.signatures.en_dns
+# _tld_get = DNSProxy.signatures.tld.get
+# _enabled_categories = DNSProxy.signatures.en_dns
+#
+# _dns_whitelist = DNSProxy.whitelist.dns
+# _dns_blacklist = DNSProxy.blacklist.dns
+# _dns_keywords  = DNSProxy.signatures.keyword
 
-_dns_whitelist = DNSProxy.whitelist.dns
-_dns_blacklist = DNSProxy.blacklist.dns
-_dns_keywords  = DNSProxy.signatures.keyword
+CFG_PROFILES = DNSProxy.cfg_profiles
 
-# pre-check will filter out invalid packets, ipv6 records, and local dns records
+# pre-check will filter out invalid packets and local dns records
 def pre_inspect(packet: DNSPacket) -> bool:
     # local records will continue directly to the dns server
     if LOCAL_RECORD(packet.qname):
@@ -116,20 +117,24 @@ def pre_inspect(packet: DNSPacket) -> bool:
 
 # this is where the system decides whether to block dns query/sinkhole or to allow.
 def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
-    # NOTE: request_ident[0] is a string representation of ip addresses. this is currently needed as the whitelists
-    #  are stored in this format and we have since moved away from this format on the back end.
-    # TODO: in the near-ish future, consider storing ip whitelists as integers to conform to newer standards.
-    whitelisted = _ip_whitelist_get(packet.request_identifier[0], False)
-
-    enum_categories = []
+    inspection_profile: CFG_PROFILE = CFG_PROFILES[packet.dns_profile]
 
     # TLD (top level domain) block
     # url whitelist does not override tld blocks at the moment.
-    if _tld_get(packet.tld):
+    if inspection_profile.signatures.tld.get(packet.tld):
 
         return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[packet.tld])
 
-    category: DNS_CAT
+    # direct references to proxy class data structure methods
+    # ========================================================
+    _enabled_categories = inspection_profile.signatures.en_dns
+
+    _dns_whitelist = inspection_profile.whitelist.dns
+    _dns_blacklist = inspection_profile.blacklist.dns
+    _dns_keywords  = inspection_profile.signatures.keyword
+    # ========================================================
+
+    enum_categories = []
     # signature/ blacklist check.
     for enum_request in packet.requests:
 
@@ -139,13 +144,13 @@ def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
             return DNS_REQUEST_RESULTS(False, None, None)
 
         # ip whitelist overrides configured blacklist
-        if (not whitelisted and enum_request in _dns_blacklist):
+        if (enum_request in _dns_blacklist):
 
             return DNS_REQUEST_RESULTS(True, 'blacklist', DNS_CAT.time_based)
 
         # determining the domain category
         category = DNS_CAT(CAT_LOOKUP(enum_request))
-        if (category is not DNS_CAT.NONE) and _block_query(category, whitelisted):
+        if (category in _enabled_categories):
 
             return DNS_REQUEST_RESULTS(True, 'category', category)
 
@@ -170,14 +175,14 @@ def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
 
 # grabbing the request category and determining whether the request should be blocked. if so, returns general
 # information for further processing
-def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
-    # signature match, but blocking is disabled for the category | ALLOW
-    if (category not in _enabled_categories):
-        return False
-
-    # signature match and not whitelisted or whitelisted and cat is high risk | BLOCK
-    if (not whitelisted or category in [DNS_CAT.malicious, DNS_CAT.crypto_miner]):
-        return True
-
-    # default action | ALLOW
-    return False
+# def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
+#     # signature match, but blocking is disabled for the category | ALLOW
+#     if (category not in _enabled_categories):
+#         return False
+#
+#     # signature match and not whitelisted or whitelisted and cat is high risk | BLOCK
+#     if (not whitelisted or category in [DNS_CAT.malicious, DNS_CAT.crypto_miner]):
+#         return True
+#
+#     # default action | ALLOW
+#     return False
