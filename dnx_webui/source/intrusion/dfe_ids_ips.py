@@ -73,13 +73,8 @@ class WebPage(StandardWebPage):
 
     @staticmethod
     def update(form: Form) -> WebUpdateError:
-
-        if ('security_profile' in form):
-            sec_profile = get_convert_in_range(form, 'security_profile', bounds=(1, 15))
-            if (sec_profile in [DATA.MISSING, DATA.INVALID]):
-                return -1, 'unknown security profile selection.'
-
-        elif ('security_profile_ident' in form):
+        # this needs to be first because "security profile" key will also be present in the form.
+        if ('security_profile_ident' in form):
             sp_ident = config(**{
                 'idx': get_convert_in_range(form, 'security_profile', bounds=(1, 15)),
                 'name': form.get('security_profile_name', DATA.MISSING),
@@ -93,6 +88,12 @@ class WebPage(StandardWebPage):
                 return -3, error.message
 
             configure_security_profile_ident(sp_ident)
+
+        # this is needed here to prevent webui thinking request is invalid, so we might as well do the validation here.
+        elif ('security_profile' in form):
+            sec_profile = get_convert_in_range(form, 'security_profile', bounds=(1, 15))
+            if (sec_profile in [DATA.MISSING, DATA.INVALID]):
+                return -1, 'unknown security profile selection.'
 
         elif ('ddos_enabled' in form):
 
