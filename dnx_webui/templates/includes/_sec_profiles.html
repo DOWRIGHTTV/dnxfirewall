@@ -30,7 +30,8 @@
               <h6><input type="text" id="sp_desc" name="security_profile_desc" value="{{ page_settings.profile_desc }}" required></h6>
             </div>
             <div class="col s3">
-              <button class="btn waves-effect waves-light col s12" name="change_security_profile_ident" value="{{ page_settings.security_profile }}">Change</button>
+              <input type="hidden" name="security_profile" value="{{ page_settings.security_profile }}">
+              <button class="btn waves-effect waves-light col s12" name="change_security_profile_ident">Change</button>
             </div>
           </div>
         </form>
