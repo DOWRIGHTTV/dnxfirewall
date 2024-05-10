@@ -123,7 +123,7 @@ class IPSConfiguration(ConfigurationMixinBase):
         self._initialize.done()
 
     # todo: determine whether the default sleep timer is acceptable for this open port updates. if not, figure out how
-    # to override the setting set in the decorator or remove the decorator entirely.
+    #  to override the setting set in the decorator or remove the decorator entirely.
     @cfg_read_poller('global', cfg_type='security/ids_ips')
     def _get_open_ports(self, proxy_settings: ConfigChain) -> None:
 
