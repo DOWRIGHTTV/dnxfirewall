@@ -182,8 +182,9 @@
       let cat_value = cat_info[0];
       let cat_opt   = cat_info[1];
 
-      // region is not needed for reputation and will be ignored on server side input validation.
+      // region is not needed for reputation categories and will be ignored on server side input validation.
       let response = await ajaxClient.post('/post', {
+        'security_profile': {{ ip_settings.security_profile }},
         'type': category.name, 'category': cat_value, 'direction': cat_opt, 'region': region
       });
 

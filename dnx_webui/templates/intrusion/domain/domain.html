@@ -24,7 +24,7 @@
       <div class="col s12 m10 offset-m1">
         <div class="card-panel hoverable {{ theme.card }}">
           {{ create_title('user defined')|safe }}
-          {% for category, settings in domain_settings['user_defined'] %}
+          {% for category, settings in domain_settings.user_defined %}
             {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
             {{ create_decora_switch('user_defined', category, settings['enabled'])|safe }}
             {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
@@ -75,7 +75,10 @@ async function updateCategory(btn_idx, btn, enabled, tethered) {
 
     console.log(btn.name, btn.value);
 
-    let response = await ajaxClient.post('/post', {'type': btn.name, 'category': btn.value, 'enabled': enabled});
+    let response = await ajaxClient.post('/post', {
+      'security_profile': {{ domain_settings.security_profile }},
+      'type': btn.name, 'category': btn.value, 'enabled': enabled
+    });
 
     // if an error is returned, immediately return. pop-up is handled by the ajax client
     if (ajaxClient.handleResponse(response, btn)) { return; }
