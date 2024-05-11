@@ -103,7 +103,7 @@
       iSwitch.form.submit();
     }
 
-  {% if page_settings.security_profile %}
+  {% if page_settings and page_settings.security_profile %}
     let forms = document.querySelectorAll("form");
 
     forms.forEach(f => f.setAttribute("onsubmit", "iFormIntercept(this)"));
