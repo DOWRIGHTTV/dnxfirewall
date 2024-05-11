@@ -303,12 +303,14 @@ class config(dict):
     def __getattr__(self, item: str) -> str | int | bool:
         '''calls __getitem__ and returns the returned value.
 
-        raises AttributeError on error.
+        raises AttributeError if not found.
         '''
         try:
             return self[item]
         except KeyError:
-            raise AttributeError
+            pass
+
+        raise AttributeError(f'"{item}" not found in config data.')
 
     def __setattr__(self, key: str, value: str | int | bool) -> None:
         self[key] = value
