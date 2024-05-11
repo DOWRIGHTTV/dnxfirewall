@@ -49,7 +49,7 @@
                 <div class="input-field col s12 {{input_color}}">
                   <p class="range-field">
                     <input type="range" name="icmp_limit" id="icmp-l" min="5" max="100"
-                           value="{{ips_settings['ddos']['icmp']}}">
+                        value="{{ips_settings['ddos']['icmp']}}">
                     <label for="icmp-l">ICMP Source Limit (packets/sec) | Current: {{ips_settings['ddos']['icmp']}}</label>
                   </p>
                 </div>
@@ -66,22 +66,8 @@
             <h4 class="{{ theme.title }}">General Settings</h4>
             <div class="row">
               {{ create_switch('IDS Mode', 'ids_mode', checked=ips_settings.ids_mode)|safe }}
-              <form method="POST">
-                <input type="hidden" name="tab" value="1">
-                <div class="input-field col s6 left {{input_color}}">
-                  <select name="passive_block_length" id="pbl" onchange="this.form.submit()">
-                    <option value="0" {% if ips_settings['length']==0 %} selected {% endif %}
-                    >disabled</option>
-                    <option value="24" {% if ips_settings['length']==24 %} selected {% endif %}
-                    >24 hours</option>
-                    <option value="48" {% if ips_settings['length']==48 %} selected {% endif %}
-                    >48 hours</option>
-                    <option value="72" {% if ips_settings['length']==72 %} selected {% endif %}
-                    >72 hours</option>
-                  </select>
-                  <label for="pbl">Passive Block</label>
-                </div>
-              </form>
+              {{ create_dropdown('Passive Block', 'passive_block_length', ips_settings['length'],
+                            options=[('disabled', 0), ('24 hours', 24), ('48 hours', 48), ('72 hours', 72)])|safe }}
             </div>
           </div>
           <div class="card-panel hoverable {{ theme.card }}">

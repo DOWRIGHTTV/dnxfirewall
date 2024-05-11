@@ -534,7 +534,7 @@ def update_local_branch(branch: str) -> list[tuple]:
 
     commands: list[tuple[str, str]] = [
         ('git stash', None),  # resetting any local changes before pulling
-        (f'git pull origin {branch}', 'downloading updates')
+        (f'git pull origin {branch} --force', 'downloading updates')
     ]
 
     return commands

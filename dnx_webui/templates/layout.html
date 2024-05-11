@@ -94,14 +94,23 @@
   {% endif %}
 
   <script>
-      let switches = document.querySelectorAll(".iswitch");
+    let switches = document.querySelectorAll(".iswitch");
 
-      switches.forEach(s => s.setAttribute("onchange", "iSwitchSet(this)"))
-      function iSwitchSet(iSwitch) {
-          iSwitch.setAttribute('value', !!iSwitch.checked ? 1 : 0);
-          iSwitch.checked = true;
-          iSwitch.form.submit();
-      }
+    switches.forEach(s => s.setAttribute("onchange", "iSwitchSet(this)"))
+    function iSwitchSet(iSwitch) {
+      iSwitch.setAttribute('value', !!iSwitch.checked ? 1 : 0);
+      iSwitch.checked = true;
+      iSwitch.form.submit();
+    }
+
+  {% if page_settings.security_profile %}
+    let forms = document.querySelectorAll("form");
+
+    forms.forEach(f => f.setAttribute("onsubmit", "iFormIntercept(this)"));
+    function iFormIntercept(iForm) {
+      iForm.append("security_profile", {{ page_settings.security_profile }});
+    }
+  {% endif %}
   </script>
 
   {# handles a single table as quick enable. additional need to be called within individual page template. #}
