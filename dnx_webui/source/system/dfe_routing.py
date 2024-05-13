@@ -104,12 +104,12 @@ form_validator = ValidationConfigForm({
         'nmk': ValidationFieldInfo(cfg_key='net_mask', format=ip_address),
         'nxh': ValidationFieldInfo(cfg_key='gateway', format=ip_address),
         'nad': ValidationFieldInfo(cfg_key='adm_distance', format=check_digit, validation=validate_adm_distance),
-        'on_exit': ValidationFieldContext(call=lambda cfg: ip_network(f'{cfg.net_id}/{cfg.net_mask}'))
+        '_on_exit': ValidationFieldContext(call=lambda cfg: ip_network(f'{cfg.net_id}/{cfg.net_mask}'))
     },
     'route_del': {
         # 'on_enter': ValidationFieldContext(call=lambda form: ValidationError('Unable to remove routes at this time.')),
         'route_del': ValidationFieldInfo(cfg_key='route_str', validation=validate_route_del),
-        'on_exit': ValidationFieldContext(call=lambda cfg: cfg.update({'route_obj': Route(*cfg.route_str.split(', '))}))
+        '_on_exit': ValidationFieldContext(call=lambda cfg: cfg.update({'route_obj': Route(*cfg.route_str.split(', '))}))
     }
 })
 # ==============

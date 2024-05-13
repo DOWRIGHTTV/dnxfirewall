@@ -230,7 +230,7 @@ def calculate_file_hash(
     return file_hash
 
 def cfg_read_poller(watch_file: str, *, profiles: tuple[int, int] = None, ext: str = 'cfg',
-        cfg_type: str = '', filepath: str = 'dnx_profile/data', class_method: bool = False):
+    cfg_type: str = '', filepath: str = 'dnx_profile/data', class_method: bool = False):
     '''Automate Class configuration file poll decorator.
 
     apply this decorator to all functions that will update configurations loaded in memory from json files.
@@ -255,10 +255,10 @@ def cfg_read_poller(watch_file: str, *, profiles: tuple[int, int] = None, ext: s
         if (profiles[0] not in range(1, 15)):
             raise ValueError('profile start value must be between 1 and 14.')
 
-        if (profiles[1] not in range(2,16)):
+        if (profiles[1] not in range(2, 16)):
             raise ValueError('profile end value must be between 2 and 15.')
 
-    def decorator(function_to_wrap):
+    def decorator(function_to_wrap: Callable_ReturnNone) -> Wrapped_ReturnNone:
         @wraps(function_to_wrap)
         def wrapper(*args):
             watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
@@ -269,13 +269,10 @@ def cfg_read_poller(watch_file: str, *, profiles: tuple[int, int] = None, ext: s
             else:
                 watcher.watch(*args)
 
-        if (class_method):
-            wrapper = classmethod(wrapper)
-
-        return wrapper
+        return classmethod(wrapper) if class_method else wrapper
     return decorator
 
-def cfg_write_poller(list_function: DNSListHandler) -> Wrapper:
+def cfg_write_poller(list_function: DNSListHandler) -> Wrapped_ReturnNone:
     '''Automate module configuration class file polling for read and writes.
 
     only compatible with the dns proxy module whitelist/blacklist read/write operations.
@@ -538,7 +535,7 @@ class ConfigurationManager:
 
         # error as value semantics
         self._err_as_value = err_as_value
-        self.error = None
+        self.error: Optional[ConfigurationError] = None
 
         # initialization isn't required if config file is not specified.
         if (not name):
@@ -610,8 +607,6 @@ class ConfigurationManager:
 
             if (not self._err_as_value):
                 raise self.error
-
-        return True
 
     # will load json data from file, convert it to a ConfigChain
     def load_configuration(self, *, strict: bool = True) -> ConfigChain:

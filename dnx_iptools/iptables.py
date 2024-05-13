@@ -7,7 +7,7 @@ import fcntl
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import Queue, CFG
-from dnx_gentools.file_operations import acquire_lock, release_lock, load_configuration
+from dnx_gentools.file_operations import ConfigurationError, acquire_lock, release_lock, load_configuration
 
 try:
     from dnx_iptools.cprotocol_tools import itoip
@@ -122,15 +122,19 @@ class IPTablesManager:
     iptables_lock_file: ConfigLock = f'{HOME_DIR}/dnx_profile/iptables/iptables.lock'
 
     __slots__ = (
+        '_err_as_value', 'error',
+
         '_intf_to_zone', '_zone_to_intf',
 
         '_iptables_lock'
     )
 
-    def __init__(self) -> None:
-        interfaces: ConfigChain = load_configuration('system', cfg_type='global')
+    def __init__(self, err_as_value: bool = False) -> None:
+        # error as value semantics
+        self._err_as_value = err_as_value
+        self.error: Optional[ConfigurationError] = None
 
-        builtins = interfaces.get_items('interfaces->builtin')
+        builtins = load_configuration('system', cfg_type='global').get_items('interfaces->builtin')
 
         self._intf_to_zone: dict[str, int] = {
             info['ident']: zone for zone, info in builtins
@@ -150,6 +154,12 @@ class IPTablesManager:
             self.commit()
 
         release_lock(self._iptables_lock)
+
+        if (exc_type):
+            self.error = ConfigurationError(f'IPTables manager failed while modifying the rules. error->{exc_val}')
+
+            if (not self._err_as_value):
+                raise self.error
 
         return True
 

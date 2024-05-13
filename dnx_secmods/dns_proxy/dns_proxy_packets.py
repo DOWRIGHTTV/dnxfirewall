@@ -53,7 +53,7 @@ class ClientQuery:
         'question_record', 'additional_records'
     )
 
-    def __init__(self, address: Address, sock_info):
+    def __init__(self, address: NET_ADDRESS, sock_info):
 
         self.client_ip:   int = iptoi(address[0])
         self.client_port: int = address[1]

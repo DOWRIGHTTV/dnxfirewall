@@ -96,7 +96,7 @@ class Listener:
         recv_buffer = memoryview(recv_buf)
 
         nbytes: int
-        address: Address
+        address: NET_ADDRESS
 
         # custom iterator
         for _ in RUN_FOREVER:

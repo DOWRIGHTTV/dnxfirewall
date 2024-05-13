@@ -61,8 +61,8 @@
           return values;
       }
 
-      window.addEventListener("beforeunload",function(e) {
-          document.body.classList.add("page-loading");
+      window.addEventListener('beforeunload',function(e) {
+          document.body.classList.add('page-loading');
       }, false);
 
   </script>
@@ -76,11 +76,11 @@
     <script>
         function activeTab(n) {
             history.replaceState(null, null, window.location.pathname+"?tab="+n);
-            document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value=" + n + ">";
+            document.getElementById('timeout-tab').innerHTML = '<input type=hidden name=tab value=" + n + ">';
         }
 
         function activeMenu(n) {
-            document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value=" + n + ">";
+            document.getElementById('timeout-menu').innerHTML = '<input type=hidden name=menu value=" + n + ">';
         }
     </script>
   {% endif %}
@@ -94,9 +94,9 @@
   {% endif %}
 
   <script>
-    let switches = document.querySelectorAll(".iswitch");
+    let switches = document.querySelectorAll('.iswitch');
 
-    switches.forEach(s => s.setAttribute("onchange", "iSwitchSet(this)"))
+    switches.forEach(s => s.setAttribute('onchange', 'iSwitchSet(this)'));
     function iSwitchSet(iSwitch) {
       iSwitch.setAttribute('value', !!iSwitch.checked ? 1 : 0);
       iSwitch.checked = true;
@@ -104,13 +104,19 @@
     }
 
   {% if page_settings and page_settings.security_profile %}
-    let forms = document.querySelectorAll("form");
+    let forms = document.querySelectorAll('form');
 
-    forms.forEach(f => f.setAttribute("onsubmit", "iFormIntercept(this)"));
+    forms.forEach(f => {console.log(f); f.setAttribute('onsubmit', 'return iFormIntercept(this)')});
     function iFormIntercept(iForm) {
-      iForm.append("security_profile", {{ page_settings.security_profile }});
+      let input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'security_profile';
+      input.value = {{ page_settings.security_profile }};
+
+      iForm.prepend(input);
+
+      return true;
     }
-  {% endif %}
   </script>
 
   {# handles a single table as quick enable. additional need to be called within individual page template. #}

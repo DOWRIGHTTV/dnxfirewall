@@ -1,7 +1,7 @@
 {% extends('layout.html') %}
+{# aliasing for now so we can reuse template #}
+{% set page_settings = ips_settings %}
 {% block body %}
-  {# aliasing for now so we can reuse template #}
-  {% set page_settings = ips_settings %}
   <section id="tabs-bar">
     <div class="container">
       <div class="row">
@@ -28,29 +28,26 @@
               <input type="hidden" name="tab" value="1">
               <input type="hidden" name="ddos_limits">
               <div class="row">
-                <div class="input-field col s12 {{input_color}}">
+                <div class="input-field col s12 {{ input_color }}">
                   <p class="range-field">
-                    <input type="range" name="tcp_limit" id="tcp-l" min="5" max="100"
-                           value="{{ips_settings['ddos']['tcp']}}">
-                    <label for="tcp-l">TCP Source Limit (conns/sec) | Current: {{ips_settings['ddos']['tcp']}}</label>
+                    <input type="range" name="tcp_limit" id="tcp-l" min="5" max="100" value="{{ ips_settings['ddos']['tcp'] }}">
+                    <label for="tcp-l">TCP Source Limit (conns/sec) | Current: {{ ips_settings['ddos']['tcp'] }}</label>
                   </p>
                 </div>
               </div>
               <div class="row">
-                <div class="input-field col s12 {{input_color}}">
+                <div class="input-field col s12 {{ input_color }}">
                   <p class="range-field">
-                    <input type="range" name="udp_limit" id="udp-l" min="5" max="100"
-                           value="{{ips_settings['ddos']['udp']}}">
-                    <label for="udp-l">UDP Source Limit (unique/sec) | Current: {{ips_settings['ddos']['udp']}}</label>
+                    <input type="range" name="udp_limit" id="udp-l" min="5" max="100" value="{{ ips_settings['ddos']['udp'] }}">
+                    <label for="udp-l">UDP Source Limit (unique/sec) | Current: {{ ips_settings['ddos']['udp'] }}</label>
                   </p>
                 </div>
               </div>
               <div class="row">
-                <div class="input-field col s12 {{input_color}}">
+                <div class="input-field col s12 {{ input_color }}">
                   <p class="range-field">
-                    <input type="range" name="icmp_limit" id="icmp-l" min="5" max="100"
-                        value="{{ips_settings['ddos']['icmp']}}">
-                    <label for="icmp-l">ICMP Source Limit (packets/sec) | Current: {{ips_settings['ddos']['icmp']}}</label>
+                    <input type="range" name="icmp_limit" id="icmp-l" min="5" max="100" value="{{ ips_settings['ddos']['icmp'] }}">
+                    <label for="icmp-l">ICMP Source Limit (packets/sec) | Current: {{ ips_settings['ddos']['icmp'] }}</label>
                   </p>
                 </div>
               </div>
@@ -91,16 +88,14 @@
             <form method="POST">
               <input type="hidden" name="tab" value="2">
               <div class="row">
-                <div class="input-field col s4 {{input_color}}">
+                <div class="input-field col s4 {{ input_color }}">
                   <label>
-                    IP Address
-                    <input type="text" name="ips_wl_ip" class="validate" placeholder="127.0.0.1" required>
+                    IP Address<input type="text" name="ips_wl_ip" class="validate" placeholder="127.0.0.1" required>
                   </label>
                 </div>
-                <div class="input-field col s4 {{input_color}}">
+                <div class="input-field col s4 {{ input_color }}">
                   <label>
-                    Name
-                    <input type="text" name="ips_wl_name" class="validate" placeholder=dns required>
+                    Name<input type="text" name="ips_wl_name" class="validate" placeholder=dns required>
                   </label>
                 </div>
                 <div class="input-field col s4">
@@ -114,8 +109,7 @@
         <div class="col s4">
           <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
             <h4 class="{{ theme.title }}">Includes</h4>
-            {{ create_switch('DNS Servers', 'dns_svr_wl', tab=2,
-                        checked=ips_settings.dns_server_whitelist)|safe }}
+            {{ create_switch('DNS Servers', 'dns_svr_wl', tab=2, checked=ips_settings.dns_server_whitelist)|safe }}
           </div>
         </div>
         <div class="col s12">
@@ -130,7 +124,7 @@
               </tr>
               </thead>
               <tbody>
-              {% set message = 'Are you sure you want to remove the IPS whitelist rule?' %}
+              {% set message = 'Are you sure you want to remove the IDS/IPS whitelist rule?' %}
               {% for ip_address, name in ips_settings.ip_whitelist %}
                 <tr>
                   <td>
