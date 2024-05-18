@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from source.web_typing import *
 
 web_module_load_callout(__file__)
@@ -9,7 +11,7 @@ web_module_load_callout(__file__)
 from source.web_validate import *
 
 from dnx_gentools.def_enums import DATA, GEO, DIR
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config, load_data
+from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration, config
 
 from source.web_interfaces import StandardWebPage
 
@@ -104,37 +106,13 @@ class WebPage(StandardWebPage):
 
     @staticmethod
     def update(form: Form) -> WebUpdateError:
-        # this needs to be first because "security profile" key will also be present in the form.
-        if ('security_profile_ident' in form):
-            sp_ident = config(**{
-                'idx': get_convert_in_range(form, 'security_profile', bounds=(1, 15)),
-                'name': form.get('security_profile_name', DATA.MISSING),
-                'desc': form.get('security_profile_desc', DATA.MISSING)
-            })
+        error, ipp_info = form_validator.parse_form(form)
+        if (error):
+            return 1, error.message
 
-            if ([x for x in [DATA.MISSING, DATA.INVALID] if x in sp_ident.values()]):
-                return -2, INVALID_FORM
-
-            if error := validate_security_profile_ident(sp_ident):
-                return -3, error.message
-
-            configure_security_profile_ident(sp_ident)
-
-        # this is needed here to prevent webui thinking request is invalid, so we might as well do the validation here.
-        elif ('security_profile' in form):
-            sec_profile = get_convert_in_range(form, 'security_profile', bounds=(1, 15))
-            if (sec_profile in [DATA.MISSING, DATA.INVALID]):
-                return -1, 'unknown security profile selection.'
-
-        elif ('change_geo_view' in form):
-            geo_direction = convert_int(form.get('menu_dir', DATA.MISSING))
-
-            if (geo_direction not in range(6)):
-                return 1, INVALID_FORM
-
-            valid_regions = load_configuration('geolocation', filepath='dnx_webui/data').get_list()
-            if (form.get('region') not in valid_regions):
-                return 2, INVALID_FORM
+        if (ipp_info.btn == 'security_profile_ident'):
+            if error := configure_security_profile_ident(ipp_info):
+                return 11, error.message
 
         # deprecated:: time restriction will ultimately be merged with quotas.
         # elif ('restriction_enable' in form):
@@ -204,23 +182,17 @@ class WebPage(StandardWebPage):
 
         return True, {'error': 0, 'message': ''}
 
-# ==============
-# VALIDATION
-# ==============
-def validate_security_profile_ident(sp_ident: config) -> Optional[ValidationError]:
-    if (not sp_ident.name.isalpha()):
-        return ValidationError('Security profile name can only contain characters in the alphabet.')
+# ====================
+# VALIDATION - UPDATE
+# ====================
+def validate_geo_view_region(region: str) -> Optional[ValidationError]:
+    valid_regions = load_configuration('geolocation', filepath='dnx_webui/data').get_list()
+    if (region not in valid_regions):
+        return ValidationError('Unknown region specified.')
 
-    if (len(sp_ident.name) > 12):
-        return ValidationError('Security profile name must be less than 12 characters.')
-
-    description = sp_ident.desc.split()
-    if ([x for x in description if not x.isalpha()]):
-        return ValidationError('Security profile description can only contain characters in the alphabet or spaces.')
-
-    if (len(sp_ident.desc) > 32):
-        return ValidationError('Security profile name must be less than 32 characters.')
-
+# ==================
+# VALIDATION - AJAX
+# ==================
 def validate_reputation(category: config) -> Optional[ValidationError]:
     ip_proxy = load_configuration(f'profiles/profile_{category.profile}', cfg_type='security/ip')
 
@@ -243,12 +215,12 @@ def validate_geolocation(category: config, rtype: str = 'country') -> Optional[V
         except:
             return ValidationError(INVALID_FORM)
 
-    elif (rtype == 'continent'):
-        geolocation = load_configuration('geolocation', filepath='dnx_webui/data')
-
-        # TODO: test this.
-        if (category[rtype] not in geolocation.searchable_system_data):
-            return ValidationError(INVALID_FORM)
+    # elif (rtype == 'continent'):
+    #     geolocation = load_configuration('geolocation', filepath='dnx_webui/data')
+    #
+    #     # TODO: test this.
+    #     if (category[rtype] not in geolocation.searchable_system_data):
+    #         return ValidationError(INVALID_FORM)
 
     else:
         return ValidationError(INVALID_FORM)
@@ -264,17 +236,44 @@ def validate_geolocation(category: config, rtype: str = 'country') -> Optional[V
 #
 #     if (tr.suffix not in ['AM', 'PM']):
 #         return ValidationError('Restriction settings are not valid.')
+
+# =========================
+# FORM VALIDATION TEMPLATE
+# =========================
+form_validator = ValidationConfigForm({
+    '__on_enter': {
+        # security profile should always be present so defaulting to -1 if missing to trigger error
+        ValidationPageContext(
+            call=lambda form: check_in_range(form.get('security_profile', -1), (1, 15)),
+            append=lambda form, cfg: cfg.update({'security_profile': cfg.security_profile})
+        )
+    },
+    'security_profile_ident': {
+        'security_profile_name': ValidationFieldInfo(cfg_key='name', validation=partial(alpha_maxlen, max_len=12)),
+        'security_profile_desc': ValidationFieldInfo(
+            cfg_key='desc', validation=partial(alpha_maxlen, max_len=32, override=[' '])),
+    },
+    'change_geo_view': {
+        'menu_dir': ValidationFieldInfo(cfg_key='name', format=partial(check_in_range, (0, 6))),
+        'region': ValidationFieldInfo(cfg_key='name', validation=validate_geo_view_region)
+    }
+})
+
 # ==============
 # CONFIGURATION
 # ==============
-def configure_security_profile_ident(sp_ident: config) -> None:
-    with ConfigurationManager(f'profiles/profile_{sp_ident.idx}', cfg_type='security/ip') as dnx:
-        security_profile_settings: ConfigChain = dnx.load_configuration()
+def configure_security_profile_ident(sp_ident: config) -> Optional[ConfigurationError]:
+    ipp = ConfigurationManager(
+        f'profiles/profile_{sp_ident.idx}', cfg_type='security/ip', err_as_value=True)
+    with ipp:
+        security_profile_settings: ConfigChain = ipp.load_configuration()
 
         security_profile_settings['name'] = sp_ident.name
         security_profile_settings['description'] = sp_ident.desc
 
-        dnx.write_configuration(security_profile_settings.expanded_user_data)
+        ipp.write_configuration(security_profile_settings.expanded_user_data)
+
+    return ipp.error
 
 def configure_reputation(category: config) -> None:
     with ConfigurationManager(f'profiles/profile_{category.profile}', cfg_type='security/ip') as dnx:

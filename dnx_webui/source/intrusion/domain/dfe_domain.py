@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from source.web_typing import *
 
 web_module_load_callout(__file__)
@@ -46,27 +48,13 @@ class WebPage(StandardWebPage):
 
     @staticmethod
     def update(form: Form) -> WebUpdateError:
-        # this needs to be first because "security profile" key will also be present in the form.
-        if ('security_profile_ident' in form):
-            sp_ident = config(**{
-                'idx':  get_convert_in_range(form, 'security_profile', bounds=(1, 15)),
-                'name': form.get('security_profile_name', DATA.MISSING),
-                'desc': form.get('security_profile_desc', DATA.MISSING)
-            })
+        error, dnsp_info = form_validator.parse_form(form)
+        if (error):
+            return 1, error.message
 
-            if ([x for x in [DATA.MISSING, DATA.INVALID] if x in sp_ident.values()]):
-                return -2, INVALID_FORM
-
-            if error := validate_security_profile_ident(sp_ident):
-                return -3, error.message
-
-            configure_security_profile_ident(sp_ident)
-
-        # this is needed here to prevent webui thinking request is invalid, so we might as well do the validation here.
-        elif ('security_profile' in form):
-            sec_profile = get_convert_in_range(form, 'security_profile', bounds=(1, 15))
-            if (sec_profile in [DATA.MISSING, DATA.INVALID]):
-                return -1, 'unknown security profile selection.'
+        if (dnsp_info.btn == 'security_profile_ident'):
+            if error := configure_security_profile_ident(dnsp_info):
+                return 11, error.message
 
         else: return 99, INVALID_FORM
 
@@ -163,17 +151,39 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
 
     return 99, ValidationError(INVALID_FORM)
 
+# =========================
+# FORM VALIDATION TEMPLATE
+# =========================
+form_validator = ValidationConfigForm({
+    '__on_enter': {
+        # security profile should always be present so defaulting to -1 if missing to trigger error
+        ValidationPageContext(
+            call=lambda form: check_in_range(form.get('security_profile', -1), (1, 15)),
+            append=lambda form, cfg: cfg.update({'security_profile': cfg.security_profile})
+        )
+    },
+    'security_profile_ident': {
+        'security_profile_name': ValidationFieldInfo(cfg_key='name', validation=partial(alpha_maxlen, max_len=12)),
+        'security_profile_desc': ValidationFieldInfo(
+            cfg_key='desc', validation=partial(alpha_maxlen, max_len=32, override=[' '])),
+    }
+})
+
 # ==============
 # CONFIGURATION
 # ==============
-def configure_security_profile_ident(sp_ident: config) -> None:
-    with ConfigurationManager(f'profiles/profile_{sp_ident.idx}', cfg_type='security/dns') as dnx:
-        security_profile_settings: ConfigChain = dnx.load_configuration()
+def configure_security_profile_ident(sp_ident: config) -> Optional[ConfigurationError]:
+    dnsp = ConfigurationManager(
+        f'profiles/profile_{sp_ident.idx}', cfg_type='security/ip', err_as_value=True)
+    with dnsp:
+        security_profile_settings: ConfigChain = dnsp.load_configuration()
 
         security_profile_settings['name'] = sp_ident.name
         security_profile_settings['description'] = sp_ident.desc
 
-        dnx.write_configuration(security_profile_settings.expanded_user_data)
+        dnsp.write_configuration(security_profile_settings.expanded_user_data)
+
+    return dnsp.error
 
 # im being very explicit on the if statements because I would rather get the logic right before pretty.
 def configure_domain_categories(category: config, *, ruleset: str):

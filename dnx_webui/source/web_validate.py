@@ -37,6 +37,7 @@ __all__ = (
     'convert_int', 'get_convert_int',
     'convert_bint', 'get_convert_bint',
     'convert_in_range', 'get_convert_in_range',
+    'check_in_options_int',
 
     'alpha_maxlen', 'alphanum_maxlen',
     'standard', 'full_field',
@@ -137,6 +138,8 @@ class ValidationConfigForm:
         # ==================================================
         for field_name, field_profile in form_profile.items():
 
+            field_friedly_name = field_name.replace('_', ' ')
+
             # context fields/ function calls
             if (field_name == '_on_enter'):
                 if error := field_profile.call(form):
@@ -157,15 +160,15 @@ class ValidationConfigForm:
             # field format check will generally raise an exception, but added support for returning instead
             if (field_profile.format):
                 try:
-                    if error := field_profile.format(field_value):
-                        return ValidationError(field_profile.error_msg or error.args[0]), None
-                except Exception as e:
-                    return ValidationError(field_profile.error_msg or e.args[0]), None
+                    if err := field_profile.format(field_value):
+                        return ValidationError(f'{field_friedly_name}: {field_profile.error_msg or err.args[0]}'), None
+                except Exception as err:
+                    return ValidationError(f'{field_friedly_name}: {field_profile.error_msg or err.args[0]}'), None
 
             # field validation returns exception as value only
             if (field_profile.validation):
                 if error := field_profile.validation(field_value):
-                    return ValidationError(f'{field_name.replace("_", " ")}: {error.message}'), None
+                    return ValidationError(f'{field_friedly_name}: {error.message}'), None
 
             cfg[field_profile.cfg_key] = field_profile.convert(field_value)
 
@@ -221,6 +224,14 @@ def check_in_range(s: str, r: tuple[int, int]) -> Optional[ValidationError]:
     if i_s not in range(r[0], r[1] + 1):
         return ValidationError(f'Selection must be within range [{r[0]}, {r[1]}].')
 
+def check_in_options_int(s: str, o: tuple) -> Optional[ValidationError]:
+    try:
+        i_s = int(s)
+    except ValueError:
+        return INVALID_TYPE
+
+    if i_s not in o:
+        return ValidationError(f'Selection must be within options {list(o)}.')
 
 def get_convert_int(form: Union[Form, Args], key: str) -> Union[int, DATA]:
     '''gets string value from submitted form then converts into an integer and returns.

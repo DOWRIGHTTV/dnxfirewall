@@ -133,21 +133,6 @@ class WebPage(StandardWebPage):
 # ==============
 # VALIDATION
 # ==============
-def validate_protocol_limits_range(limit: str, /) -> Optional[ValidationError]:
-    if int(limit) not in range(5, 100):
-        return ValidationError('protocol limits must be in within range 5-100.')
-
-def validate_passive_block_length(pbl: str, /) -> Optional[ValidationError]:
-    options = [0, 24, 48, 72]
-    if int(pbl) not in options:
-        return ValidationError(f'Passive block length outside of valid options {options}.')
-
-def validate_portscan_reject(settings: config, /) -> Optional[ValidationError]:
-    ips: ConfigChain = load_configuration(f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips')
-
-    if (settings.reject and not ips['port_scan->enabled']):
-        return ValidationError('Prevention must be enabled to configure portscan reject.')
-
 def validate_pbl_remove(host: str, /) -> Optional[ValidationError]:
     try:
         host_ip, profile, timestamp = host.split('/')
@@ -177,20 +162,20 @@ form_validator = ValidationConfigForm({
         )
     },
     'security_profile_ident': {
-        'security_profile_name': ValidationFieldInfo(cfg_key='name', validation=partial(alpha_maxlen, max_len=12)),
+        'security_profile_name': ValidationFieldInfo(cfg_key='name', format=partial(alpha_maxlen, max_len=12)),
         'security_profile_desc': ValidationFieldInfo(
-            cfg_key='desc', validation=partial(alpha_maxlen, max_len=32, override=[' '])),
+            cfg_key='desc', format=partial(alpha_maxlen, max_len=32, override=[' '])),
     },
     'ddos_enabled': {
         'ddos_enabled': ValidationFieldInfo(cfg_key='enabled', format=check_bint, convert=int)
     },
     'ddos_limits': {
         'tcp_limit': ValidationFieldInfo(
-            cfg_key='tcp', format=check_digit, convert=int, validation=validate_protocol_limits_range),
+            cfg_key='tcp', format=partial(check_in_range, r=(5, 100)), convert=int),
         'udp_limit': ValidationFieldInfo(
-            cfg_key='udp', format=check_digit, convert=int, validation=validate_protocol_limits_range),
+            cfg_key='udp', format=partial(check_in_range, r=(5, 100)), convert=int),
         'icmp_limit': ValidationFieldInfo(
-            cfg_key='icmp', format=check_digit, convert=int, validation=validate_protocol_limits_range)
+            cfg_key='icmp', format=partial(check_in_range, r=(5, 100)), convert=int)
     },
     'ps_enabled': {
         'ps_enabled': ValidationFieldInfo(cfg_key='enabled', format=check_bint, convert=int)
@@ -200,14 +185,14 @@ form_validator = ValidationConfigForm({
     },
     'passive_block_length': {
         'passive_block_length': ValidationFieldInfo(
-            cfg_key='pb_length', format=check_digit, convert=int, validation=validate_passive_block_length)
+            cfg_key='pb_length', format=partial(check_in_options_int, o=(0, 24, 48, 72)), convert=int)
     },
     'ids_mode': {
         'ids_mode': ValidationFieldInfo(cfg_key='ids_mode', format=check_bint, convert=int)
     },
     'ips_wl_add': {
         'ips_wl_ip': ValidationFieldInfo(cfg_key='ip', format=ip_address),  # idea:: convert to iptoi here?
-        'ips_wl_name': ValidationFieldInfo(cfg_key='name', validation=partial(alphanum_maxlen, max_len=16))
+        'ips_wl_name': ValidationFieldInfo(cfg_key='name', format=partial(alphanum_maxlen, max_len=16))
     },
     'ips_wl_remove': {
         'ips_wl_remove': ValidationFieldInfo(cfg_key='ip', format=ip_address, convert=iptoi)

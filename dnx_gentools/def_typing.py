@@ -27,8 +27,12 @@ if (TYPE_CHECKING and not _DISABLED):
     IP_ADDRESS = NewType('IP_ADDRESS', str)
     IP_ADDRINT = NewType('IP_ADDRINT', int)
 
-    NET_ADDRESS:    TypeAlias = tuple[str, int]  # todo: change to NET_ADDRESS, replace str with IP_ADDRESS
-    NET_ADDRINT: TypeAlias = tuple[int, int]  # todo: change to NET_ADDRINT, replace int with IP_ADDRINT
+    NET_PORT = NewType('NET_PORT', int)
+    TCP_PORT = NewType('TCP_PORT', NET_PORT)
+    UDP_PORT = NewType('UDP_PORT', NET_PORT)
+
+    NET_ADDRESS: TypeAlias = tuple[IP_ADDRESS, NET_PORT]
+    NET_ADDRINT: TypeAlias = tuple[IP_ADDRINT, NET_PORT]
 
     Wrapped_ReturnNone: TypeAlias = Callable[..., None]
     Callable_ReturnNone: TypeAlias = Callable[..., None]
