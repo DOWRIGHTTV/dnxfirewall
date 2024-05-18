@@ -160,9 +160,9 @@ form_validator = ValidationConfigForm({
     },
     'security_profile': SKIP_VALIDATION,
     'security_profile_ident': {
-        'security_profile_name': ValidationFieldInfo(cfg_key='name', format=partial(alpha_maxlen, max_len=12)),
+        'security_profile_name': ValidationFieldInfo(cfg_key='name', format=partial(alpha_maxlen, maxlen=12)),
         'security_profile_desc': ValidationFieldInfo(
-            cfg_key='desc', format=partial(alpha_maxlen, max_len=32, override=[' '])),
+            cfg_key='desc', format=partial(alpha_maxlen, maxlen=32, override=[' '])),
     },
     'ddos_enabled': {
         'ddos_enabled': ValidationFieldInfo(cfg_key='enabled', format=check_bint, convert=int)
@@ -190,7 +190,7 @@ form_validator = ValidationConfigForm({
     },
     'ips_wl_add': {
         'ips_wl_ip': ValidationFieldInfo(cfg_key='ip', format=ip_address),  # idea:: convert to iptoi here?
-        'ips_wl_name': ValidationFieldInfo(cfg_key='name', format=partial(alphanum_maxlen, max_len=16))
+        'ips_wl_name': ValidationFieldInfo(cfg_key='name', format=partial(alphanum_maxlen, maxlen=16))
     },
     'ips_wl_remove': {
         'ips_wl_remove': ValidationFieldInfo(cfg_key='ip', format=ip_address, convert=iptoi)
