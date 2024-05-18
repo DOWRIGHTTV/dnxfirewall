@@ -138,6 +138,7 @@ class ValidationConfigForm:
 
         # needed to register form submissions that are validated at page level __on_enter
         if (form_profile is SKIP_VALIDATION):
+            cfg.btn = btn_name
             return None, cfg
 
         # ==================================================
