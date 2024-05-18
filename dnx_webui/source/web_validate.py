@@ -26,6 +26,7 @@ MAX_PORT = 65535
 MAX_PORT_RANGE = MAX_PORT + 1
 
 __all__ = (
+    'SKIP_VALIDATION',
     'ValidationError', 'ValidationPageContext',
     'ValidationConfigForm', 'ValidationFieldContext', 'ValidationFieldInfo',
 
@@ -49,6 +50,8 @@ __all__ = (
     'domain_name',
     'add_ip_whitelist',
 )
+
+SKIP_VALIDATION = object()  # form field level sentinel
 
 class ValidationError(DNXError):
     '''Webui processing failure or invalid user input.'''
@@ -132,6 +135,10 @@ class ValidationConfigForm:
 
             if error := page_on_enter.append(form, cfg):
                 return error, None
+
+        # needed to register form submissions that are validated at page level __on_enter
+        if (form_profile is SKIP_VALIDATION):
+            return None, cfg
 
         # ==================================================
         # FORM SUBMISSION PROCESSING

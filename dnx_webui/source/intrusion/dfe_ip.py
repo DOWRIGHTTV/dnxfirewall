@@ -248,6 +248,7 @@ form_validator = ValidationConfigForm({
             append=lambda form, cfg: cfg.update({'security_profile': cfg.security_profile})
         )
     },
+    'security_profile': SKIP_VALIDATION,
     'security_profile_ident': {
         'security_profile_name': ValidationFieldInfo(cfg_key='name', validation=partial(alpha_maxlen, max_len=12)),
         'security_profile_desc': ValidationFieldInfo(
