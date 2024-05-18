@@ -141,11 +141,8 @@ class WebPage(StandardWebPage):
         #
         #     configure_time_restriction(tr_settings, 'all')
 
-        elif ('continent' in form):
-            return 69, 'Bulk actions not available.'
-
-        else:
-            return 99, INVALID_FORM
+        # elif ('continent' in form):
+        #     return 69, 'Bulk actions not available.'
 
         return NO_STANDARD_ERROR
 

@@ -56,8 +56,6 @@ class WebPage(StandardWebPage):
             if error := configure_security_profile_ident(dnsp_info):
                 return 11, error.message
 
-        else: return 99, INVALID_FORM
-
         return NO_STANDARD_ERROR
 
     @staticmethod

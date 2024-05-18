@@ -124,9 +124,6 @@ class WebPage(StandardWebPage):
             if error := pbl_remove_notify(ids_ips_info):
                 return 21, error.message
 
-        else:
-            return 99, INVALID_FORM
-
         return NO_STANDARD_ERROR
 
 
