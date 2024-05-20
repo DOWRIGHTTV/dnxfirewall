@@ -26,7 +26,6 @@
             <h4 class="{{ theme.title }}">Denial Of Service</h4>
             <form method="post" id="ddos-limits">
               <input type="hidden" name="tab" value="1">
-              <input type="hidden" name="ddos_limits">
               <div class="row">
                 <div class="input-field col s12 {{ input_color }}">
                   <p class="range-field">
@@ -53,7 +52,7 @@
               </div>
             </form>
             <div class="row">
-              <button class="btn waves-effect waves-light col s4" form="ddos-limits">Update</button>
+              <button class="btn waves-effect waves-light col s4" name="vbtn" value="ddos_limits" form="ddos-limits">Update</button>
               {{ create_switch('Enabled', 'ddos_enabled', checked=ips_settings.ddos.enabled)|safe }}
             </div>
           </div>

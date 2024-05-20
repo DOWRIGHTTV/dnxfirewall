@@ -45,9 +45,11 @@ def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enab
 
     return f'''
     <form method="post"><input type="hidden" name="tab" value="{tab}">
+        <input type="hidden" name="vbtn" value="{name}">
         <div class="input-field col s6 center">{label}
         <div class="switch"><label>Off
-        <input type="checkbox" class="iswitch" name="{name}" {status}><span class="lever"></span>On</label></div></div>
+        <input type="checkbox" class="iswitch" name="{name}" {status}><span class="lever"></span>
+        On</label></div></div>
     </form>
     '''
 
@@ -138,6 +140,7 @@ def create_dropdown(
     dropdown = f'''
     <form method="POST">
         <input type="hidden" name="tab" value="1">
+        <input type="hidden" name="vbtn" value="{name}">
         <div class="input-field col s6 left">
             <select name="{name}" id="{name}" onchange="this.form.submit()">
                 {selections}
@@ -161,9 +164,9 @@ def create_button_with_modal(
         <div class="modal-content"><h5 class="{context_global.theme['modal_text']}">{message}</h5></div>
         <form method="POST">
             <input type="hidden" name="tab" value="{tab}">
-            <input type="hidden" name="{btn_name}" value="{btn_value}">
+            <input type="hidden" name="vbtn" value="{btn_name}">
             <div class="modal-footer">
-                <button name="vbtn" value="{btn_name}" class="btn waves-effect waves-light">YES</button>
+                <button name="{btn_name}" value="{btn_value}" class="btn waves-effect waves-light">YES</button>
                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
             </div>
         </form>
