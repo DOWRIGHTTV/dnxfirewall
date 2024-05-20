@@ -154,7 +154,7 @@ form_validator = ValidationConfigForm({
     # security profile should always be present so defaulting to -1 if missing to trigger error
     '__on_enter': ValidationPageContext(
         call=lambda form: check_in_range(form.get('security_profile', -1), (1, 15)),
-        append=lambda form, cfg: cfg.update({'security_profile': cfg.security_profile})
+        append=lambda form, cfg: cfg.update({'security_profile': form['security_profile']})
     ),
     'security_profile': SKIP_VALIDATION,
     'security_profile_ident': {
