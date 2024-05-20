@@ -104,7 +104,7 @@
     }
 
   {% if page_settings and page_settings.security_profile %}
-    let forms = document.querySelectorAll('form');
+    let forms = document.querySelectorAll('form:not(.sec-profiles-form)');
 
     forms.forEach(f => {console.log(f); f.setAttribute('onsubmit', 'return iFormIntercept(this)')});
     function iFormIntercept(iForm) {
