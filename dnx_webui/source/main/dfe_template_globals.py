@@ -173,6 +173,22 @@ def create_button_with_modal(
     return button
 
 @app.template_global()
+def increment_wrap_positive(i: int, max: int) -> int:
+    '''increments the passed in value by 1, wrapping around to 1 if the value equals "max".
+
+    note: zero is not included in the positive range.
+    '''
+    return 1 if i == max else i + 1
+
+@app.template_global()
+def decrement_wrap_positive(i: int, max: int) -> int:
+    '''decrements the passed in value by 1, wrapping around to max if the value == 1.
+
+    note: zero is not included in the positive range.
+    '''
+    return max if i == 1 else i - 1
+
+@app.template_global()
 def merge_items(a1, a2):
     '''accepts 2 arguments of item or list and merges them into one list. int can be replaced with any singular object.
 

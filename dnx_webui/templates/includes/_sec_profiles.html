@@ -3,16 +3,20 @@
     <form method="post" class="sec-profiles-form">
       <input type="hidden" name="vbtn" value="security_profile">
       <ul class="pagination multi-switch sec-profiles">
-        <li{% if page_settings.security_profile == 1 %} class="disabled"{% endif %}>
-          <button name="security_profile" value="<"><i class="material-icons">chevron_left</i></button>
+        <li>
+          <button name="security_profile" value="{{ decrement_wrap_positive(page_settings.security_profile, 15) }}">
+            <i class="material-icons">chevron_left</i>
+          </button>
         </li>
         {% for profile in range(1,16) %}
           <li class="multi-switch-on{% if page_settings.security_profile == profile %} active{% endif %}">
             <button name="security_profile" value="{{ profile }}">{{ profile }}</button>
           </li>
         {% endfor %}
-        <li{% if page_settings.security_profile == 15 %} class="disabled"{% endif %}>
-          <button name="security_profile" value=">"><i class="material-icons">chevron_right</i></button>
+        <li>
+          <button name="security_profile" value="{{ increment_wrap_positive(page_settings.security_profile, 15) }}">
+            <i class="material-icons">chevron_right</i>
+          </button>
         </li>
       </ul>
     </form>
