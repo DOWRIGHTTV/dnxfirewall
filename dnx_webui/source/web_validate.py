@@ -14,6 +14,7 @@ from dnx_webui.source.web_typing import *
 
 web_module_load_callout(__file__)
 
+from dnx_gentools.def_constants import WEBUI_DEVELOPMENT
 from dnx_gentools.def_enums import CFG, DATA, PROTO
 from dnx_gentools.def_exceptions import DNXError
 from dnx_gentools.file_operations import config
@@ -197,6 +198,9 @@ class ValidationConfigForm:
 
         # appending button name to select correct configuration function
         cfg.btn = btn_name
+
+        if (WEBUI_DEVELOPMENT):
+            print(f'Config data\n{"="*16}\n{cfg}')
 
         return None, cfg
 
