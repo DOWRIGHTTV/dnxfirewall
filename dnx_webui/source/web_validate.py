@@ -130,7 +130,7 @@ class ValidationConfigForm:
         # PAGE ON ENTER - applies to all forms
         # ==================================================
         page_on_enter: Optional[ValidationPageContext]
-        if page_on_enter := form.get('__on_enter', None):
+        if page_on_enter := self.page_forms.get('__on_enter', None):
             if error := page_on_enter.call(form):
                 return error, None
 
