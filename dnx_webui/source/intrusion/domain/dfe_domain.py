@@ -173,7 +173,7 @@ form_validator = ValidationConfigForm({
 # ==============
 def configure_security_profile_ident(sp_ident: config) -> Optional[ConfigurationError]:
     dnsp = ConfigurationManager(
-        f'profiles/profile_{sp_ident.idx}', cfg_type='security/ip', err_as_value=True)
+        f'profiles/profile_{sp_ident.security_profile}', cfg_type='security/ip', err_as_value=True)
     with dnsp:
         security_profile_settings: ConfigChain = dnsp.load_configuration()
 
