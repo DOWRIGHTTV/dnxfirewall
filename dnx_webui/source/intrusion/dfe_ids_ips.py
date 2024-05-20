@@ -151,13 +151,11 @@ def validate_pbl_remove(host: str, /) -> Optional[ValidationError]:
 # FORM VALIDATION TEMPLATE
 # =========================
 form_validator = ValidationConfigForm({
-    '__on_enter': {
-        # security profile should always be present so defaulting to -1 if missing to trigger error
-        ValidationPageContext(
-            call=lambda form: check_in_range(form.get('security_profile', -1), (1, 15)),
-            append=lambda form, cfg: cfg.update({'security_profile': cfg.security_profile})
-        )
-    },
+    # security profile should always be present so defaulting to -1 if missing to trigger error
+    '__on_enter': ValidationPageContext(
+        call=lambda form: check_in_range(form.get('security_profile', -1), (1, 15)),
+        append=lambda form, cfg: cfg.update({'security_profile': cfg.security_profile})
+    ),
     'security_profile': SKIP_VALIDATION,
     'security_profile_ident': {
         'security_profile_name': ValidationFieldInfo(cfg_key='name', format=partial(alpha_maxlen, maxlen=12)),
