@@ -139,8 +139,9 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
             return
 
     elif (ruleset in ['tld']):
-        # general category membership test
-        if not dns_proxy.get_dict(f'tld->{cat_group}').get(cat_name, None):
+        # general category membership test, tld only has a single setting so must check against "None"
+        cat_setting = dns_proxy.get_dict(f'tld->{cat_group}').get(cat_name, None)
+        if (cat_setting is None):
             return 3, ValidationError('Unknown TLD category specified.')
 
         # tld enable-code is in the standard range only
