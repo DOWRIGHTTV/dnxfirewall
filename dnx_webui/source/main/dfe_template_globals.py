@@ -69,9 +69,9 @@ def create_decora_switch(
     <div class="row row-thin"><p class="multi-switch-label center">{value_name.replace("_", " ")}</p></div>
     <div class="row row-thin"><div class="multi-switch-wrapper decora-switch">
     <ul class="multi-switch"{disabled}>
-        <li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="{onclick}(this, 0)">
+        <li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="{onclick}(this,0)">
             <i class="material-icons small">radio_button_unchecked</i></button></li>
-        <li class="multi-switch-on{on}"><button name="{name}" value="{value}" onclick="{onclick}(this, 1)">
+        <li class="multi-switch-on{on}"><button name="{name}" value="{value}" onclick="{onclick}(this,1)">
             <i class="material-icons small">block</i></button></li>
     </ul></div></div></div>
     '''

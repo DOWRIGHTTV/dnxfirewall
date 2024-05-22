@@ -87,7 +87,7 @@ async function updateCategory(btn, enabled, btn_idx = 0, tethered = 0) {
 
   // TLD buttons are handled differently
   if (btn.name === 'tld') {
-    updateBtn(btn, enabled);
+    updateBtn(btn.parentElement, enabled);
     return;
   }
 
