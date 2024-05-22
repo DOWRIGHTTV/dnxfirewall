@@ -187,7 +187,7 @@ def configure_security_profile_ident(sp_ident: config) -> Optional[Configuration
 # im being very explicit on the if statements because I would rather get the logic right before pretty.
 def configure_domain_categories(category: config, *, ruleset: str):
     with ConfigurationManager('profiles/profile_1', cfg_type='security/dns') as dnx:
-        # TODO: does this need to be strict?
+        # note: when custom categories are reintroduced, this wil need to set strict=False
         dns_proxy: ConfigChain = dnx.load_configuration()
 
         # weird naming/ category structures are remnants from older config file formatting.
@@ -219,6 +219,6 @@ def configure_domain_categories(category: config, *, ruleset: str):
             dns_proxy[f'categories->custom->{category.name}->enabled'] = category.enable_code
 
         elif (ruleset in ['tld']):
-            dns_proxy[f'tld->{category.name}'] = category.enable_code
+            dns_proxy[f'tld->{category.group}->{category.name}'] = category.enable_code
 
         dnx.write_configuration(dns_proxy.expanded_user_data)
