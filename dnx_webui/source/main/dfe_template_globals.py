@@ -62,9 +62,11 @@ def create_decora_switch(
     off = ' active' if (not checked or disabled) else ''
     on  = ' active' if (checked and not disabled) else ''
 
+    value_name = value.split(',')[1]
+
     switch = f'''
     <div class="col s3">
-    <div class="row row-thin"><p class="multi-switch-label center">{value.replace("_", " ")}</p></div>
+    <div class="row row-thin"><p class="multi-switch-label center">{value_name.replace("_", " ")}</p></div>
     <div class="row row-thin"><div class="multi-switch-wrapper decora-switch">
     <ul class="multi-switch"{disabled}>
         <li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="{onclick}(this, 0)">
@@ -77,7 +79,7 @@ def create_decora_switch(
     return switch
 
 @app.template_global()
-def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tuple[int, int, int],
+def create_decora_switch_tandem(name: tuple[str, str], value: str, checked: tuple[int, int, int],
         *, enabled: int = 1, onclick: str = 'updateCategory'):
     '''generates and returns HTML containing a title and (2) decora switches.
 
@@ -109,18 +111,18 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
         <h6 class="center">STANDARD</h6>
         <div id="{value_name}-1" class="multi-switch-wrapper decora-switch">
         <ul class="multi-switch">
-            <li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(0,this,0,{th})"{disabled}>
+            <li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,0,{th})"{disabled}>
                 <i class="material-icons small">radio_button_unchecked</i></button></li>
-            <li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(0,this,1,{th})"{disabled}>
+            <li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,1,0,{th})"{disabled}>
                 <i class="material-icons small">block</i></button></li>
         </ul></div></div>
         <div class="row row-thin">
         <h6 class="center">KEYWORD</h6>
         <div id="{value_name}-2" class="multi-switch-wrapper decora-switch">
         <ul class="multi-switch">
-            <li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(1,this,0,{th})"{disabled_two}>
+            <li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,0,1,{th})"{disabled_two}>
                 <i class="material-icons small">radio_button_unchecked</i></button></li>
-            <li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(1,this,1,{th})"{disabled_two}>
+            <li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,1,{th})"{disabled_two}>
                 <i class="material-icons small">block</i></button></li>
         </ul></div></div>
     </div>
