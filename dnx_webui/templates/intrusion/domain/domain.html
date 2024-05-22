@@ -121,7 +121,7 @@ async function updateTLD(btn, enabled) {
 
     let response = await ajaxClient.post('/post', {
       'security_profile': {{ domain_settings.security_profile }},
-      'type': btn.name, 'category': btn.value, 'enabled': enabled
+      'type': btn.name, 'name': btn.value, 'enabled': enabled
     });
 
     // if an error is returned, immediately return. pop-up is handled by the ajax client
