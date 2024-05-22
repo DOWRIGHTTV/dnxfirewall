@@ -19,7 +19,7 @@
 </section>
 <section id="categories" class="section">
   <div class="container">
-  {% if domain_settings['user_defined'] %}
+  {% if domain_settings.user_defined %}
     <div class="row">
       <div class="col s12 m10 offset-m1">
         <div class="card-panel hoverable {{ theme.card }}">
@@ -56,11 +56,11 @@
     <div class="row">
       <div class="col s8 offset-s2">
         <div class="card-panel hoverable {{ theme.card }}">
-        {% for label, categories in domain_settings['tld'] %}
+        {% for label, categories in domain_settings.tld %}
           {{ create_title(label)|safe }}
           {% for tld, status in categories.items() %}
             {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
-            {{ create_decora_switch('tld', tld, status)|safe }}
+            {{ create_decora_switch('tld', tld, status, onclick='updateTLD')|safe }}
             {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
           {% endfor %}
           <br>
@@ -116,6 +116,20 @@ async function updateCategory(btn_idx, btn, enabled, tethered) {
     {#updateBtn(buttons[button_idx]);#}
     {#updateBtn(buttons[(button_idx + 1) % 2]);#}
 }
+async function updateTLD(btn, enabled) {
+    console.log(btn.name, btn.value);
+
+    let response = await ajaxClient.post('/post', {
+      'security_profile': {{ domain_settings.security_profile }},
+      'type': btn.name, 'tld': btn.value, 'enabled': enabled
+    });
+
+    // if an error is returned, immediately return. pop-up is handled by the ajax client
+    if (ajaxClient.handleResponse(response, btn)) { return; }
+
+    updateBtn(btn, enabled);
+}
+
 function updateBtn(btn, enabled) {
     console.log(btn);
 

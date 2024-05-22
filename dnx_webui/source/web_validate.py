@@ -90,6 +90,7 @@ class ValidationFieldInfo(NamedTuple):
     validation: Callable[[str], Optional[ValidationError]] = None
     convert: Callable[[str], Any] = lambda x: x
 
+ValidationPageContexts: TypeAlias = dict[str, ValidationPageContext]
 FormButtonName = str
 FormFieldName = str
 ValidationPageForms_T: TypeAlias = dict[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
@@ -129,13 +130,16 @@ class ValidationConfigForm:
         # ==================================================
         # PAGE ON ENTER - applies to all forms
         # ==================================================
-        page_on_enter: Optional[ValidationPageContext]
+        page_on_enter: Optional[ValidationPageContexts]
         if page_on_enter := self.page_forms.get('__on_enter', None):
-            if error := page_on_enter.call(form):
-                return error, None
+            for context_name, context_profile in page_on_enter.items():
+                conxtext_friedly_name = context_name.replace('_', ' ')
 
-            if error := page_on_enter.append(form, cfg):
-                return error, None
+                if error := context_profile.call(form):
+                    return ValidationError(f'{conxtext_friedly_name}: {error.message}'), None
+
+                if error := context_profile.append(form, cfg):
+                    return ValidationError(f'{conxtext_friedly_name}: {error.message}'), None  # lambda typing issue
 
         # needed to register form submissions that are validated at page level __on_enter
         if (form_profile is SKIP_VALIDATION):
