@@ -105,23 +105,23 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
 
     dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
+    # category data should be a string form of a tuple. converting to tuple to validate
+    try:
+        cat_group, cat_name = category.data.split(',')
+    except ValueError:
+        return 1, ValidationError('Invalid category data format.')
+
+    # reassigning data in config object to tuple for later use
+    category.group = cat_group
+    category.name = cat_name
+
     if (ruleset in ['built-in', 'custom', 'keyword']):
         # keyword and built-in share categories
         r_set = 'built-in' if ruleset == 'keyword' else ruleset
 
-        # category data should be a string form of a tuple. converting to tuple to validate
-        try:
-            cat_group, cat_name = category.data.split(',')
-        except ValueError:
-            return 1, ValidationError(INVALID_FORM)
-
-        # reassigning data in config object to tuple for later use
-        category.group = cat_group
-        category.name = cat_name
-
         # general category membership test
         if not (cat := dns_proxy.get_dict(f'categories->{r_set}->{cat_group}').get(cat_name, None)):
-            return 2, ValidationError(INVALID_FORM)
+            return 2, ValidationError('Unknown domain category specified.')
 
         if (ruleset == 'keyword' and category.enable_code in VALID_CATEGORY_CODES):
 
@@ -140,7 +140,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
 
     elif (ruleset in ['tld']):
         # general category membership test
-        if not dns_proxy.get_dict('tld').get(category.data, None):
+        if not dns_proxy.get_dict(f'tld->{cat_group}').get(cat_name, None):
             return 3, ValidationError('Unknown TLD category specified.')
 
         # tld enable-code is in the standard range only
