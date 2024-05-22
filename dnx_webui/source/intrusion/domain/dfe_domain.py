@@ -126,7 +126,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
         if (ruleset == 'keyword' and category.enable_code in VALID_CATEGORY_CODES):
 
             if (not cat['tethered'] and (category.enable_code and not cat['enabled'])):
-                return 3, ValidationError('standard must be enabled first for this category to use keyword.')
+                return 3, ValidationError('Standard must be enabled first for this category to use keyword.')
 
             return
 
@@ -141,7 +141,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
     elif (ruleset in ['tld']):
         # general category membership test
         if not dns_proxy.get_dict('tld').get(category.name, None):
-            return 3, ValidationError(INVALID_FORM)
+            return 3, ValidationError('Unknown TLD category specified.')
 
         # tld enable-code is in the standard range only
         if (category.enable_code in STANDARD_CATEGORY_CODES):
