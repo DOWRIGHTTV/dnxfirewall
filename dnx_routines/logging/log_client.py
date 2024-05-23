@@ -444,9 +444,9 @@ import sys as _sys
 import traceback as _tb
 
 _err_report_write_lock = threading.Lock()
-_err_report_path = f'{HOME_DIR}/dnx_profile/log/_err_reports/{_system_date(string=True)}_err.log'
+_err_report_path = f'{HOME_DIR}/dnx_profile/log/_err_reports'
 
-# Process hook -> called if an unhandled exception occurs in the Main thread or within a Thread exception hook.
+# Process hook -> called if an unhandled exception occurs in the Main thread or within the Thread exception hook.
 def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         print(f'\nProcess [{__file__.split("/", 3)[3]}] terminated by Keyboard Interrupt.')
@@ -456,9 +456,10 @@ def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
 
     _dump_to_file(_err_report_path, err_report, lock=_err_report_write_lock)
 
-    # checking for Log handler initialization to prevent additional errors on early runtime thread exceptions
+    # checking for Log handler initialization to prevent additional errors on early runtime exceptions
     if (Log.is_running):
-        Log.alert(f'{str(exc_type).split()[1][:-1]} -> {exc_value} :: see {_err_report_path}')
+        err_file = f'{_err_report_path}/{_system_date(string=True)}_err.log'
+        Log.alert(f'{str(exc_type).split()[1][:-1]} -> {exc_value} :: see {err_file}')
 
 _sys.excepthook = _handle_unhandled_exception
 
@@ -470,6 +471,11 @@ def _handle_unhandled_thread_exception(args, /):
     err_report = _format_output(args.exc_type, args.exc_value, args.exc_traceback)
 
     _dump_to_file(_err_report_path, err_report, lock=_err_report_write_lock)
+
+    # checking for Log handler initialization to prevent additional errors on early runtime thread exceptions
+    if (Log.is_running):
+        err_file = f'{_err_report_path}/{_system_date(string=True)}_err.log'
+        Log.critical(f'{str(args.exc_type).split()[1][:-1]} -> {args.exc_value} :: see {err_file}')
 
 
 threading.excepthook = _handle_unhandled_thread_exception

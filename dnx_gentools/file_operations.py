@@ -722,7 +722,7 @@ class Watcher:
                     config_chain: ConfigChain = load_configuration(
                         profile_path, self._ext, cfg_type=self._cfg_type, filepath=self._filepath, strict=False)
 
-                    self._callback(*args, profile_name, config_chain)
+                    self._callback(*args, profile_num, config_chain)
 
             else:
                 fast_sleep(FILE_POLL_TIMER)
