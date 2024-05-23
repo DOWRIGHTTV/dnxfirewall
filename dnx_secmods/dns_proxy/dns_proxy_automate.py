@@ -43,8 +43,6 @@ class CFG_PROFILE(NamedTuple):
 
     # en_dns | tld | keyword |
     signatures: ClassVar[DNS_SIGNATURES]
-
-    _keywords: ClassVar[list[tuple[str, DNS_CAT]]]
     '''
     idx: int
 
@@ -54,15 +52,13 @@ class CFG_PROFILE(NamedTuple):
     # en_dns | tld | keyword |
     signatures: ClassVar[DNS_SIGNATURES]
 
-    _keywords: ClassVar[list[tuple[str, DNS_CAT]]]
-
 
 class ProxyConfiguration(ConfigurationMixinBase):
     '''DNS proxy configuration Mixin.
     '''
     cfg_profiles: ClassVar[tuple[CFG_PROFILE, ...]] = tuple(
         CFG_PROFILE(
-            i, DNS_WHITELIST({}), DNS_BLACKLIST({}), DNS_SIGNATURES({DNS_CAT.dns_https}, {}, []), _keywords=[]
+            i, DNS_WHITELIST({}), DNS_BLACKLIST({}), DNS_SIGNATURES({DNS_CAT.dns_https}, {}, [])
         ) for i in range(PROFILE_CT+1)  # note: +1 is to allow for [1] start index. [0] is reserved for the system.
     )
 
@@ -73,7 +69,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
         '''
         # TODO: keyword matching is in the process of a rework. they will not be loaded for the time being.
         # needed to be moved since other sigs are now being handled by an external C extension via cython
-        self.__class__._keywords = []  # load_keywords(log=Log)
+        # self.__class__._keywords = []  # load_keywords(log=Log)
 
         threads = (
             (self._get_proxy_settings, ()),

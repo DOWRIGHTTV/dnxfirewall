@@ -716,10 +716,11 @@ class Watcher:
 
                 if modified_time := self._profile_is_modified(profile_name, last_modified):
 
+                    profile_path = f'profiles/{profile_name}'
                     file_tracker[profile_num] = modified_time
 
                     config_chain: ConfigChain = load_configuration(
-                        profile_name, self._ext, cfg_type=self._cfg_type, filepath=self._filepath, strict=False)
+                        profile_path, self._ext, cfg_type=self._cfg_type, filepath=self._filepath, strict=False)
 
                     self._callback(*args, profile_name, config_chain)
 
