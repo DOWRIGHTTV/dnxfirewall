@@ -90,11 +90,13 @@ class ValidationFieldInfo(NamedTuple):
     validation: Callable[[str], Optional[ValidationError]] = None
     convert: Callable[[str], Any] = lambda x: x
 
-ValidationPageContexts: TypeAlias = dict[str, ValidationPageContext]
-FormButtonName = str
-FormFieldName = str
-ValidationPageForms_T: TypeAlias = dict[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
-ValidationPageForms_P: TypeAlias = MappingProxyType[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
+
+if (TYPE_CHECKING):
+    ValidationPageContexts: TypeAlias = dict[str, ValidationPageContext]
+    FormButtonName = str
+    FormFieldName = str
+    ValidationPageForms_T: TypeAlias = dict[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
+    ValidationPageForms_P: TypeAlias = MappingProxyType[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
 
 class ValidationConfigForm:
     '''Configuration class for storing configuration key/value pairs.
