@@ -603,13 +603,13 @@ class ConfigurationManager:
         # !test: this was changed to allow forward compatibility with the new automatic api.
         #  make sure the original and new api are working correctly.
         elif (exc_type is None):
-            # new method for writing, done automatically
-            if (self.config_data.user_modified):
-                self.__write_to_disk(json.dumps(self.config_data.expanded_user_data, indent=2))
-
             # old method for writing, requires calling load/write_configuration methods
-            elif (self._data_written):
+            if (self._data_written):
                 self.__write_to_disk(json.dumps(self._config_data, indent=2))
+
+            # new method for writing, done automatically
+            elif (self.config_data and self.config_data.user_modified):
+                self.__write_to_disk(json.dumps(self.config_data.expanded_user_data, indent=2))
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
         release_lock(self._config_lock)
