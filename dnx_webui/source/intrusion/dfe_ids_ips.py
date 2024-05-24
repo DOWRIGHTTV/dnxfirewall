@@ -212,7 +212,7 @@ form_validator = ValidationConfigForm({
 # ==============
 def configure_security_profile_ident(sp_ident: config) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{sp_ident.profile}', cfg_type='security/ids_ips', err_as_value=True)
+        f'profiles/profile_{sp_ident.security_profile}', cfg_type='security/ids_ips', err_as_value=True)
     with ids_ips:
         ids_ips.config_data['name'] = sp_ident.name
         ids_ips.config_data['description'] = sp_ident.desc
@@ -253,7 +253,7 @@ def configure_portscan(portscan: config, *, field: str) -> Optional[Configuratio
 
 def configure_general_settings(settings: config, *, field: str) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+        f'profiles/profile_{settings.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
         if (field == 'pb_length'):
             ids_ips.config_data['passive_block_ttl'] = settings.pb_length
@@ -265,7 +265,7 @@ def configure_general_settings(settings: config, *, field: str) -> Optional[Conf
 
 def configure_ip_whitelist(whitelist: config, *, action: CFG) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{whitelist.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+        f'profiles/profile_{whitelist.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
         if (action is CFG.ADD):
             ids_ips.config_data[f'whitelist->ip_whitelist->{whitelist.ip}'] = whitelist.name
@@ -277,7 +277,7 @@ def configure_ip_whitelist(whitelist: config, *, action: CFG) -> Optional[Config
 
 def configure_dns_whitelist(settings: config, /) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+        f'profiles/profile_{settings.security_profiles}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
         ids_ips.config_data['whitelist->dns_servers'] = settings.action
 

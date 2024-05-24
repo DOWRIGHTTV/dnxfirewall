@@ -61,7 +61,7 @@
           <div class="row">
             <form method="POST">
               <input type="hidden" name="tab" value="2">
-              <input type="hidden" name="change_geo_view">
+              <input type="hidden" name="vbtn" value="change_geo_view">
               <div class="input-field col s5 m3 offset-m1 {{ input_color }}">
                 <select name="region" id="region" onchange="this.form.submit()">
                   {% for region in ip_settings.regions %}
