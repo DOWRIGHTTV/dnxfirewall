@@ -229,7 +229,7 @@ def configure_ddos(ddos: CFG) -> Optional[ConfigurationError]:
 
 def configure_ddos_limits(ddos_limits: config) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{ddos_limits.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+        f'profiles/profile_{ddos_limits.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
         for protocol, limit in ddos_limits.items():
             ids_ips.config_data[f'ddos->limits->source->{protocol}'] = limit
@@ -238,7 +238,7 @@ def configure_ddos_limits(ddos_limits: config) -> Optional[ConfigurationError]:
 
 def configure_portscan(portscan: config, *, field: str) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{portscan.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+        f'profiles/profile_{portscan.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
         if (field == 'enabled'):
             ids_ips.config_data['port_scan->enabled'] = portscan.enabled

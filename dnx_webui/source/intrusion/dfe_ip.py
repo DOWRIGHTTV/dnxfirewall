@@ -249,7 +249,7 @@ form_validator = ValidationConfigForm({
     'security_profile_ident': {
         'security_profile_name': ValidationFieldInfo(cfg_key='name', validation=partial(alpha_maxlen, maxlen=12)),
         'security_profile_desc': ValidationFieldInfo(
-            cfg_key='desc', validation=partial(alpha_maxlen, max_len=32, override=[' '])),
+            cfg_key='desc', validation=partial(alpha_maxlen, maxlen=32, override=[' '])),
     },
     'change_geo_view': {
         'menu_dir': ValidationFieldInfo(cfg_key='name', format=partial(check_in_range, (0, 6))),
