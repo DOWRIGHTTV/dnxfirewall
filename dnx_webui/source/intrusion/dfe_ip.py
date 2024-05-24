@@ -267,7 +267,7 @@ def configure_security_profile_ident(sp_ident: config) -> Optional[Configuration
         security_profile_settings: ConfigChain = ipp.load_configuration()
 
         security_profile_settings['name'] = sp_ident.name
-        security_profile_settings['description'] = sp_ident.desc
+        security_profile_settings['desc'] = sp_ident.desc
 
         ipp.write_configuration(security_profile_settings.expanded_user_data)
 

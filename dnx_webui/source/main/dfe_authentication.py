@@ -192,7 +192,7 @@ def update_session_tracker(
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')
 
-    with ConfigurationManager('session_tracker', file_path='dnx_webui/data') as session_tracker:
+    with ConfigurationManager('session_tracker', dir='dnx_webui/data') as session_tracker:
         persistent_tracker: ConfigChain = session_tracker.load_configuration(strict=False)
 
         user_path = f'active_users->{name}'

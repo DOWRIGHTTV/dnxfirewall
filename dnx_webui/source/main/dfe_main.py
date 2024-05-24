@@ -803,7 +803,7 @@ def set_user_settings() -> None:
 
         if new_theme not in ['light', 'dark']: return
 
-        with ConfigurationManager('logins', file_path='/dnx_webui/data') as webui:
+        with ConfigurationManager('logins', dir='dnx_webui/data') as webui:
             webui_settings: ConfigChain = webui.load_configuration()
 
             # this check prevents issues with login/out transitions

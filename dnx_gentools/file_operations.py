@@ -313,13 +313,15 @@ class config(dict):
         self[key] = value
 
 
-# TODO: shouldnt __mutable_config be an alias to __flatten_config[0] (user config) so any changes to the data will be
+# !test: __mutable_config is now an alias to __flatten_config[0] (user config) so any changes to the data should be
 #  reflected in the _merge_expand operation and subsequently all the get methods.
 class ConfigChain:
 
     _sep: ClassVar[str] = '->'
 
     __slots__ = (
+        'user_modified',
+
         '__config', '__flat_config', '__mutable_config'
     )
 
@@ -331,10 +333,18 @@ class ConfigChain:
         self.__config = (user, system)
         self.__flat_config = (user_flat, system_flat)
 
-        self.__mutable_config = copy(self.__flat_config[0])
+        # self.__mutable_config = copy(self.__flat_config[0])
+        self.__mutable_config = user_flat
+
+        # will be set to True on any set or del operation.
+        # this won't be reset if the data is set back to the original value.
+        self.user_modified = False
 
     def __str__(self):
         return json.dumps(self._merge_expand(), indent=2)
+
+    def __getattr__(self, item) -> NoReturn:
+        raise RuntimeError('ConfigChain does not support attribute access.')
 
     def __getitem__(self, key: str) -> Union[bool, int, str, list]:
 
@@ -347,16 +357,18 @@ class ConfigChain:
         raise KeyError(f'{key} not found in configuration chain.')
 
     def __setitem__(self, key: str, value: Union[bool, int, float, str, list, None]):
-
-        # print('setting ->', value)
-
         self.__mutable_config[key] = value
+
+        self.user_modified = True
 
     def __delitem__(self, key: str) -> None:
 
         key_matches = [k for k in self.__mutable_config if k.startswith(key)]
         for k in key_matches:
             del self.__mutable_config[k]
+
+        if (key_matches):
+            self.user_modified = True
 
     def get(self, key: str, ret_val: Any = None) -> Any:
 
@@ -442,7 +454,7 @@ class ConfigChain:
 
     @property
     def user_data(self) -> dict:
-        '''returns mutable flattened user config dictionary.
+        '''returns a reference to the mutable flattened user config dictionary.
         '''
         return self.__mutable_config
 
@@ -450,7 +462,11 @@ class ConfigChain:
     def expanded_user_data(self) -> dict:
         '''returns snapshot of expanded user config dictionary.
 
+        changes made to the returned dictionary will not be reflected in the ConfigChain object.
         additional calls are required to reflect changes to user data outside the returned object.
+
+        idea:: have this return a mapping proxy to the primary expanded dict and make changes to the flat config flow
+          back through the initially loaded expanded configuration.
         '''
         return self._expand(self.__mutable_config)
 
@@ -502,19 +518,25 @@ class ConfigChain:
 class ConfigurationManager:
     '''Class to ensure process safe operations on configuration files.
 
-    This class is written as a context manager and must be used as such. upon calling the context, a file lock will be
-    obtained or block until it can acquire the lock and return the class object to the caller.
+    This class is written as a context manager and must be used as such.
+    A configuration-global file lock will be acquired upon entering the context and released upon exiting.
+     - If the lock is held by another thread/process, it will block until it can be acquired.
+
+     *old: load/write_configuration methods should be replaced with the automatic api, but are still available for use.
+     *new: automatic api is enabled by settings err_as_value=True. config_data will be loaded on entry.
     '''
     log: LogHandler_T = None
     config_lock_file: IPTablesLock = f'{HOME_DIR}/dnx_profile/data/config.lock'
 
     __slots__ = (
-        '_name', '_ext', '_cfg_type', '_filename',
+        'config_data', 'error',
 
-        '_err_as_value', 'error',
+        '_config_data', '_err_as_value',
+
+        '_name', '_ext', '_cfg_type', '_filename', '_strict',
 
         '_config_lock', '_data_written',
-        '_file_path', '_usr_path_file',  # '_system_path_file',
+        '_dir', '_usr_file_path',  # '_system_path_file',
         '_temp_file', '_temp_file_path',
     )
 
@@ -524,18 +546,22 @@ class ConfigurationManager:
         '''
         cls.log: LogHandler_T = ref
 
-    def __init__(self, name: str = '', ext: str = 'cfg', cfg_type: str = '', file_path: str = None, *,
-            err_as_value: bool = False) -> None:
-        '''config_file can be omitted to allow for configuration lock to be used with
-        external operations.
+    def __init__(self, name: str = '', ext: str = 'cfg', cfg_type: str = '', dir: str = 'dnx_profile/data', *,
+            err_as_value: bool = False, strict: bool = True) -> None:
+        ''' if err_as_value=True, ConfigurationErrors will not be raised and will be stored in the error attribute.
+                - the automatic api is also tied to this argument and will load the configuration data on entry.
         '''
         self._name = name
         self._ext  = ext
         self._cfg_type = cfg_type
+        self._strict   = strict
+
+        self.config_data:  Optional[ConfigChain] = None
+        self._config_data: Optional[dict] = None
 
         # error as value semantics
-        self._err_as_value = err_as_value
         self.error: Optional[ConfigurationError] = None
+        self._err_as_value = err_as_value
 
         # initialization isn't required if config file is not specified.
         if (not name):
@@ -545,28 +571,22 @@ class ConfigurationManager:
         else:
             self._data_written = False
 
-            if (not file_path):
-                file_path = 'dnx_profile/data'
-
-            self._file_path = file_path
+            self._dir = dir
             self._filename = f'{cfg_type}/{name}.{ext}' if cfg_type else f'{name}.{ext}'
 
             # self._system_path_file = f'{HOME_DIR}/{file_path}/system/{self._filename}'
-            self._usr_path_file = f'{HOME_DIR}/{file_path}/usr/{self._filename}'
+            self._usr_file_path = f'{HOME_DIR}/{dir}/usr/{self._filename}'
 
     # attempt to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
     def __enter__(self) -> ConfigurationManager:
         self._config_lock = acquire_lock(self.config_lock_file)
 
-        # setup required only if the config file is specified.
-        if (self._name):
-            # TEMP prefix is to wildcard match any orphaned files for deletion
-            self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}'
-            self._temp_file = open(self._temp_file_path, 'w+', opener=file_opener)
-
-            # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
-            shutil.chown(self._temp_file_path, user=USER, group=GROUP)
+        # replacing the need for load_configuration method to be called every time the context is created.
+        # note: this is for forward compatibility and the original method is still available for use.
+        #  - locking behind err_as_value because it will be used on new code and will prevent double loading for now.
+        if (self._err_as_value):
+            self.config_data: Optional[ConfigChain] = self.load_configuration(strict=self._strict)
 
         self.log.debug(f'Config file lock acquired for {self._filename}.')
 
@@ -580,12 +600,16 @@ class ConfigurationManager:
         if (not self._name):
             pass
 
-        elif (exc_type is None and self._data_written):
-            os.replace(self._temp_file_path, self._usr_path_file)
+        # !test: this was changed to allow forward compatibility with the new automatic api.
+        #  make sure the original and new api are working correctly.
+        elif (exc_type is None):
+            # new method for writing, done automatically
+            if (self.config_data.user_modified):
+                self.__write_to_disk(json.dumps(self.config_data.expanded_user_data, indent=2))
 
-        else:
-            self._temp_file.close()
-            os.unlink(self._temp_file_path)
+            # old method for writing, requires calling load/write_configuration methods
+            elif (self._data_written):
+                self.__write_to_disk(json.dumps(self._config_data, indent=2))
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
         release_lock(self._config_lock)
@@ -608,28 +632,43 @@ class ConfigurationManager:
             if (not self._err_as_value):
                 raise self.error
 
+    def __write_to_disk(self, updated_config: str) -> Optional[ConfigurationError]:
+        # TEMP prefix is to wildcard match any orphaned files for deletion
+        temp_file_path = f'{HOME_DIR}/dnx_profile/interfaces/TEMP_{token_urlsafe(10)}'
+
+        if write_file(temp_file_path, updated_config):
+            # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
+            shutil.chown(temp_file_path, user=USER, group=GROUP)
+            os.replace(temp_file_path, self._usr_file_path)
+
+        else:
+            return ConfigurationError('ConfigurationManager failed to write configuration to temp file.')
+
     # will load json data from file, convert it to a ConfigChain
     def load_configuration(self, *, strict: bool = True) -> ConfigChain:
         '''returns python dictionary of configuration file contents.
+
+        *old: this should be replaced with the new automatic load/write api.
         '''
         if (not self._name):
-            raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
+            raise RuntimeError('ConfigurationManager methods are disabled in lock only mode.')
 
         return load_configuration(
-            self._name, self._ext, cfg_type=self._cfg_type, filepath=self._file_path, strict=strict)
+            self._name, self._ext, cfg_type=self._cfg_type, filepath=self._dir, strict=strict)
 
     # accepts python dictionary for serialization to json. writes data to specified file opened.
     def write_configuration(self, data_to_write: dict):
         '''writes configuration data as json to generated temporary file.
+
+        *old: this should be replaced with the new automatic load/write api.
         '''
         if (not self._name):
-            raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
+            raise RuntimeError('ConfigurationManager methods are disabled in lock only mode.')
 
         if (self._data_written):
             raise RuntimeWarning('configuration file has already been written to.')
 
-        json.dump(data_to_write, self._temp_file, indent=2)
-        self._temp_file.flush()
+        self._config_data = data_to_write
 
         # this is to inform context to copy temp file to dnx configuration folder
         self._data_written = True

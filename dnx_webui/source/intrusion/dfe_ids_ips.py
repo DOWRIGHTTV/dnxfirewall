@@ -214,100 +214,72 @@ def configure_security_profile_ident(sp_ident: config) -> Optional[Configuration
     ids_ips = ConfigurationManager(
         f'profiles/profile_{sp_ident.profile}', cfg_type='security/ids_ips', err_as_value=True)
     with ids_ips:
-        security_profile_settings: ConfigChain = ids_ips.load_configuration()
-
-        security_profile_settings['name'] = sp_ident.name
-        security_profile_settings['description'] = sp_ident.desc
-
-        ids_ips.write_configuration(security_profile_settings.expanded_user_data)
+        ids_ips.config_data['name'] = sp_ident.name
+        ids_ips.config_data['description'] = sp_ident.desc
 
     return ids_ips.error
 
 def configure_ddos(ddos: CFG) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{ddos.profile}', cfg_type='security/ids_ips', err_as_value=True)
+        f'profiles/profile_{ddos.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
-        ips_settings: ConfigChain = ids_ips.load_configuration(strict=False)
-
-        ips_settings['ddos->enabled'] = ddos.enabled
-
-        ids_ips.write_configuration(ips_settings.expanded_user_data)
+        ids_ips.config_data['ddos->enabled'] = ddos.enabled
 
     return ids_ips.error
 
 def configure_ddos_limits(ddos_limits: config) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{ddos_limits.profile}', cfg_type='security/ids_ips', err_as_value=True)
+        f'profiles/profile_{ddos_limits.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
-        ips_settings: ConfigChain = ids_ips.load_configuration(strict=False)
-
         for protocol, limit in ddos_limits.items():
-            ips_settings[f'ddos->limits->source->{protocol}'] = limit
-
-        ids_ips.write_configuration(ips_settings.expanded_user_data)
+            ids_ips.config_data[f'ddos->limits->source->{protocol}'] = limit
 
     return ids_ips.error
 
 def configure_portscan(portscan: config, *, field: str) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{portscan.profile}', cfg_type='security/ids_ips', err_as_value=True)
+        f'profiles/profile_{portscan.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
-        ips_settings: ConfigChain = ids_ips.load_configuration(strict=False)
-
         if (field == 'enabled'):
-            ips_settings['port_scan->enabled'] = portscan.enabled
+            ids_ips.config_data['port_scan->enabled'] = portscan.enabled
 
             if (not portscan.enabled):
-                ips_settings['port_scan->reject'] = 0
+                ids_ips.config_data['port_scan->reject'] = 0
 
         elif (field == 'reject'):
-            ips_settings['port_scan->reject'] = portscan.reject
-
-        ids_ips.write_configuration(ips_settings.expanded_user_data)
+            ids_ips.config_data['port_scan->reject'] = portscan.reject
 
     return ids_ips.error
 
 def configure_general_settings(settings: config, *, field: str) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips', err_as_value=True)
+        f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
-        ips_settings: ConfigChain = ids_ips.load_configuration(strict=False)
-
         if (field == 'pb_length'):
-            ips_settings['passive_block_ttl'] = settings.pb_length
+            ids_ips.config_data['passive_block_ttl'] = settings.pb_length
 
         elif (field == 'ids_mode'):
-            ips_settings['ids_mode'] = settings.ids_mode
-
-        ids_ips.write_configuration(ips_settings.expanded_user_data)
+            ids_ips.config_data['ids_mode'] = settings.ids_mode
 
     return ids_ips.error
 
 def configure_ip_whitelist(whitelist: config, *, action: CFG) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{whitelist.profile}', cfg_type='security/ids_ips', err_as_value=True)
+        f'profiles/profile_{whitelist.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
-        ips_settings: ConfigChain = ids_ips.load_configuration(strict=False)
-
         if (action is CFG.ADD):
-            ips_settings[f'whitelist->ip_whitelist->{whitelist.ip}'] = whitelist.name
+            ids_ips.config_data[f'whitelist->ip_whitelist->{whitelist.ip}'] = whitelist.name
 
         elif (action is CFG.DEL):
-            del ips_settings[f'whitelist->ip_whitelist->{whitelist.ip}']
-
-        ids_ips.write_configuration(ips_settings.expanded_user_data)
+            del ids_ips.config_data[f'whitelist->ip_whitelist->{whitelist.ip}']
 
     return ids_ips.error
 
 def configure_dns_whitelist(settings: config, /) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips', err_as_value=True)
+        f'profiles/profile_{settings.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
-        ips_settings: ConfigChain = ids_ips.load_configuration(strict=False)
-
-        ips_settings['whitelist->dns_servers'] = settings.action
-
-        ids_ips.write_configuration(ips_settings.expanded_user_data)
+        ids_ips.config_data['whitelist->dns_servers'] = settings.action
 
     return ids_ips.error
 
@@ -320,12 +292,8 @@ def pbl_remove_notify(pbl: config) -> Optional[ConfigurationError]:
     if (iptables.error):
         return iptables.error
 
-    ids_ips = ConfigurationManager('global', cfg_type='security/ids_ips', err_as_value=True)
+    ids_ips = ConfigurationManager('global', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
-        ips_global_settings: ConfigChain = ids_ips.load_configuration(strict=False)
-
-        ips_global_settings[f'pbl_remove->{pbl.host}'] = [pbl.profile_idx, pbl.timestamp]
-
-        ids_ips.write_configuration(ips_global_settings.expanded_user_data)
+        ids_ips.config_data[f'pbl_remove->{pbl.host}'] = [pbl.profile_idx, pbl.timestamp]
 
     return ids_ips.error

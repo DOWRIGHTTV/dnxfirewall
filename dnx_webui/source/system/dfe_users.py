@@ -124,7 +124,7 @@ def user_role(role: str, /) -> Optional[ValidationError]:
 # ==============
 def configure_user_account(account: config, action: CFG) -> Optional[ValidationError]:
 
-    with ConfigurationManager('logins', file_path='/dnx_webui/data') as dnx:
+    with ConfigurationManager('logins', dir='dnx_webui/data') as dnx:
         accounts: ConfigChain = dnx.load_configuration(strict=False)
 
         users = accounts.get_list('users')

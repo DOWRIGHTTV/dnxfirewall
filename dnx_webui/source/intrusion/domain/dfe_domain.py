@@ -176,19 +176,15 @@ def configure_security_profile_ident(sp_ident: config) -> Optional[Configuration
     dnsp = ConfigurationManager(
         f'profiles/profile_{sp_ident.security_profile}', cfg_type='security/ip', err_as_value=True)
     with dnsp:
-        security_profile_settings: ConfigChain = dnsp.load_configuration()
-
-        security_profile_settings['name'] = sp_ident.name
-        security_profile_settings['description'] = sp_ident.desc
-
-        dnsp.write_configuration(security_profile_settings.expanded_user_data)
+        dnsp.config_data['name'] = sp_ident.name
+        dnsp.config_data['desc'] = sp_ident.desc
 
     return dnsp.error
 
 # im being very explicit on the if statements because I would rather get the logic right before pretty.
 def configure_domain_categories(category: config, *, ruleset: str):
     with ConfigurationManager('profiles/profile_1', cfg_type='security/dns') as dnx:
-        # note: when custom categories are reintroduced, this wil need to set strict=False
+        # note: when custom categories are reintroduced, this will need to set strict=False
         dns_proxy: ConfigChain = dnx.load_configuration()
 
         # weird naming/ category structures are remnants from older config file formatting.

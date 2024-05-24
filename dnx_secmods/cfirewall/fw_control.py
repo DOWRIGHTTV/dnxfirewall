@@ -85,7 +85,7 @@ class FirewallControl:
 
         This is a replace operation on disk and thread/process safe.
         '''
-        with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
+        with ConfigurationManager(DEFAULT_VERSION, ext='firewall', dir=DEFAULT_PATH) as dnx_fw:
             fw_rules: ConfigChain = dnx_fw.load_configuration(strict=False)
 
             fw_rules_copy = fw_rules.get_dict()
@@ -171,7 +171,7 @@ class FirewallControl:
     @staticmethod
     def modify_management_access(fields: config) -> bool:
 
-        with ConfigurationManager('system', ext='firewall', file_path='dnx_profile/iptables') as system_rules_file:
+        with ConfigurationManager('system', ext='firewall', dir='dnx_profile/iptables') as system_rules_file:
             system_rules = system_rules_file.load_configuration()
 
             for svc in fields.service_ports:

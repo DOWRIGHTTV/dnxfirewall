@@ -15,7 +15,7 @@ from subprocess import run, CalledProcessError, DEVNULL
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_exceptions import ParseError
 from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX, str_join
-from dnx_gentools.def_enums import PROTO
+from dnx_gentools.def_enums import PROTO_ICMP
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
