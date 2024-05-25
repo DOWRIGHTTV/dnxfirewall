@@ -262,19 +262,15 @@ form_validator = ValidationConfigForm({
 # ==============
 def configure_security_profile_ident(sp_ident: config) -> Optional[ConfigurationError]:
     ipp = ConfigurationManager(
-        f'profiles/profile_{sp_ident.idx}', cfg_type='security/ip', err_as_value=True)
+        f'profiles/profile_{sp_ident.security_profile}', cfg_type='security/ip', err_as_value=True)
     with ipp:
-        security_profile_settings: ConfigChain = ipp.load_configuration()
-
-        security_profile_settings['name'] = sp_ident.name
-        security_profile_settings['desc'] = sp_ident.desc
-
-        ipp.write_configuration(security_profile_settings.expanded_user_data)
+        ipp.config_data['name'] = sp_ident.name
+        ipp.config_data['desc'] = sp_ident.desc
 
     return ipp.error
 
 def configure_reputation(category: config) -> None:
-    with ConfigurationManager(f'profiles/profile_{category.profile}', cfg_type='security/ip') as dnx:
+    with ConfigurationManager(f'profiles/profile_{category.security_profile}', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         ip_proxy_settings[f'reputation->built-in->{category.name}'] = category.direction
@@ -282,7 +278,7 @@ def configure_reputation(category: config) -> None:
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
 def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
-    with ConfigurationManager(f'profiles/profile_{category.profile}', cfg_type='security/ip') as dnx:
+    with ConfigurationManager(f'profiles/profile_{category.security_profile}', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         # setting the individual country to user set value

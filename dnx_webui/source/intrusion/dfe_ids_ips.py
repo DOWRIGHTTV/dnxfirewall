@@ -221,7 +221,7 @@ def configure_security_profile_ident(sp_ident: config) -> Optional[Configuration
 
 def configure_ddos(ddos: CFG) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{ddos.profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+        f'profiles/profile_{ddos.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
         ids_ips.config_data['ddos->enabled'] = ddos.enabled
 
@@ -277,7 +277,7 @@ def configure_ip_whitelist(whitelist: config, *, action: CFG) -> Optional[Config
 
 def configure_dns_whitelist(settings: config, /) -> Optional[ConfigurationError]:
     ids_ips = ConfigurationManager(
-        f'profiles/profile_{settings.security_profiles}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+        f'profiles/profile_{settings.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
     with ids_ips:
         ids_ips.config_data['whitelist->dns_servers'] = settings.action
 
