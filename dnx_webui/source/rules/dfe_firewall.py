@@ -201,18 +201,18 @@ class WebPage(RulesWebPage):
         return '', section
 
     @staticmethod
-    def handle_ajax(json_data: dict[str, str]) -> return_data:
+    def handle_ajax(aform: JSON) -> return_data:
 
-        section: str = json_data.get('section', '')
+        section: str = aform.get('section', '')
         if (not section or section not in valid_sections):
             return False, {'error': 1, 'message': 'missing section data'}
 
-        if not json_data.get('rules', None):
+        if not aform.get('rules', None):
             return False, {'error': 2, 'message': 'missing rule data'}
 
         # NOTE: all rules must be validated for changes to be applied. validation will raise exception on first error.
         try:
-            validated_rules = validate_firewall_commit(json_data['rules'])
+            validated_rules = validate_firewall_commit(aform['rules'])
         except ValidationError as ve:
             return False, {'error': 3, 'message': str(ve)}
 

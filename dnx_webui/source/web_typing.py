@@ -27,7 +27,7 @@ if (TYPE_CHECKING):
 
     Callable_T: TypeAlias = Callable[[Any, ...], Any]
 
-    JSON: TypeAlias = dict[str, Any]
+    JSON: TypeAlias = dict[str, str]
     Form: TypeAlias = ImmutableMultiDict[str, str]
     Args: TypeAlias = MultiDict[str, str]
 

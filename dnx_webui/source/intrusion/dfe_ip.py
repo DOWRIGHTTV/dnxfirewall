@@ -147,14 +147,14 @@ class WebPage(StandardWebPage):
         return NO_STANDARD_ERROR
 
     @staticmethod
-    def handle_ajax(json_data: Form) -> WebAjaxResponse:
+    def handle_ajax(aform: JSON) -> WebAjaxResponse:
 
         category = config(**{
-            'profile': json_data.get('security_profile', DATA.MISSING),
-            'type': json_data.get('type', DATA.MISSING),
-            'name': json_data.get('category', DATA.MISSING),
-            'region': json_data.get('region', DATA.MISSING),
-            'direction': get_convert_int(json_data, 'direction')
+            'security_profile': get_convert_in_range(aform, 'security_profile', bounds=(1, 15)),
+            'type': aform.get('type', DATA.MISSING),
+            'name': aform.get('category', DATA.MISSING),
+            'region': aform.get('region', DATA.MISSING),
+            'direction': get_convert_int(aform, 'direction')
         })
 
         if ([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):

@@ -59,15 +59,16 @@ class WebPage(StandardWebPage):
         return NO_STANDARD_ERROR
 
     @staticmethod
-    def handle_ajax(form: JSON) -> WebAjaxResponse:
+    def handle_ajax(aform: JSON) -> WebAjaxResponse:
 
-        ruleset: str | DATA = form.get('type', DATA.MISSING)
+        ruleset: str | DATA = aform.get('type', DATA.MISSING)
         if (ruleset is DATA.MISSING):
             return False, {'error': 1, 'message': INVALID_FORM}
 
         category = config(**{
-            'data': form.get('category', DATA.MISSING),
-            'enable_code': get_convert_in_range(form, 'enabled')
+            'security_profile': get_convert_in_range(aform, 'security_profile', bounds=(1, 15)),
+            'data': aform.get('category', DATA.MISSING),
+            'enable_code': get_convert_in_range(aform, 'enabled')
         })
 
         if any([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):

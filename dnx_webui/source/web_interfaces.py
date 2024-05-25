@@ -17,7 +17,7 @@ class WebPage:
         raise NotImplementedError('update page not defined.')
 
     @staticmethod
-    def handle_ajax(json_data: JSON) -> WebAjaxResponse:
+    def handle_ajax(aform: JSON) -> WebAjaxResponse:
         raise NotImplementedError('handle ajax not defined.')
 
 

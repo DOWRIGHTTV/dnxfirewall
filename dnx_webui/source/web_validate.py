@@ -277,8 +277,7 @@ def get_convert_in_range(form: Form | JSON, key: str, *, bounds: tuple[int, int]
         note: both ends of the bounds are inclusive.
     '''
     value = form.get(key, DATA.MISSING)
-
-    if value is DATA.MISSING:
+    if (value is DATA.MISSING):
         return value
 
     try:

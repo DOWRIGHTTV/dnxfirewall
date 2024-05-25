@@ -33,8 +33,8 @@ class WebPage(LogWebPage):
         return 'combined', None, get_log_entries(file_path)
 
     @staticmethod
-    def handle_ajax(form: Form) -> tuple[str, None, list[str]]:
-        log_table = form.get('table', 'combined')
+    def handle_ajax(aform: JSON) -> tuple[str, None, list[str]]:
+        log_table = aform.get('table', 'combined')
 
         # ternary to handle initial page load.
         # TODO: this should be done better, but i am waiting until reports page gets converted to ajax to support both
