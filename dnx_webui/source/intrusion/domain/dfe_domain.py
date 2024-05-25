@@ -183,7 +183,7 @@ def configure_security_profile_ident(sp_ident: config) -> Optional[Configuration
 
 # im being very explicit on the if statements because I would rather get the logic right before pretty.
 def configure_domain_categories(category: config, *, ruleset: str):
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/dns') as dnx:
+    with ConfigurationManager(f'profiles/profile_{category.security_profile}', cfg_type='security/dns') as dnx:
         # note: when custom categories are reintroduced, this will need to set strict=False
         dns_proxy: ConfigChain = dnx.load_configuration()
 
