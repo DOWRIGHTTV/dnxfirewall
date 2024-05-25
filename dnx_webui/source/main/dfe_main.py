@@ -640,7 +640,7 @@ def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key
     # --------------------------------------------- #
     # LABEL: DEVELOPMENT_ONLY_CODE
     if (WEBUI_DEVELOPMENT):
-        print('page_settings\n', page_settings)
+        print(f'{"=" * 16}\npage_settings\n{"=" * 16}\n{page_settings}')
     # --------------------------------------------- #
 
     return render_template(page_name, theme=context_global.theme, **page_settings)

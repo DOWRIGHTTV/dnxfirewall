@@ -206,7 +206,7 @@ class ValidationConfigForm:
         cfg.btn = btn_name
 
         if (WEBUI_DEVELOPMENT):
-            print(f'Config data\n{"="*16}\n{cfg}')
+            print(f'{"=" * 16}\nconfig data\n{"="*16}\n{cfg}')
 
         return None, cfg
 

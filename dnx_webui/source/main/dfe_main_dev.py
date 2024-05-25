@@ -32,7 +32,7 @@ def print_forms() -> None:
     if (request.method != 'POST'):
         return None
 
-    print(f'form data\n{"=" * 16}')
+    print(f'{"=" * 16}\nform data\n{"=" * 16}')
     if ajax_data := request.get_json(silent=True):
         ppt(ajax_data)
 
