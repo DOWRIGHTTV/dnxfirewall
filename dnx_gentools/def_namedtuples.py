@@ -207,7 +207,8 @@ class DNS_SIGNATURES(_NamedTuple):  # todo: type this out better using NewTypes.
     tld:     dict[str, int]
     keyword: list[tuple[str, _DNS_CAT]]
 
-_DNS_EVENT_CATEGORY: TypeAlias = tuple[DNS_CAT_LABEL, _DNS_CAT, SEC_PROFILE]
+if (TYPE_CHECKING):
+    _DNS_EVENT_CATEGORY: TypeAlias = tuple[DNS_CAT_LABEL, _DNS_CAT, SEC_PROFILE]
 class DNS_INSPECTION_RESULTS(_NamedTuple):
     '''
     redirect: bool
@@ -248,7 +249,8 @@ class DNS_EVENT_LOG(_NamedTuple):
 
 # bookmark:: add comments regarding log string joins. consider making formatter method within the class.
 # IP PROXY
-_IPP_EVENT_CATEGORY: TypeAlias = tuple[GEOLOCATION, REPUTATION, SEC_PROFILE]
+if (TYPE_CHECKING):
+    _IPP_EVENT_CATEGORY: TypeAlias = tuple[GEOLOCATION, REPUTATION, SEC_PROFILE]
 class IPP_INSPECTION_RESULTS(_NamedTuple):
     '''
     category: tuple[GEOLOCATION, REPUTATION, SEC_PROFILE]
