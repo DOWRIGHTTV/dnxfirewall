@@ -33,7 +33,7 @@ if (TYPE_CHECKING):
     # from typing import Type, TypeAlias
 
     __all__ = (
-        'LogHandler', 'LogHandler_T', 'LogService', 'direct_log'
+        'LogHandler', 'LogHandler_T', 'LogService',
     )
 
     from log_client import *

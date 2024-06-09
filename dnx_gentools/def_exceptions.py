@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
 from functools import wraps
 
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import LOG as _LOG
-from dnx_routines.logging import direct_log as _direct_log
+from dnx_routines.logging.log_client import direct_log as _direct_log
 
 # ================
 # TYPING IMPORTS
 # ================
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Optional
     from dnx_routines.logging import LogHandler_T
 
 
