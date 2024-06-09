@@ -9,8 +9,8 @@ from json import dumps
 from functools import partial
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING, ROOT, HOME_DIR, DATABASE_SOCKET, DNX_AUTHENTICATION
+from dnx_gentools.def_constants import fast_time, console_log
 from dnx_gentools.def_enums import LOG
 from dnx_gentools.standard_tools import classproperty, dnx_queue, Initialize
 from dnx_gentools.file_operations import change_file_owner, load_data, cfg_read_poller
@@ -20,7 +20,8 @@ from dnx_gentools.system_info import System
 # ===============
 # TYPING IMPORTS
 # ===============
-#
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import *
 
 
 __all__ = (

@@ -13,8 +13,7 @@ from copy import copy
 from functools import wraps, partial
 from secrets import token_urlsafe
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
 from dnx_gentools.def_exceptions import DNXError, dnx_assert
@@ -23,6 +22,10 @@ from dnx_gentools.def_exceptions import DNXError, dnx_assert
 # TYPING IMPORTS
 # ================
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Any, Optional, ClassVar, Union, NoReturn, Callable, TextIO, Generator
+    from dnx_gentools.def_typing import Callable_ReturnNone, Wrapped_ReturnNone, DNSListHandler, Callable_T
+    from dnx_gentools. def_typing import FileLock, IPTablesLock
+
     from dnx_routines.logging import LogHandler_T
 
 
