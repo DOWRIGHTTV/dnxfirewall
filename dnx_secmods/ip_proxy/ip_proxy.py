@@ -4,21 +4,27 @@ from __future__ import annotations
 
 from threading import Thread
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import UINT16_MAX, RUN_FOREVER
+from dnx_gentools.def_constants import TYPE_CHECKING, UINT16_MAX, RUN_FOREVER
 from dnx_gentools.def_enums import Queue
 from dnx_gentools.def_enums import PROTO_ICMP, PROTO_UDP, PROTO_DNS
 from dnx_gentools.def_enums import GEOLOCATION, GEO_ID_TO_STRING, REPUTATION, REP_ID_TO_STRING
-from dnx_gentools.def_enums import DIRECTION, DIR_OFF, DIR_OUTBOUND, DIR_INBOUND, DIR_BOTH
-from dnx_gentools.def_enums import DECISION, CONN_REJECT, CONN_INSPECT, CONN_DROP, CONN_ACCEPT
+from dnx_gentools.def_enums import DIRECTION, DIR_INBOUND
+from dnx_gentools.def_enums import DECISION, CONN_REJECT, CONN_DROP, CONN_ACCEPT
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
 
+from ip_proxy_automate import ProxyConfiguration
 from ip_proxy_packets import IPPPacket, ProxyResponse
 # from ip_proxy_restrict import LanRestrict
-from ip_proxy_automate import ProxyConfiguration, CFG_PROFILE
 from ip_proxy_log import Log
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Callable, ClassVar, NoReturn
+    from dnx_gentools.def_typing import ProxyParser
+    from dnx_gentools.def_enums import GEOID
+
+    from ip_proxy_automate import CFG_PROFILE
 
 __all__ = (
     'IPProxy',
@@ -124,7 +130,7 @@ def inspect(packet: IPPPacket, inspection_profile: CFG_PROFILE) -> IPP_INSPECTIO
 
     # only checking ip_addr reputation if not filtered by geolocation
     if (action != CONN_ACCEPT):
-        return IPP_INSPECTION_RESULTS((country_name, REP_ID_TO_STRING[-1]), action)  # REP.DNL
+        return IPP_INSPECTION_RESULTS((country_name, REP_ID_TO_STRING[-1], packet.ipp_profile), action)  # REP.DNL
 
     if reputation_id := REP_LOOKUP(packet.tracked_ip):
         action, reputation_name = _reputation_action(reputation_id, packet, inspection_profile)
@@ -132,9 +138,9 @@ def inspect(packet: IPPPacket, inspection_profile: CFG_PROFILE) -> IPP_INSPECTIO
     else:
         reputation_name = REP_ID_TO_STRING[reputation_id]  # REP.NONE
 
-    return IPP_INSPECTION_RESULTS((country_name, reputation_name), action)
+    return IPP_INSPECTION_RESULTS((country_name, reputation_name, packet.ipp_profile), action)
 
-# category setting lookup. comparing  the packet direction with the configured direction for a category/category group.
+# category setting lookup. comparing the packet direction with the configured direction for a category/category group.
 def _reputation_action(reputation_id: int, packet: IPPPacket, inspection_profile: CFG_PROFILE) -> tuple[DECISION, REPUTATION]:
 
     # flooring cat to its group id for easier matching
@@ -160,7 +166,7 @@ def _reputation_action(reputation_id: int, packet: IPPPacket, inspection_profile
     # default action
     return CONN_ACCEPT, rep_group
 
-def _country_action(country_id: int, packet: IPPPacket, inspection_profile: CFG_PROFILE) -> tuple[DECISION, GEOLOCATION]:
+def _country_action(country_id: GEOID, packet: IPPPacket, inspection_profile: CFG_PROFILE) -> tuple[DECISION, GEOLOCATION]:
 
     country_name = GEO_ID_TO_STRING[country_id]
 

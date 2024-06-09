@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 from functools import wraps
 
+from dnx_gentools.def_enums import LOG as _LOG
+from dnx_routines.logging import direct_log as _direct_log
+
 # ================
 # TYPING IMPORTS
 # ================
@@ -52,11 +55,16 @@ def err_as_value(exc_type):
 def dnx_assert(condition: bool, message: str, *, logger: LogHandler_T = None) -> None:
     '''DNX assertion function.
 
-    If an assertion fails and a logger is provided, the message is logger prior to raising the exception.
+    If an assertion fails and a logger is provided, the message is logged prior to raising the exception.
     '''
     if (condition): return
 
     if (logger):
         logger.emergency(message)
+
+    # todo: figure out how or what to do for the module name in the direct log.
+    #  for now we will use "system" as catch all if no logger is provided.
+    else:
+        _direct_log('system', _LOG.EMERGENCY, message)
 
     raise AssertionError(message)

@@ -94,7 +94,7 @@ class LogService:
     @looper(THREE_MIN)
     def clean_blocked_table(self) -> None:
         with DBConnector(Log) as FirewallDB:
-            FirewallDB.blocked_cleaner(table='blocked')
+            FirewallDB.blocked_cleaner()
 
         # NOTE: consider moving this into the DBConnector, so it can report if no exc are raised.
         Log.debug('completed blocked database cleaning')

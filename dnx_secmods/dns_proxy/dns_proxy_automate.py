@@ -58,7 +58,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
     '''
     cfg_profiles: ClassVar[tuple[CFG_PROFILE, ...]] = tuple(
         CFG_PROFILE(
-            i, DNS_WHITELIST({}), DNS_BLACKLIST({}), DNS_SIGNATURES({DNS_CAT.dns_https}, {}, [])
+            i, DNS_WHITELIST({}), DNS_BLACKLIST({}), DNS_SIGNATURES({DNS_CAT.dns_https: 'system'}, {}, [])
         ) for i in range(PROFILE_CT+1)  # note: +1 is to allow for [1] start index. [0] is reserved for the system.
     )
 
@@ -85,7 +85,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
         signatures: DNS_SIGNATURES = self.__class__.cfg_profiles[profile_idx].signatures
 
         # CATEGORY SETTINGS
-        enabled_keywords: list[DNS_CAT] = []
+        # enabled_keywords: list[DNS_CAT] = []
         for label in proxy_config.get_list('categories->built-in'):
 
             for cat, setting in proxy_config.get_items(f'categories->built-in->{label}'):
@@ -95,13 +95,11 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
                 # identifying enabled general categories
                 if (setting['enabled']):
-                    signatures.en_dns.add(DNS_CAT[cat])
+                    signatures.filter[DNS_CAT[cat]] = label
 
                 # removing category if present in memory
                 else:
-                    dns_cat = DNS_CAT[cat]
-                    if (dns_cat in signatures.en_dns):
-                        signatures.en_dns.remove(dns_cat)
+                    signatures.filter.pop(DNS_CAT[cat], None)
 
         # KEYWORD SETTINGS
         # copying the keyword signature list in memory to a local object, then iterating over the list.

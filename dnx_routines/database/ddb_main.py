@@ -6,11 +6,9 @@ import os
 import traceback
 
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED
-from json import loads
 
-from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
+from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 
-from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import dnx_queue, looper
 
@@ -19,10 +17,18 @@ from dnx_iptools.protocol_tools import authenticate_sender
 from dnx_routines.logging.log_client import Log
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Type, NoReturn, Callable, Optional, Union
+    from dnx_gentools.def_typing import EVENT_LOGS
+
+    NT_MAP:    dict[str, Type[EVENT_LOGS]]
+    NT_LOOKUP: Callable[[str], Optional[Type[EVENT_LOGS]]]
+
 # NOTE: dynamic reference to namedtuples
-NT_LOOKUP = {
-    nt.__name__: nt for nt in [IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG]
-}.get
+NT_MAP = {
+    nt.__name__: nt for nt in [IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG]
+}
+NT_LOOKUP = NT_MAP.get
 
 # ====================================================
 # SERVICE SOCKET - Initialization
@@ -71,36 +77,53 @@ def _request_handler(database: DBConnector, job: list) -> None:
     database.commit_entries()
 
 @looper(NO_DELAY, queue_for_db=_request_handler.add)
-def receive_requests(queue_for_db: Callable[[tuple[str, str, str]], None]) -> None:
-    '''receives databases messages plus ancillary authentication data from dnxfirewall mods.
+def receive_requests(queue_for_db: Callable[[tuple[str, Union[EVENT_LOGS, GEOLOCATION_LOG]]], None]) -> None:
+    '''receives database messages plus ancillary authentication data from dnxfirewall mods.
     '''
     try:
         data, anc_data, *_ = _db_service_recvmsg(2048, 256)
     except OSError:
         traceback.print_exc()
+        return
+
+    authorized = authenticate_sender(anc_data)
+    # dropping message due to failed auth
+    if (not authorized):
+        Log.warning(f'sender failed to authenticate. sent -> {data.decode()}')
+        return
+
+    log: str
+    routine: str
+    log, routine = data.decode('utf-8').split('|')
+
+    log_tuple: Type[Union[EVENT_LOGS, GEOLOCATION_LOG]] = NT_LOOKUP(f'{routine}_log'.upper())
+    # Log.debug(f'tuple reference retrieved: name->{name}, log_tuple->{log_tuple}')
+
+    # bookmark:: continue updating arguments throughout db api to handle the change in log message format.
+    #  - see if you can get the typing on log_tuple to stop being lame.
+    try:
+        log_entry = log_tuple(*log.split(','))
+    except:
+        Log.critical(f'routine lookup failure -> ({routine})')
 
     else:
-        authorized = authenticate_sender(anc_data)
-
-        # dropping message due to failed auth
-        if (not authorized):
-            return
+        queue_for_db((routine, log_entry))
 
         # not validating input because we don't accept unsolicited comms, enforced by unix socket authentication.
-        # if there is malformed data from other dnx module, then it will be unrecoverable until a patch can be loaded.
-        data = loads(data.decode())
-
-        name = data['method']
-
-        # NOTE: instead of pickle, using json then converting to a py object manually
-        log_tuple = NT_LOOKUP(f'{name}_log'.upper())
-
-        # Log.debug(f'tuple reference retrieved: name->{name}, log_tuple->{log_tuple}')
-
-        try:
-            log_entry = log_tuple(*data['log'])
-        except:
-            Log.critical(f'routine lookup failure -> ({name})')
-
-        else:
-            queue_for_db((name, data['timestamp'], log_entry))
+        # if there is malformed data from another dnx module, then it will be unrecoverable until a patch can be loaded.
+        # data = loads(data.decode())
+        #
+        # name = data['method']
+        #
+        # # NOTE: instead of pickle, using json then converting to a py object manually
+        # log_tuple = NT_LOOKUP(f'{name}_log'.upper())
+        #
+        # # Log.debug(f'tuple reference retrieved: name->{name}, log_tuple->{log_tuple}')
+        #
+        # try:
+        #     log_entry = log_tuple(*data['log'])
+        # except:
+        #     Log.critical(f'routine lookup failure -> ({name})')
+        #
+        # else:
+        #     queue_for_db((name, data['timestamp'], log_entry))

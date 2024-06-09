@@ -17,7 +17,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
-from dnx_gentools.def_exceptions import DNXError, ControlError
+from dnx_gentools.def_exceptions import DNXError, dnx_assert
 
 # ================
 # TYPING IMPORTS
@@ -322,6 +322,8 @@ class ConfigChain:
     __slots__ = (
         'user_modified',
 
+        '_strict',
+
         '__config', '__flat_config', '__mutable_config'
     )
 
@@ -330,6 +332,7 @@ class ConfigChain:
         system_flat = self._flatten(system)
         user_flat = {k: v for k, v in self._flatten(user).items() if k in system_flat} if strict else self._flatten(user)
 
+        self._strict = strict
         self.__config = (user, system)
         self.__flat_config = (user_flat, system_flat)
 
@@ -357,6 +360,9 @@ class ConfigChain:
         raise KeyError(f'{key} not found in configuration chain.')
 
     def __setitem__(self, key: str, value: Union[bool, int, float, str, list, None]):
+        dnx_assert(
+            self._strict and key not in self.__mutable_config, f'unknown key "{key}" cannot be applied in strict mode.')
+
         self.__mutable_config[key] = value
 
         self.user_modified = True
@@ -398,8 +404,8 @@ class ConfigChain:
 
         return search_data
 
-    def get_list(self, key: str = None) -> list[Union[str, int]]:
-        '''return list of child keys 1 level lower than the passed in key.
+    def get_list(self, key: str = None) -> list[str]:
+        '''return list of child keys 1 level lower than the specified key.
 
         returns an empty list if not found.
 
@@ -616,21 +622,19 @@ class ConfigurationManager:
 
         self.log.debug(f'file lock released for {self._filename}')
 
-        # fast out if no error occurred
-        if (exc_type is None):
-            return True
-
-        # raise it regardless of in err_as_value mode
-        if (exc_type is ControlError):
-            raise
-
-        else:
+        if (exc_type is ConfigurationError):
             self.log.error(f'ConfigurationManager: {exc_val}')
 
             self.error = ConfigurationError(f'Configuration manager failed while updating file. error->{exc_val}')
 
             if (not self._err_as_value):
                 raise self.error
+
+        # raise all non configuration errors regardless of err_as_value mode
+        elif (exc_type is not None):
+            raise
+
+        return True
 
     def __write_to_disk(self, updated_config: str) -> Optional[ConfigurationError]:
         # TEMP prefix is to wildcard match any orphaned files for deletion
@@ -947,7 +951,7 @@ def json_to_yaml(data: Union[str, dict], /, *, from_dict: bool = True) -> str:
     output_str = []
     for _, line in s_parsed_indents:
 
-        # no nested lists. we don't need them, and i don't want the complexity.
+        # no nested lists. we don't need them, and I don't want the complexity.
         if (not ongoing_list and line.endswith('[')):
 
             ongoing_list = True

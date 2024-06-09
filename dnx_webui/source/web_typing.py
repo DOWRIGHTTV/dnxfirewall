@@ -16,7 +16,7 @@ def web_module_load_callout(filename: str) -> None:
 
 
 if (TYPE_CHECKING):
-    from typing import TypeAlias, Type, Any, Callable, ByteString, Optional, Union
+    from typing import TypeAlias, Type, Any, Callable, Optional, Union
 
     from threading import Lock as _Lock, Event as _Event
 

@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import ByteString
-# from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import PROTO_ICMP
 
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 from dnx_iptools.interface_ops import load_interfaces
 
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Bytes
+    from dnx_gentools.def_typing import IP_ADDRINT, NET_PORT
+
 
 class IPSPacket(NFPacket):
-    tracked_ip: int
+    tracked_ip:  IP_ADDRINT
+    target_port: NET_PORT
+
+    icmp_payload_override: Bytes
 
     __slots__ = (
         'tracked_ip', 'target_port', 'icmp_payload_override'
@@ -19,10 +25,10 @@ class IPSPacket(NFPacket):
 
     def __init__(self):
         # super().__init__()  # parent no longer uses __init__ method
-        self.target_port: int = 0
-        self.icmp_payload_override: bytes = b''
+        self.target_port = 0  # note: type issue is ok here.
+        self.icmp_payload_override = b''
 
-    def tcp_override(self, dst_port: int, seq_num: int) -> IPSPacket:
+    def tcp_override(self, dst_port: NET_PORT, seq_num: int) -> IPSPacket:
         '''override the tcp header values of the received packet with the passed in data.
 
         a reference to the packet instance will be returned.
@@ -33,7 +39,7 @@ class IPSPacket(NFPacket):
 
         return self
 
-    def udp_override(self, icmp_payload: ByteString) -> IPSPacket:
+    def udp_override(self, icmp_payload: Bytes) -> IPSPacket:
         '''override the icmp payload from the received packet with the passed in data.
 
         a reference to the packet instance will be returned.
@@ -43,7 +49,6 @@ class IPSPacket(NFPacket):
 
         return self
 
-    # building named tuple with tracked_ip, tracked_port, and local_port variables
     def _before_exit(self, mark: int) -> None:
 
         self.tracked_ip = self.src_ip

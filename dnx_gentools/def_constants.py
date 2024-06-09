@@ -12,10 +12,15 @@ from itertools import repeat as _repeat
 from subprocess import run as _run, DEVNULL as _DEVNULL
 from pprint import PrettyPrinter as _PrettyPrinter
 
-from typing import Callable as _Callable, Iterator as _Iterator, Iterable as _Iterable
-from typing import Optional as _Optional, Union as _Union, Any as _Any
+from typing import TYPE_CHECKING
 
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Callable, Iterator, Iterable
+    from dnx_gentools.def_typing import Optional, Union, Any
+
+    from dnx_gentools.def_typing import NET_ADDRESS
 
 # =====================================================
 # PYTHON PATH MODIFICATION
@@ -31,7 +36,7 @@ _sys.path.append('/usr/local/lib')
 # =====================================================
 # MODULE INITIALIZATION CONTROL - set by shell command
 # =====================================================
-# module startup code will run if. values are stored as strings
+# module startup code will run if [...]. values are stored as strings
 def INITIALIZE_MODULE(log_name: str):
     '''returns True if the calling module functions should start.
     '''
@@ -42,17 +47,17 @@ def INITIALIZE_MODULE(log_name: str):
 
 
 WEBUI_DEVELOPMENT: bool = _os.environ.get('WEBUI_DEVELOPMENT') == '1'
-ppt: _Callable[[_Any], None] = _PrettyPrinter(sort_dicts=False).pprint
+ppt: Callable[[Any], None] = _PrettyPrinter(sort_dicts=False).pprint
 
-console_log: _Callable[[str], None] = _partial(print, flush=True)
-shell: _Callable[..., None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
+console_log: Callable[[str], None] = _partial(print, flush=True)
+shell: Callable[..., None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 
-RUN_FOREVER: _Iterator[int] = _repeat(1)
-fast_sleep: _Callable[[_Union[int, float]], None] = _time.sleep
+RUN_FOREVER: Iterator[int] = _repeat(1)
+fast_sleep: Callable[[Union[int, float]], None] = _time.sleep
 ftime = _time.time
 
 def fast_time(_int=int, _time=_time.time) -> int: return _int(_time())
-def hardout(msg: _Optional[str] = None) -> None:
+def hardout(msg: Optional[str] = None) -> None:
     '''exit the application.
 
     guarantees all threads and processes are not left dangling.
@@ -67,11 +72,11 @@ def hardout(msg: _Optional[str] = None) -> None:
 ATTEMPTS: tuple[int, int] = (0, 1)
 LAST_ATTEMPT: int = 1
 
-byte_join:  _Callable[[_Iterable[bytes]], bytes] = b''.join
-str_join:   _Callable[[_Iterable[str]], str] = ''.join
-dot_join:   _Callable[[_Iterable[str]], str] = '.'.join
-space_join: _Callable[[_Iterable[str]], str] = ' '.join
-comma_join: _Callable[[_Iterable[str]], str] = ', '.join
+byte_join:  Callable[[Iterable[bytes]], bytes] = b''.join
+str_join:   Callable[[Iterable[str]], str] = ''.join
+dot_join:   Callable[[Iterable[str]], str] = '.'.join
+space_join: Callable[[Iterable[str]], str] = ' '.join
+comma_join: Callable[[Iterable[str]], str] = ', '.join
 
 # USER, GROUP, HOME_DIR - user set dynamically for development convenience (DNX user used in production deployment)
 __usr = _pwd.getpwuid(_os.getuid())
@@ -80,7 +85,7 @@ __usr = _pwd.getpwuid(_os.getuid())
 USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
 ROOT: bool = not __usr.pw_uid
 
-# HOME_DIR:   str = f'{__usr.pw_dir}/dnxfirewall'
+# HOME_DIR: str = f'{__usr.pw_dir}/dnxfirewall'
 HOME_DIR:   str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 SYSTEM_DIR: str = 'dnx_profile/data/system'
 USER_DIR:   str = 'dnx_profile/data/usr'
@@ -110,7 +115,7 @@ MSEC:     float = .001   # one millisecond
 NO_DELAY:   int = 0
 
 # ip addresses
-NULL_ADDR:  tuple[str, int] = ('', -1)
+NULL_ADDR:  NET_ADDRESS = ('', -1)  # note: type is fine as is
 INADDR_ANY: int = 0
 LOCALHOST:  int = 2130706433
 BROADCAST:  int = 4294967295

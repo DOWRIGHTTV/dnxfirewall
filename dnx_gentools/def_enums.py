@@ -186,6 +186,8 @@ class DNS_CAT(_IntEnum):
     weaponry        = 500
 
 
+DNS_MALWARE_CATEGORIES = (DNS_CAT.crypto_miner, DNS_CAT.malicious)
+
 _TLD_LIST = [
     'NONE', 'ru', 'cn', 'xxx', 'porn', 'adult', 'ads', 'click', 'download',
     'top', 'loan', 'work', 'men', 'cf', 'gq', 'ml', 'ga'
@@ -206,8 +208,9 @@ except FileNotFoundError:
     _GEO_LIST = ['NONE', 'RFC1918']
 
 GEO = _IntEnum('GEO', _GEO_LIST, start=0)
+GEOID = _NewType('GEOID', int)
 GEOLOCATION = _NewType('GEOLOCATION', str)
-GEO_ID_TO_STRING: dict[int, GEOLOCATION] = {i: GEOLOCATION(x) for i, x in enumerate(_GEO_LIST)}
+GEO_ID_TO_STRING: dict[GEOID, GEOLOCATION] = {i: GEOLOCATION(x) for i, x in enumerate(_GEO_LIST)}  # note: typing is fine as is
 
 # ----------------------
 # REPUTATION
@@ -235,6 +238,7 @@ class REP(_IntEnum):
 REPUTATION = _NewType('REPUTATION', str)
 REP_ID_TO_STRING: dict[int, REPUTATION] = {rep.value: REPUTATION(rep.name) for rep in REP}
 
+IP_MALWARE_CATEGORIES = (REP.COMMAND_CONTROL.name,)
 
 # ======================
 # CUSTOM ENUM TYPES
@@ -244,6 +248,10 @@ REP_ID_TO_STRING: dict[int, REPUTATION] = {rep.value: REPUTATION(rep.name) for r
 # ----------------------
 # ENUM BASE
 # ----------------------
+# note: with __init__ check: 4x slower than leaving as int
+#       without __init__ check: 2x slower than leaving as int
+#       subclass of int: 1.5x slower than calling int() on the value
+# idea:: make the __init__ method a dev only function, then have the name property pull from the index.
 class DNXEnum(int):
 
     _members: dict[int, str] = {}
@@ -254,8 +262,6 @@ class DNXEnum(int):
             self._name = self._members[val]
         except KeyError:
             raise TypeError(f'[{val}] is not a valid {self.__class__.__name__} member.')
-
-        super().__init__()
 
     @property
     def name(self) -> str:
@@ -282,7 +288,7 @@ class PROTO(_IntEnum):
 
 class NETWORK_PROTOCOL(DNXEnum):
 
-        _members = {x.value: x.name for x in PROTO}
+    _members = {x.value: x.name for x in PROTO}
 
 
 PROTO_NOT_SET  = NETWORK_PROTOCOL(PROTO.NOT_SET)

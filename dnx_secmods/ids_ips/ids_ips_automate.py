@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_exceptions import dnx_assert
 from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_TCP, PROTO_UDP, PROTO_ICMP
@@ -15,12 +14,15 @@ from dnx_gentools.file_operations import cfg_read_poller, ConfigurationManager
 from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.iptables import IPTablesManager
 
-from dnx_secmods.ids_ips.ids_ips_log import Log
+from ids_ips_log import Log
 
 # ===============
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import ClassVar
+    from dnx_gentools.def_typing import ConfigChain, OPEN_WAN_PORTS
+
     from dnx_routines.logging import LogHandler_T
 
 # needed for updating pbl early removal notification in cfg

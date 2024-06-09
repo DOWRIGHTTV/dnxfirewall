@@ -13,6 +13,10 @@ from dnx_gentools.def_exceptions import ControlError
 
 from dnx_routines.logging.log_client import Log, direct_log
 
+__all__ = (
+    'system_action',
+)
+
 # ==================
 # CONTROL SOCKET
 # ===================
@@ -25,7 +29,7 @@ _control_client_send = _control_client.send
 # ==================
 # CONTROL UTILITY
 # ===================
-def _system_action(control_data: ByteString) -> None:
+def _system_action(control_data: Bytes) -> None:
     _control_client_send(control_data)
 
 def system_action(*, delay: int = NO_DELAY, **kwargs) -> None:

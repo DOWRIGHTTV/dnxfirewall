@@ -8,10 +8,9 @@ import select
 
 from threading import Thread
 
-from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import ICMP, DECISION, DIRECTION
-from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_NOT_SET, PROTO_TCP, PROTO_UDP, PROTO_ICMP, PROTO_DNS_TLS
+from dnx_gentools.def_enums import PROTO_NOT_SET, PROTO_TCP, PROTO_UDP, PROTO_ICMP, PROTO_DNS_TLS
 from dnx_gentools.def_exceptions import ProtocolError
 from dnx_gentools.standard_tools import looper, inspection_queue
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK, DNS_SEND
@@ -24,6 +23,13 @@ from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import NetfilterQueue
 
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import TypeAlias, ClassVar, NoReturn, Bytes, Optional, Callable
+    from dnx_gentools.def_typing import Epoll_T, ListenerParser, ListenerPackets, ListenerCallback
+    from dnx_gentools.def_typing import Socket_T, ProxyParser, ProxyPackets, ProxyCallback
+    from dnx_gentools.def_typing import IP_ADDRINT, NET_ADDRESS, NET_PORT, SEC_PROFILE
+
+    from dnx_gentools.def_enums import NETWORK_PROTOCOL, GEOID
+
     from dnx_netmods.dnx_netfilter import CPacket
     from dnx_secmods.dns_proxy import DNSServer_T
     from dnx_routines.logging import LogHandler_T
@@ -57,7 +63,7 @@ class Listener:
     def __register(self, intf: tuple[int, int, str]) -> None:
         '''registers an interface with the listener.
 
-        once registration is complete the thread will exit.
+        once registration is complete, the thread will exit.
         '''
         # this is being defined here so the listener will be able to correlate socket back to interface and send in.
         # NOTE: we can probably _ the first 2 vars, but they may actually come in handy for something so check to see
@@ -139,7 +145,7 @@ class Listener:
         '''
         raise NotImplementedError('the listener_sock method must be overridden in subclass.')
 
-    def request_handler(self, request: Any) -> None:
+    def request_handler(self, request) -> None:
         '''must be overriden by the subclass and implemented with the dnx_queue decorator.
 
         example:
@@ -235,8 +241,9 @@ class ProtoRelay:
         '''starts the protocol relay.
 
         DNSServer object is the class handling client side requests which we can call back to and fallback is a
-        secondary relay that can get forwarded a request post failure. initialize will be called to run any subclass
-        specific processing then query handler will run indefinitely.
+        secondary relay that can get forwarded a request on failure.
+
+        Initialize will be called to run any subclass specific processing then query handler will run indefinitely.
         '''
         self = cls(dns_server, fallback_relay)
 
@@ -421,10 +428,10 @@ class NFPacket:
     action:    DECISION
     direction: DIRECTION
 
-    tracked_geo: int
-    ipp_profile: int
-    dns_profile: int
-    ids_profile: int
+    tracked_geo: GEOID
+    ipp_profile: SEC_PROFILE
+    dns_profile: SEC_PROFILE
+    ids_profile: SEC_PROFILE
 
     # HW FIELDS
     in_intf:   int
@@ -434,19 +441,19 @@ class NFPacket:
 
     # IP FIELDS
     protocol: NETWORK_PROTOCOL
-    src_ip: int
-    dst_ip: int
-    src_port: int
-    dst_port: int
+    src_ip:   IP_ADDRINT
+    dst_ip:   IP_ADDRINT
+    src_port: NET_PORT
+    dst_port: NET_PORT
 
     # TCP FIELDS
     seq_number: int
     ack_number: int
 
     # UDP FIELDS
-    ip_header:   ByteString
-    udp_header:  ByteString
-    udp_payload: ByteString
+    ip_header:   Bytes
+    udp_header:  Bytes
+    udp_payload: Bytes
 
     # ICMP FIELDS
     icmp_type: ICMP

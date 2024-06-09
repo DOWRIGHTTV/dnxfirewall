@@ -16,7 +16,7 @@ from __future__ import annotations
 #   all writing routines must return boolean of
 #   whether data was successfully written
 #
-#   all reading routing must return a single var
+#   all reading routines must return a single var.
 #   this can be list, dict, int, bool, etc. since
 #   it will be passed through connector without
 #   accessing the data.
@@ -32,7 +32,7 @@ from dnx_gentools.system_info import System as _System
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG
+    from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG
     from dnx_gentools.def_namedtuples import INF_EVENT_LOG
 
     from sqlite3 import Cursor
@@ -45,100 +45,102 @@ db = _db_conn.DBConnector
 # ========================================
 @db.register('dns_request', routine_type='write')
 # standard input for dns proxy module database entries
-def dns_request(cur: Cursor, timestamp: int, log: DNS_REQUEST_LOG) -> bool:
+def dns_request(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
     cur.execute(
-        f'select * from dnsproxy where src_ip=? and domain=? and action=?', (log.src_ip, log.request, log.action)
+        'select count, last_seen from dnsproxy where src_ip=? and domain=? and action=?',
+        (log.src_ip, log.request, log.action)
     )
 
-    existing_record = cur.fetchone()
-    if (existing_record):
+    if existing_record := cur.fetchone():
 
-        i, t = existing_record[5] + 1, existing_record[6]
-        if (timestamp - t > 10):
+        i, t = existing_record[0] + 1, existing_record[1]
+        if (log.timestamp - t > 10):
             cur.execute(
-                f'update dnsproxy set count=?, last_seen=?, reason=? where src_ip=? and domain=? and action=?',
-                (i, timestamp, log.reason, log.src_ip, log.request, log.action)
+                'update dnsproxy set count=?, last_seen=?, reason=? where src_ip=? and domain=? and action=?',
+                (i, log.timestamp, log.reason, log.src_ip, log.request, log.action)
             )
 
     else:
         cur.execute(
-            f'insert into dnsproxy values (?, ?, ?, ?, ?, ?, ?)',
-            (log.src_ip, log.request, log.category, log.reason, log.action, 1, timestamp)
+            'insert into dnsproxy values (?, ?, ?, ?, ?, ?, ?)',
+            (log.src_ip, log.request, log.category, log.reason, log.action, 1, log.timestamp)
         )
 
     return True
 
 @db.register('dns_blocked', routine_type='write')
 # used by dns proxy to authorize front end block page access.
-def dns_blocked(cur: Cursor, timestamp: int, log: DNS_REQUEST_LOG) -> bool:
+def dns_blocked(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
     cur.execute(
-        f'insert into blocked values (?, ?, ?, ?, ?)', (log.src_ip, log.request, log.category, log.reason, timestamp)
+        'insert into blocked values (?, ?, ?, ?, ?)',
+        (log.src_ip, log.request, log.category, log.reason, log.timestamp)
     )
 
     return True
 
 @db.register('ips_event', routine_type='write')
 # standard input for ips module database entries
-def ips_event(cur: Cursor, timestamp: int, log: IPS_EVENT_LOG) -> bool:
+def ips_event(cur: Cursor, log: IPS_EVENT_LOG) -> bool:
     cur.execute(
-        f'select * from ips where src_ip=? and attack_type=? order by last_seen desc limit 1', (log.attacker, log.attack_type)
+        'select last_seen from ips where src_ip=? and attack_type=? order by last_seen desc limit 1',
+        (log.attacker, log.attack_type)
     )
 
     existing_record = cur.fetchone()
     if (existing_record):
 
         # event log suppression. limit one every 10 seconds.
-        if (timestamp - existing_record[4] < 10):
+        if (log.timestamp - existing_record[0] < 10):
             return True
 
     cur.execute(
-        f'insert into ips values (?, ?, ?, ?, ?)',
-        (log.attacker, log.protocol, log.attack_type, log.action, timestamp)
+        'insert into ips values (?, ?, ?, ?, ?)',
+        (log.attacker, log.protocol, log.attack_type, log.action, log.timestamp)
     )
 
     return True
 
 @db.register('ipp_event', routine_type='write')
 # standard input for ip proxy module database entries.
-def ipp_event(cur: Cursor, timestamp: int, log: IPP_EVENT_LOG) -> bool:
+def ipp_event(cur: Cursor, log: IPP_EVENT_LOG) -> bool:
     cur.execute(
-        f'insert into ipproxy values (?, ?, ?, ?, ?, ?)',
-        (log.local_ip, log.tracked_ip, '/'.join(log.category), log.direction, log.action, timestamp)
+        'insert into ipproxy values (?, ?, ?, ?, ?, ?)',
+        (log.local_ip, log.tracked_ip, '/'.join(log.category), log.direction, log.action, log.timestamp)
     )
 
     return True
 
 @db.register('inf_event', routine_type='write')
-def infected_event(cur: Cursor, timestamp: int, log: INF_EVENT_LOG) -> bool:
-    cur.execute(f'select * from infectedclients where mac=? and detected_host=?', (log.client_mac, log.detected_host))
+def infected_event(cur: Cursor, log: INF_EVENT_LOG) -> bool:
+    cur.execute(
+        'select * from infectedclients where mac=? and detected_host=?',
+        (log.client_mac, log.detected_host)
+    )
 
-    existing_record = cur.fetchone()
-    if (existing_record):
-
+    if existing_record := cur.fetchone():
         cur.execute(
-            f'update infectedclients set last_seen=? where mac=? and detected_host=?',
-            (timestamp, log.client_mac, log.detected_host)
+            'update infectedclients set last_seen=? where mac=? and detected_host=?',
+            (log.timestamp, log.client_mac, log.detected_host)
         )
 
     else:
         cur.execute(
-            f'insert into infectedclients values (?, ?, ?, ?, ?)',
-            (log.client_mac, log.src_ip, log.detected_host, log.reason, timestamp)
+            'insert into infectedclients values (?, ?, ?, ?, ?)',
+            (log.client_mac, log.src_ip, log.detected_host, log.reason, log.timestamp)
         )
 
     return True
 
 @db.register('geolocation', routine_type='write')
-# first arg is timestamp. this can likely go away with new DB API.
-def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
+def geo_record(cur: Cursor, log: GEOLOCATION_LOG) -> bool:
     month = ','.join(_System.date()[:2])
 
-    cur.execute(f'select * from geolocation where month=? and country=?', (month, log.cty_name))
+    cur.execute('select * from geolocation where month=? and country=?', (month, log.cty_name))
 
     existing_record = cur.fetchone()
     # if it's the first time a country has been seen in the current month, it will be initialized with zeroes
     if (not existing_record):
-        cur.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.cty_name, log.dir_name, 0, 0))
+        cur.execute('insert into geolocation values (?, ?, ?, ?, ?)', (month, log.cty_name, log.dir_name, 0, 0))
 
     # incremented count of the specific action specified in the log. (eg. blocked, allowed)
     cur.execute(
@@ -161,7 +163,7 @@ def send_message(cur: Cursor, *, msg_id: str, message) -> bool:
 # TODO: see why this wasnt being committed. i feel like it was an oversight.
 # TODO: also type this
 def clear_infected(cur: Cursor, infected_client, detected_host):
-    cur.execute(f'delete from infectedclients where mac=? and detected_host=?', (infected_client, detected_host))
+    cur.execute('delete from infectedclients where mac=? and detected_host=?', (infected_client, detected_host))
 
     return True
 
@@ -172,7 +174,7 @@ def clear_infected(cur: Cursor, infected_client, detected_host):
 # query to authorize viewing of web block page and show block info for reference
 def blocked_domain(cur: Cursor, *, domain: str, src_ip: str) -> _BLOCKED_DOM:
     for _ in range(6):
-        cur.execute(f'select * from blocked where domain=? and src_ip=?', (domain, src_ip))
+        cur.execute('select * from blocked where domain=? and src_ip=?', (domain, src_ip))
         try:
             return _BLOCKED_DOM(*cur.fetchone()[1:4])
         except TypeError:
@@ -211,7 +213,7 @@ def top_dashboard(cur: Cursor, count, *, action):
 
     elif (action in ['allowed', 'blocked']):
         cur.execute(
-            f'select domain, category, sum(count) from dnsproxy where action=? '
+            'select domain, category, sum(count) from dnsproxy where action=? '
             f'group by domain order by count desc limit {count}',
             (action,)
         )
@@ -235,16 +237,17 @@ def top_geolocation(cur: Cursor, count: int, *, action: str, direction: str) -> 
 # TODO: see if this should use sum() instead of len() on the results
 def unique_domain_count(cur: Cursor, *, action: str) -> int:
     if (action in ['all']):
-        cur.execute(f'select domain, count(*) from dnsproxy group by domain')
+        cur.execute('select domain, count(*) from dnsproxy group by domain')
 
     elif (action in ['allowed', 'blocked']):
-        cur.execute(f'select domain, count(*) from dnsproxy where action=? group by domain', (action,))
+        cur.execute('select domain, count(*) from dnsproxy where action=? group by domain', (action,))
 
     return len(cur.fetchall())
 
 @db.register('total_request_count', routine_type='query')
 # TODO: see if this should use sum() instead of iter add
 def total_request_count(cur: Cursor, *, table: str, action: str) -> int:
+    # todo: put a dnx_assert here.
     if (action in ['all']):
         cur.execute(f'select count from {table}')
 

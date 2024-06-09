@@ -7,31 +7,35 @@ from threading import Lock, Thread
 from copy import copy
 from collections import defaultdict
 
-from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import TYPE_CHECKING, fast_time, RUN_FOREVER, INSPECT_PACKET, DONT_INSPECT_PACKET
 from dnx_gentools.def_enums import IPS, ICMP
 from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_TCP, PROTO_UDP, PROTO_ICMP
-from dnx_gentools.def_enums import CONN_DROP, CONN_ACCEPT  # DECISION, CONN_REJECT, CONN_INSPECT
-from dnx_gentools.def_constants import fast_time, RUN_FOREVER, INSPECT_PACKET, DONT_INSPECT_PACKET
+from dnx_gentools.def_enums import CONN_DROP, CONN_ACCEPT
 from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
 from dnx_gentools.standard_tools import inspection_queue
 
 from dnx_iptools.iptables import IPTablesManager
 from dnx_iptools.packet_classes import NFQueue
 
-from dnx_secmods.ids_ips.ids_ips_automate import IPSConfiguration, CFG_PROFILE
-from dnx_secmods.ids_ips.ids_ips_packets import IPSPacket, IPSResponse
+from ids_ips_automate import IPSConfiguration
+from ids_ips_packets import IPSPacket, IPSResponse
+from ids_ips_log import Log
 
-from dnx_secmods.ids_ips.ids_ips_log import Log
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import TypeAlias, Union, NoReturn
+    from dnx_gentools.def_typing import NET_PORT
+
+    from ids_ips_automate import CFG_PROFILE
+
+    # todo: try to make these type definitions less convoluted and more accurate.
+    HOST_TRACKER: TypeAlias = dict[str, Union[bool, int, dict]]
+    PROTO_TRACKER: TypeAlias = dict[int, HOST_TRACKER]
+
+    PRE_DETECTION: TypeAlias = Union[dict[NET_PORT, list[tuple[int, int]]], dict[NET_PORT, tuple[int, int]]]
 
 __all__ = (
     'IDS_IPS',
 )
-
-if (TYPE_CHECKING):
-    HOST_TRACKER: TypeAlias = dict[str, Any]
-    PROTO_TRACKER: TypeAlias = dict[int, HOST_TRACKER]
-
-    PRE_DETECTION: TypeAlias = Union[dict[int, list[tuple[int, int]]], dict[int, tuple[int, int]]]
 
 
 class IDS_IPS(IPSConfiguration, NFQueue):

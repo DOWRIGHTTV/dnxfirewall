@@ -42,7 +42,8 @@ __all__ = (
     'Route', 'strtoroute'
 )
 
-btoia: Callable[[ByteString|int], int] = partial(int.from_bytes, byteorder='big', signed=False)
+# todo: why is int included as a valid input type?
+btoia: Callable[[Bytes|int], int] = partial(int.from_bytes, byteorder='big', signed=False)
 # itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 

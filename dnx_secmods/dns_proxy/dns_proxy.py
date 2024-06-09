@@ -4,17 +4,23 @@ from __future__ import annotations
 
 from threading import Thread
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import RUN_FOREVER, INSPECT_PACKET, DONT_INSPECT_PACKET
+from dnx_gentools.def_typing import DNS_CAT_LABEL
+from dnx_gentools.def_constants import TYPE_CHECKING, RUN_FOREVER, INSPECT_PACKET, DONT_INSPECT_PACKET
 from dnx_gentools.def_enums import DNS, DNS_CAT, TLD_CAT
-from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS
+from dnx_gentools.def_namedtuples import DNS_INSPECTION_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
 
 from dns_proxy_server import DNSServer
-from dns_proxy_automate import ProxyConfiguration, CFG_PROFILE
+from dns_proxy_automate import ProxyConfiguration
 from dns_proxy_packets import DNSPacket, ProxyResponse
 from dns_proxy_log import Log
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Callable, ClassVar, NoReturn
+    from dnx_gentools.def_typing import ProxyParser
+
+    from dns_proxy_automate import CFG_PROFILE
 
 __all__ = (
     'DNSProxy',
@@ -115,19 +121,22 @@ def pre_inspect(packet: DNSPacket) -> bool:
     return DONT_INSPECT_PACKET
 
 
+REASON_NA = '_'
+LABEL_NA = DNS_CAT_LABEL('_')
+
 # this is where the system decides whether to block dns query/sinkhole or to allow.
-def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
+def inspect(packet: DNSPacket) -> DNS_INSPECTION_RESULTS:
     inspection_profile: CFG_PROFILE = CFG_PROFILES[packet.dns_profile]
 
     # TLD (top level domain) block
     # url whitelist does not override tld blocks at the moment.
     if inspection_profile.signatures.tld.get(packet.tld):
 
-        return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[packet.tld])
+        return DNS_INSPECTION_RESULTS(True, 'tld filter', TLD_CAT[packet.tld])
 
     # direct references to proxy class data structure methods
     # ========================================================
-    _enabled_categories = inspection_profile.signatures.en_dns
+    _enabled_categories = inspection_profile.signatures.filter
 
     _dns_whitelist = inspection_profile.whitelist.dns
     _dns_blacklist = inspection_profile.blacklist.dns
@@ -138,31 +147,31 @@ def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     # signature/ blacklist check.
     for enum_request in packet.requests:
 
-        # NOTE: allowing malicious category overrides (for false positives)
+        # note: allowing malicious category overrides (for false positives)
         if (enum_request in _dns_whitelist):
 
-            return DNS_REQUEST_RESULTS(False, None, None)
+            return DNS_INSPECTION_RESULTS(False, REASON_NA, (LABEL_NA, DNS_CAT.NONE, packet.dns_profile))
 
         # ip whitelist overrides configured blacklist
         if (enum_request in _dns_blacklist):
 
-            return DNS_REQUEST_RESULTS(True, 'blacklist', DNS_CAT.time_based)
+            return DNS_INSPECTION_RESULTS(True, 'blacklist', (LABEL_NA, DNS_CAT.time_based, packet.dns_profile))
 
         # determining the domain category
         category = DNS_CAT(CAT_LOOKUP(enum_request))
-        if (category in _enabled_categories):
-
-            return DNS_REQUEST_RESULTS(True, 'category', category)
+        if label := _enabled_categories.get(category):
+            return DNS_INSPECTION_RESULTS(True, 'category', (label, category, packet.dns_profile))
 
         # adding the returned cat to the enum list. this will be used to identify categories for allowed requests.
         enum_categories.append(category)
 
     # TODO: expand keyword search to be able to specify locations of sub-string ex. [>start, <end]
     #  (the endian points towards which side has the remainder of the string.)
+    #   - make sure labels are associated with the builtin keyword categories like standard cats.
     # Keyword search within query name will block if match
     req = packet.qname
     if (keyword_match := [(kwd, cat) for kwd, cat in _dns_keywords if kwd in req]):
-        return DNS_REQUEST_RESULTS(True, 'keyword', keyword_match[0][1])
+        return DNS_INSPECTION_RESULTS(True, 'keyword', ('_', keyword_match[0][1], packet.dns_profile))
 
     # pulling the most specific category that is not none otherwise returned value will be DNS_CAT.NONE.
     for category in enum_categories:
@@ -171,18 +180,4 @@ def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     else: category = DNS_CAT.NONE
 
     # DEFAULT ACTION | ALLOW
-    return DNS_REQUEST_RESULTS(False, None, category)
-
-# grabbing the request category and determining whether the request should be blocked. if so, returns general
-# information for further processing
-# def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
-#     # signature match, but blocking is disabled for the category | ALLOW
-#     if (category not in _enabled_categories):
-#         return False
-#
-#     # signature match and not whitelisted or whitelisted and cat is high risk | BLOCK
-#     if (not whitelisted or category in [DNS_CAT.malicious, DNS_CAT.crypto_miner]):
-#         return True
-#
-#     # default action | ALLOW
-#     return False
+    return DNS_INSPECTION_RESULTS(False, REASON_NA, (LABEL_NA, category, packet.dns_profile))

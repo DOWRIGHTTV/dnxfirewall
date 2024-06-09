@@ -178,7 +178,7 @@ def configure_security_profile_ident(sp_ident: config) -> Optional[Configuration
         f'profiles/profile_{sp_ident.security_profile}', cfg_type='security/ip', err_as_value=True)
     with dnsp:
         dnsp.config_data['name'] = sp_ident.name
-        dnsp.config_data['desc'] = sp_ident.desc
+        dnsp.config_data['description'] = sp_ident.desc
 
     return dnsp.error
 

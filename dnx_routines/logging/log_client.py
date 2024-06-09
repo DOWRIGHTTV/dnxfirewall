@@ -69,7 +69,7 @@ def direct_log(m_name: str, message_level: LOG, msg: str, *, cli: bool = False) 
     log_path = f'{HOME_DIR}/dnx_profile/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
     log_msg  = f'{fast_time()}|{m_name}|{message_level.name.lower()}|{msg}\n'
 
-    # if the log file doesn't already exist and the process is uid is root, we will change the owner to dnx.
+    # if the log file doesn't already exist and the process uid is root, we will change the owner to dnx.
     change_owner = ROOT and not log_exists(log_path)
 
     _dump_to_file(log_path, log_msg, lock=direct_log_lock)
@@ -106,7 +106,7 @@ def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]
 
     valid input: 0-7.
 
-    if level is None the entire dict will be returned.
+    if the log level is None, the entire dict will be returned.
     '''
     levels = {
         0: ['emergency', 'system is unusable'],
@@ -271,7 +271,7 @@ def _log_handler():
 
         @staticmethod
         def cli(log_msg: str):
-            '''print a message to console. this is for all important console only events.
+            '''print a message to console. this is for all important console events.
             '''
             if (cli_output):
                 console_log(log_msg)
@@ -279,7 +279,7 @@ def _log_handler():
         @staticmethod
         # TODO: figure out a nice way to alert on excessive amounts of dropped events. maybe store dropped events
         #  to a backlog file that can be loaded into db when available.
-        def event_log(timestamp: int, log: tuple, method: str):
+        def event_log(log: EVENT_LOGS, method: bytes):
             '''log security events to database.
 
             sends over local socket controlled by database service to aggregate events from all modules.
@@ -287,7 +287,7 @@ def _log_handler():
             '''
             try:
                 db_sendmsg(
-                    [db_message(timestamp, log, method)],
+                    [b'|'.join([log.encode(), method])],
                     [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)],
                     0, DATABASE_SOCKET
                 )
@@ -327,7 +327,7 @@ def _log_handler():
 
         current_date = _system_date(string=True)
         # if the dates are different, then the day has changed.
-        # we close the previous days log file, then open a new file with current date.
+        # we close the previous days log file, then open a new file with the current date.
         # for processes running as root, we will modify the file's owner to dnx so webui can read them.
         if (current_date != _log_buf_date):
             _log_buf.close()
@@ -343,7 +343,7 @@ def _log_handler():
         # WRITING LOG ENTRY TO FILE BUFFER
         _log_buf.write(job)
 
-        # increments counter then checks currently configured limit. resets counter if limit reached.
+        # increments counter then checks currently configured limit. resets counter if the limit is reached.
         _log_write_ct += 1
         if (_log_write_ct == line_buf_limit):
             _log_buf.flush()
