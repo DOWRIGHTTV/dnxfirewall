@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
 # ================================================
 # DATABASE ROUTINES REFERENCED BY CONNECTOR CLASS
 #
@@ -23,8 +27,7 @@ from __future__ import annotations
 
 import dnx_routines.database.ddb_connector_sqlite as _db_conn
 
-from dnx_gentools.def_typing import TYPE_CHECKING, Optional
-from dnx_gentools.def_constants import fast_sleep as _fsleep
+from dnx_gentools.def_constants import TYPE_CHECKING, fast_sleep as _fsleep
 from dnx_gentools.def_namedtuples import BLOCKED_DOM as _BLOCKED_DOM
 from dnx_gentools.system_info import System as _System
 
@@ -32,6 +35,8 @@ from dnx_gentools.system_info import System as _System
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Optional
+
     from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG
     from dnx_gentools.def_namedtuples import INF_EVENT_LOG
 
