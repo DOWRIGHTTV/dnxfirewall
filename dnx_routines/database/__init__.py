@@ -36,20 +36,6 @@ def run():
     finally:
         os.remove(DATABASE_SOCKET)
 
-
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type
-
-if (TYPE_CHECKING):
-    __all__ = (
-        'DBConnector',
-
-        # Types
-        'DBConnector_T'
-    )
-
-    from ddb_connector_sqlite import DBConnector
-
-    DBConnector_T = Type[DBConnector]

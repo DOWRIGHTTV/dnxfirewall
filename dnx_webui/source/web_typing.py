@@ -12,7 +12,7 @@ def web_module_import_callout(filename: str) -> None:
     import os
 
     if os.environ.get('WEBUI_DEVELOPMENT') == '1':
-        print(f'<| file import >> {filename} |>')
+        print(f'<| webui import >> {filename} |>')
 
 def web_module_import_checkpoint(filename: str, message: str) -> None:
     '''print passed in filename to stdout.
@@ -22,7 +22,7 @@ def web_module_import_checkpoint(filename: str, message: str) -> None:
     import os
 
     if os.environ.get('WEBUI_DEVELOPMENT') == '1':
-        print(f'<| {filename} | CHECKPOINT >> {message} |>')
+        print(f'<| {filename} | webui checkpoint >> {message} |>')
 
 
 if (TYPE_CHECKING):

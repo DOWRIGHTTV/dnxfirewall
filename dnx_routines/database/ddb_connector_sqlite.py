@@ -5,6 +5,10 @@ from __future__ import annotations
 import sqlite3
 import importlib
 
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
 from dnx_gentools.def_exceptions import dnx_assert
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, ONE_DAY, FIVE_MIN, fast_time, console_log
 
@@ -12,7 +16,6 @@ if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Callable_T, ClassVar
 
     from dnx_routines.logging import LogHandler_T
-    from dnx_routines.database import DBConnector_T
 
     NO_ROUTINE: tuple[None, None]
 

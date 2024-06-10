@@ -55,7 +55,7 @@ def module_import_callout(filename: str) -> None:
     import os
 
     if (WEBUI_DEVELOPMENT):
-        print(f'<| file import >> {filename} |>')
+        print(f'<| module import >> {filename} |>')
 # =====================================================
 
 ppt: Callable[[Any], None] = _PrettyPrinter(sort_dicts=False).pprint
