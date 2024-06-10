@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from functools import wraps
 
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
 from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import LOG as _LOG
 

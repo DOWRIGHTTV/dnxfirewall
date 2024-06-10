@@ -5,6 +5,7 @@ from __future__ import annotations
 # runtime imports
 from typing import TYPE_CHECKING, cast
 
+
 if (TYPE_CHECKING):
     # standard lib imports
     from typing import TypeAlias

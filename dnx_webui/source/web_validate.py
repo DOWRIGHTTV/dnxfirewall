@@ -10,9 +10,9 @@ from typing import NamedTuple
 from ipaddress import IPv4Network, IPv4Address
 
 # TODO: consider moving this module, web_typing, and web_interfaces to dnx_webui folder instead of source
-from source.web_typing import web_module_load_callout
+from source.web_typing import web_module_import_callout
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
 from dnx_gentools.def_constants import TYPE_CHECKING, WEBUI_DEVELOPMENT
 from dnx_gentools.def_enums import CFG, DATA, PROTO

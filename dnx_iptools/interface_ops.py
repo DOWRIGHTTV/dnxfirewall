@@ -9,8 +9,11 @@ from csv import reader as csv_reader
 from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, ROOT, ONE_SEC
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, ROOT, ONE_SEC
 from dnx_gentools.def_constants import shell, fast_sleep
 from dnx_gentools.def_enums import INTF
 from dnx_gentools.file_operations import acquire_lock, release_lock, load_configuration, read_file, write_file
@@ -22,6 +25,15 @@ from dnx_iptools.protocol_tools import btoia, strtoroute, Route, masktocidr, cid
 
 from dnx_control.control.ctl_action import system_action
 
+# ================
+# TYPING IMPORTS
+# ================
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import *
+
+    from dnx_routines.logging import LogHandler_T
+
+
 __all__ = (
     'get_intf_builtin', 'load_interfaces',
     'wait_for_interface', 'wait_for_ip',
@@ -32,12 +44,6 @@ __all__ = (
 
     'InterfaceManager'
 )
-
-# ================
-# TYPING IMPORTS
-# ================
-if (TYPE_CHECKING):
-    from dnx_routines.logging import LogHandler_T
 
 NO_ADDRESS: int = -1
 

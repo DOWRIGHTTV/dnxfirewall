@@ -4,24 +4,24 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-def web_module_load_callout(filename: str) -> None:
+def web_module_import_callout(filename: str) -> None:
     '''print passed in filename to stdout.
 
     only active when WEBUI_DEVELOPMENT is present in the environment.
     '''
     import os
 
-    if os.environ.get('FLASK_ENV') == 'development':
+    if os.environ.get('WEBUI_DEVELOPMENT') == '1':
         print(f'<| file import >> {filename} |>')
 
-def web_module_load_checkpoint(filename: str, message: str) -> None:
+def web_module_import_checkpoint(filename: str, message: str) -> None:
     '''print passed in filename to stdout.
 
     only active when WEBUI_DEVELOPMENT is present in the environment.
     '''
     import os
 
-    if os.environ.get('FLASK_ENV') == 'development':
+    if os.environ.get('WEBUI_DEVELOPMENT') == '1':
         print(f'<| {filename} | CHECKPOINT >> {message} |>')
 
 

@@ -6,20 +6,26 @@ import os
 import traceback
 from datetime import timedelta
 
-from source.web_typing import web_module_load_callout, web_module_load_checkpoint
+from source.web_typing import web_module_import_callout, web_module_import_checkpoint
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, FIVE_SEC, WEBUI_DEVELOPMENT
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration
 from dnx_gentools.system_info import System
 
+web_module_import_checkpoint(__file__, 'DNX General Utilities initialized.')
+
 from dnx_iptools.interface_ops import InterfaceManager
 from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
 
+web_module_import_checkpoint(__file__, 'DNX IP Utilities initialized.')
+
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
+
+web_module_import_checkpoint(__file__, 'DNX Routines initialized.')
 
 import source.web_validate as validate
 
@@ -31,6 +37,8 @@ if (TYPE_CHECKING):
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
 # ========================================
+web_module_import_checkpoint(__file__, 'Starting FLASK API Import.')
+
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for, g as context_global
 
 app = Flask(
@@ -48,11 +56,13 @@ app.permanent_session_lifetime = timedelta(minutes=app_config['flask->session_ti
 app.jinja_env.trim_blocks   = True
 app.jinja_env.lstrip_blocks = True
 
-web_module_load_checkpoint(__file__, 'Flask API initialized.')
+web_module_import_checkpoint(__file__, 'Flask API initialized.')
 
 # =========================================
 # DNX API - LOGGING / FIREWALL / CONFIG
 # =========================================
+web_module_import_checkpoint(__file__, 'Starting DNX API Import.')
+
 from dnx_control.control.ctl_action import system_action
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 from dnx_secmods.cfirewall.fw_analyze import FirewallAnalyze
@@ -78,11 +88,13 @@ cfirewall_analyze = FirewallAnalyze()
 
 FirewallAnalyze.cfirewall_analyze = cfirewall_analyze
 
-web_module_load_checkpoint(__file__, 'DNX API initialized.')
+web_module_import_checkpoint(__file__, 'DNX API initialized.')
 
 # =========================================
 # WEBUI COMPONENTS
 # =========================================
+web_module_import_checkpoint(__file__, 'Starting WEBUI Components Import.')
+
 from source.main.dfe_dashboard import WebPage as webui_dashboard
 from source.rules.dfe_firewall import WebPage as dnx_fwall  # non standard -> firewall page logic
 from source.rules.dfe_nat import WebPage as dnx_nat
@@ -106,7 +118,7 @@ from source.system.dfe_users import WebPage as dfe_users
 
 from source.main.dfe_authentication import *
 
-web_module_load_checkpoint(__file__, 'WEBUI Components initialized.')
+web_module_import_checkpoint(__file__, 'WEBUI Components initialized.')
 
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS

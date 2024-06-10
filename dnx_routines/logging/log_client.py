@@ -29,7 +29,7 @@ __all__ = (
 
     'direct_log', 'message', 'db_message', 'convert_level',
 
-    'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',
+    # 'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',
 )
 
 _system_date = System.date

@@ -8,7 +8,9 @@ import os.path
 
 from enum import Enum as _Enum, IntEnum as _IntEnum, IntFlag as _IntFlag
 
-from dnx_gentools.def_constants import HOME_DIR as _HOME_DIR, SIG_DIR as _SIG_DIR
+from dnx_gentools.def_constants import module_import_callout, SIG_DIR as _SIG_DIR
+
+module_import_callout(__file__)
 
 # ===============
 # RUNTIME TYPES

@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
-import fcntl
+from dnx_gentools.def_constants import module_import_callout
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import Queue, CFG
+module_import_callout(__file__)
+
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, console_log, shell, str_join, INITIALIZE_MODULE
+from dnx_gentools.def_enums import Queue
 from dnx_gentools.file_operations import ConfigurationError, acquire_lock, release_lock, load_configuration
 
 try:
     from dnx_iptools.cprotocol_tools import itoip
 except ImportError:
     pass
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import *
 
 __all__ = (
     'IPTablesManager'

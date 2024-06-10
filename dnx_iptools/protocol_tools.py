@@ -12,9 +12,12 @@ from random import getrandbits
 from socket import socket, AF_INET, SOCK_RAW, SCM_CREDENTIALS
 from subprocess import run, CalledProcessError, DEVNULL
 
-from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
 from dnx_gentools.def_exceptions import ParseError
-from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX, str_join
+from dnx_gentools.def_constants import TYPE_CHECKING, USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX
 from dnx_gentools.def_enums import PROTO_ICMP
 
 from dnx_iptools.def_structs import *
@@ -25,6 +28,8 @@ from dnx_iptools.cprotocol_tools import calc_checksum, itoip
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import *
+
     from dnx_gentools import Structure_T
 
 __all__ = (

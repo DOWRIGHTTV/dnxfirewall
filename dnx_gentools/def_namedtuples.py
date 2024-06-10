@@ -5,6 +5,10 @@ from __future__ import annotations
 from collections import namedtuple as _namedtuple
 from functools import lru_cache as _lru_cache
 
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, IPS as _IPS
 from dnx_gentools.def_enums import GEO as _GEO, DIR as _DIR
 from dnx_gentools.def_enums import DECISION as _DECISION

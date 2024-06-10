@@ -8,9 +8,9 @@ import threading
 from functools import wraps
 from flask import redirect, render_template, request, session, url_for, g as context_global
 
-from source.web_typing import web_module_load_callout
+from source.web_typing import web_module_import_callout
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
 from dnx_gentools.def_constants import TYPE_CHECKING, fast_time, fast_sleep
 from dnx_gentools.def_enums import LOG, CFG

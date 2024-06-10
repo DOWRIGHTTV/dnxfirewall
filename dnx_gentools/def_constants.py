@@ -36,6 +36,7 @@ _sys.path.append('/usr/local/lib')
 # =====================================================
 # MODULE INITIALIZATION CONTROL - set by shell command
 # =====================================================
+WEBUI_DEVELOPMENT: bool = _os.environ.get('WEBUI_DEVELOPMENT') == '1'
 # module startup code will run if [...]. values are stored as strings
 def INITIALIZE_MODULE(log_name: str):
     '''returns True if the calling module functions should start.
@@ -43,10 +44,20 @@ def INITIALIZE_MODULE(log_name: str):
     init_module: str = _os.environ.get('INIT_MODULE', '')
 
     return True if init_module == log_name.replace('_', '-') else False
+
+def module_import_callout(filename: str) -> None:
+    '''print passed in filename to stdout.
+
+    only active when WEBUI_DEVELOPMENT is present in the environment.
+
+    note: currently tied to WEBUI_DEVELOPMENT environment variable
+    '''
+    import os
+
+    if (WEBUI_DEVELOPMENT):
+        print(f'<| file import >> {filename} |>')
 # =====================================================
 
-
-WEBUI_DEVELOPMENT: bool = _os.environ.get('WEBUI_DEVELOPMENT') == '1'
 ppt: Callable[[Any], None] = _PrettyPrinter(sort_dicts=False).pprint
 
 console_log: Callable[[str], None] = _partial(print, flush=True)
