@@ -5,9 +5,12 @@ from __future__ import annotations
 import os
 import urllib.request as requests
 
-from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_namedtuples import SigFile
 from dnx_gentools.file_operations import ConfigurationManager, calculate_file_hash
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import SIGNATURE_MANIFEST
 
 # update signature files from the github dnxfirewall-signatures repo.
 # a version check will be done to ensure the signatures are compatible with the current system version.

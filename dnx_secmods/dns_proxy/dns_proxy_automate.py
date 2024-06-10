@@ -8,16 +8,15 @@ import ssl
 
 from typing import NamedTuple
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
-from dnx_gentools.def_namedtuples import DNS_SERVERS, DNS_SIGNATURES, DNS_WHITELIST, DNS_BLACKLIST, Item
-from dnx_gentools.def_enums import CFG, DNS_CAT
-from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_NOT_SET, PROTO_UDP, PROTO_DNS, PROTO_DNS_TLS
+
+from dnx_gentools.def_constants import TYPE_CHECKING, CONNECT_TIMEOUT, CERTIFICATE_STORE, FIVE_SEC
+from dnx_gentools.def_namedtuples import DNS_SERVERS, DNS_SIGNATURES, DNS_WHITELIST, DNS_BLACKLIST
+from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_NOT_SET, PROTO_UDP, PROTO_DNS, PROTO_DNS_TLS, DNS_CAT
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
 
 from dnx_iptools.cprotocol_tools import iptoi
-from dnx_iptools.protocol_tools import create_dns_query_header, strtobit
+from dnx_iptools.protocol_tools import create_dns_query_header
 
 from dns_proxy_log import Log
 
@@ -25,6 +24,9 @@ from dns_proxy_log import Log
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import ClassVar
+    from dnx_gentools.def_typing import ConfigChain, Socket_T, SSLContext
+
     from dnx_routines.logging import LogHandler_T
 
 

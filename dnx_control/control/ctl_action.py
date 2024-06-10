@@ -6,12 +6,15 @@ from json import dumps
 from threading import Timer
 from socket import socket, AF_INET, SOCK_DGRAM
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import LOG
 from dnx_gentools.def_exceptions import ControlError
+from dnx_gentools.def_constants import TYPE_CHECKING, CONTROL_SOCKET, CONTROL_AUTHENTICATION, NO_DELAY
+from dnx_gentools.def_enums import LOG
 
 from dnx_routines.logging.log_client import Log, direct_log
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Bytes, Socket_T
+
 
 __all__ = (
     'system_action',

@@ -7,8 +7,7 @@ import threading
 
 from random import randint
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING, INSPECT_PACKET, DONT_INSPECT_PACKET, RUN_FOREVER
 from dnx_gentools.def_namedtuples import DNS_SEND
 from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_UDP, PROTO_DNS, PROTO_DNS_TLS, DNS
 from dnx_gentools.standard_tools import dnx_queue
@@ -23,10 +22,10 @@ from dns_proxy_packets import ClientQuery, ttl_rewrite
 from dns_proxy_cache import dns_cache, QNAME_NOT_FOUND
 from dns_proxy_log import Log
 
-# ===============
-# TYPING IMPORTS
-# ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Optional, ClassVar
+    from dnx_gentools.def_typing import Lock_T, Socket_T
+
     from dnx_gentools.def_namedtuples import QNAME_RECORD_UPDATE
 
 __all__ = (

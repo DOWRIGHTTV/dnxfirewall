@@ -6,8 +6,7 @@ import threading
 
 from collections import Counter
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING, THREE_MIN, DEFAULT_TTL, TOP_DOMAIN_COUNT, fast_time, fast_sleep
 from dnx_gentools.def_namedtuples import QNAME_RECORD, QNAME_RECORD_UPDATE
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
@@ -18,6 +17,9 @@ from dns_proxy_log import Log
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import TypeAlias, Callable
+    from dnx_gentools.def_typing import Lock_T
+
     from dns_proxy_packets import ClientQuery
 
 __all__ = (

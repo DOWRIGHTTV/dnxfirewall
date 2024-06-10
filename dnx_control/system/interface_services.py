@@ -7,10 +7,10 @@ from json import dump
 from subprocess import check_output
 
 from dnx_gentools.def_constants import INITIALIZE_MODULE, HOME_DIR, NO_DELAY
-from dnx_routines.logging.log_client import LogHandler as Log
 
 from dnx_gentools.standard_tools import looper
 
+from dnx_routines.logging.log_client import LogHandler as Log
 
 dt = {}
 INT_BANDWIDTH_TIMER = 5

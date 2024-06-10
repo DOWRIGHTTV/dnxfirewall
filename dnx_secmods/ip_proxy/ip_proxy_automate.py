@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import RFC1918
+from dnx_gentools.def_constants import TYPE_CHECKING, RFC1918
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DIRECTION, GEO, GEOLOCATION, REP, REPUTATION
 from dnx_gentools.def_enums import PROTO_UDP, PROTO_TCP
@@ -20,6 +19,9 @@ from ip_proxy_log import Log
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import ClassVar
+    from dnx_gentools.def_typing import ConfigChain, OPEN_WAN_PORTS
+
     from dnx_routines.logging import LogHandler_T
 
 PROFILE_CT = 15

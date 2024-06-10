@@ -8,7 +8,8 @@ import select
 
 from threading import Thread
 
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING, RUN_FOREVER, FIVE_SEC, LAST_ATTEMPT, ATTEMPTS
+from dnx_gentools.def_constants import WAN_IN, HEARTBEAT_FAIL_LIMIT, fast_sleep, fast_time, console_log
 from dnx_gentools.def_enums import ICMP, DECISION, DIRECTION
 from dnx_gentools.def_enums import PROTO_NOT_SET, PROTO_TCP, PROTO_UDP, PROTO_ICMP, PROTO_DNS_TLS
 from dnx_gentools.def_exceptions import ProtocolError

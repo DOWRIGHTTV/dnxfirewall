@@ -7,8 +7,8 @@ import ssl
 
 from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING, RUN_FOREVER, OK, ERR, RELAY_TIMEOUT, CONNECT_TIMEOUT, TEN_SEC
+from dnx_gentools.def_constants import KEEP_ALIVE_DOMAIN, CERTIFICATE_STORE, fast_time, fast_sleep
 from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_UDP, PROTO_DNS, PROTO_DNS_TLS
 from dnx_gentools.def_namedtuples import RELAY_CONN, DNS_SEND
 from dnx_gentools.standard_tools import dnx_queue
@@ -18,6 +18,10 @@ from dnx_iptools.packet_classes import ProtoRelay
 
 from dns_proxy_packets import ClientQuery
 from dns_proxy_log import Log
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import ClassVar
+    from dnx_gentools.def_typing import Event_T, Socket_T
 
 
 __all__ = (

@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_exceptions import ProtocolError
+from dnx_gentools.def_constants import TYPE_CHECKING, DEFAULT_TTL, MAX_A_RECORD_COUNT, UINT32_MAX, NULL_ADDR
+from dnx_gentools.def_constants import THIRTY_MIN, dot_join, byte_join, fast_time
 from dnx_gentools.def_enums import DNS, DNS_MASK
 from dnx_gentools.def_enums import PROTO_UDP, PROTO_DNS_TLS
 from dnx_gentools.def_namedtuples import QNAME_RECORD, QNAME_RECORD_UPDATE, RESOURCE_RECORD
-from dnx_gentools.def_exceptions import ProtocolError
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
-from dnx_iptools.protocol_tools import *
+from dnx_iptools.protocol_tools import parse_query_name, domain_stob, btoia
 from dnx_iptools.cprotocol_tools import iptoi, calc_checksum
 from dnx_iptools.interface_ops import load_interfaces
 from dnx_iptools.packet_classes import NFPacket, RawResponse

@@ -9,14 +9,16 @@ from json import loads
 from functools import partial
 from socket import socket, AF_UNIX, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING, CONTROL_SOCKET, NO_DELAY, shell
 from dnx_gentools.standard_tools import looper
 
 from dnx_iptools.def_structs import scm_creds_pack
 from dnx_iptools.protocol_tools import change_socket_owner, authenticate_sender
 
 from dnx_routines.logging.log_client import Log
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Socket_T
 
 
 MODULE_PERMISSIONS = {

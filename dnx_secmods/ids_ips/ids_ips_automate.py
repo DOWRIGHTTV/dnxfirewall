@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from dnx_gentools.def_constants import *
 from dnx_gentools.def_exceptions import dnx_assert
+from dnx_gentools.def_constants import TYPE_CHECKING, FIVE_MIN, ONE_HOUR, NO_DELAY
 from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_TCP, PROTO_UDP, PROTO_ICMP
 from dnx_gentools.system_info import System
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase

@@ -13,11 +13,10 @@ from dataclasses import dataclass
 from functools import partial
 from subprocess import run as _run, DEVNULL, CalledProcessError
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, INITIALIZE_MODULE, hardout, str_join
-from dnx_gentools.def_namedtuples import SigFile
-from dnx_gentools.file_operations import ConfigurationManager, write_configuration, json_to_yaml
-from dnx_gentools.file_operations import read_file, write_file, load_data, write_data,  change_file_owner
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, INITIALIZE_MODULE, hardout, str_join
+# from dnx_gentools.def_namedtuples import SigFile
+from dnx_gentools.file_operations import ConfigurationManager, json_to_yaml
+from dnx_gentools.file_operations import write_file, load_data, write_data,  change_file_owner
 
 from dnx_iptools.iptables import IPTablesManager
 from dnx_routines.logging.log_client import Log
@@ -30,6 +29,9 @@ from dnx_cli.utils.shell_colors import text
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Optional
+    from dnx_gentools.def_typing import SIGNATURE_MANIFEST
+
     from dnx_gentools.file_operations import ConfigChain
 
 ERROR_SHOW_TIME = .33

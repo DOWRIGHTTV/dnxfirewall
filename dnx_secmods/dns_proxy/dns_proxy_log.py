@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import str_join
+from dnx_gentools.def_constants import TYPE_CHECKING, str_join
 from dnx_gentools.def_enums import LOG, DNS_CAT, DNS_MALWARE_CATEGORIES as MALWARE_CATEGORIES
 from dnx_gentools.def_namedtuples import DNS_EVENT_LOG, INF_EVENT_LOG
 
