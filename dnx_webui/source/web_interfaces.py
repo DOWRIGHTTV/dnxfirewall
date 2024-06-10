@@ -1,9 +1,14 @@
 
 from __future__ import annotations
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
+
+from dnx_gentools.def_constants import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 
 class WebPage:

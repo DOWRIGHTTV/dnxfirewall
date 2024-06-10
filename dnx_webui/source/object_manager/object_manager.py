@@ -10,30 +10,31 @@ from os import replace
 from ast import literal_eval
 from enum import IntEnum
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
+
+web_module_load_callout(__file__)
 
 from source.web_validate import ValidationError
 
-from dnx_gentools.def_constants import HOME_DIR
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR
 from dnx_gentools.def_enums import GEO, DATA
 from dnx_gentools.def_namedtuples import FW_OBJECT
 from dnx_gentools.file_operations import config, acquire_lock, release_lock
+from dnx_gentools.system_info import System
 
 from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.protocol_tools import cidrtoi
 
-from dnx_gentools.system_info import System
-
 from dnx_routines.logging.log_client import Log
-
 
 __all__ = (
     'FWObjectManager', 'USER_RANGE',
 )
 
-from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
     from source.web_typing import Union
+
+    from source.web_typing import FirewallDBLock
 
     ITER_FW_OBJECTS = list[list[str, str]]
 

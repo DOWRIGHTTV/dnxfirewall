@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from source.web_validate import *
-
-from dnx_gentools.def_constants import fast_time, LOG_LEVELS
+from dnx_gentools.def_constants import TYPE_CHECKING, fast_time, LOG_LEVELS
 from dnx_gentools.def_enums import DATA, LOG
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 from dnx_gentools.system_info import System
 
+from source.web_validate import *
 from source.web_interfaces import StandardWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage',)
 

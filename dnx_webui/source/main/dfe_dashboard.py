@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from itertools import zip_longest
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.system_info import System
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
@@ -16,7 +17,11 @@ from dnx_routines.logging.log_client import LogHandler as Log
 from source.web_interfaces import StandardWebPage
 from source.system.settings.dfe_interface import get_interfaces
 
-__all__ = ('WebPage')
+if (TYPE_CHECKING):
+    from source.web_typing import *
+
+__all__ = ('WebPage',)
+
 
 class WebPage(StandardWebPage):
     '''

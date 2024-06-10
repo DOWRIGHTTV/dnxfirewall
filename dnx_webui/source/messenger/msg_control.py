@@ -8,15 +8,19 @@ from functools import lru_cache
 from typing import NamedTuple
 from hashlib import sha256
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from dnx_gentools.def_constants import fast_time
+from dnx_gentools.def_constants import TYPE_CHECKING, fast_time
 from dnx_gentools.file_operations import load_configuration
 from dnx_gentools.system_info import System
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
+
 
 _format_msg_time = System.format_msg_time
 class SECURE_MESSAGE(NamedTuple):

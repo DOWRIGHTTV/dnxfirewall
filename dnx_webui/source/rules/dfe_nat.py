@@ -4,19 +4,22 @@ from __future__ import annotations
 
 from subprocess import run
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from source.web_validate import *
-
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
-
-from dnx_iptools.iptables import IPTablesManager
 from dnx_gentools.system_info import System
 
+from dnx_iptools.iptables import IPTablesManager
+
+from source.web_validate import *
 from source.web_interfaces import RulesWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage',)
 

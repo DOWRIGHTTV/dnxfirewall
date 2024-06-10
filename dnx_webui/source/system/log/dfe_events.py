@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from source.web_validate import *
-
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_data, config
 from dnx_gentools.system_info import System
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
+from source.web_validate import *
 from source.web_interfaces import LogWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage',)
 

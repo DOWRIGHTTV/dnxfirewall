@@ -10,14 +10,18 @@ from typing import NamedTuple
 from ipaddress import IPv4Network, IPv4Address
 
 # TODO: consider moving this module, web_typing, and web_interfaces to dnx_webui folder instead of source
-from dnx_webui.source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from dnx_gentools.def_constants import WEBUI_DEVELOPMENT
+from dnx_gentools.def_constants import TYPE_CHECKING, WEBUI_DEVELOPMENT
 from dnx_gentools.def_enums import CFG, DATA, PROTO
 from dnx_gentools.def_exceptions import DNXError
 from dnx_gentools.file_operations import config
+
+if (TYPE_CHECKING):
+    from source.web_typing import TypeAlias, Optional, Any, Union, Callable
+    from source.web_typing import Form, JSON, Args
 
 
 BINT = (0, 1)

@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import os
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from dnx_gentools.def_constants import HOME_DIR
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR
 from dnx_gentools.file_operations import tail_file
 from dnx_gentools.system_info import System
 
 from source.web_interfaces import LogWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage',)
 

@@ -6,11 +6,11 @@ import os
 import traceback
 from datetime import timedelta
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout, web_module_load_checkpoint
 
 web_module_load_callout(__file__)
 
-from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, WEBUI_DEVELOPMENT
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, FIVE_SEC, WEBUI_DEVELOPMENT
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration
 from dnx_gentools.system_info import System
@@ -22,6 +22,11 @@ from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
 
 import source.web_validate as validate
+
+if (TYPE_CHECKING):
+    from source.web_typing import Union
+
+    from source.web_typing import StandardWebPage, LogWebPage, RulesWebPage, ConfigChain
 
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
@@ -42,6 +47,8 @@ app.permanent_session_lifetime = timedelta(minutes=app_config['flask->session_ti
 
 app.jinja_env.trim_blocks   = True
 app.jinja_env.lstrip_blocks = True
+
+web_module_load_checkpoint(__file__, 'Flask API initialized.')
 
 # =========================================
 # DNX API - LOGGING / FIREWALL / CONFIG
@@ -71,6 +78,8 @@ cfirewall_analyze = FirewallAnalyze()
 
 FirewallAnalyze.cfirewall_analyze = cfirewall_analyze
 
+web_module_load_checkpoint(__file__, 'DNX API initialized.')
+
 # =========================================
 # WEBUI COMPONENTS
 # =========================================
@@ -96,6 +105,8 @@ from source.system.dfe_services import WebPage as dnx_services
 from source.system.dfe_users import WebPage as dfe_users
 
 from source.main.dfe_authentication import *
+
+web_module_load_checkpoint(__file__, 'WEBUI Components initialized.')
 
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS

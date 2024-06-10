@@ -4,21 +4,23 @@ from __future__ import annotations
 
 import dnx_iptools.interface_ops as interface
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from source.web_validate import *
-
-from dnx_gentools.def_constants import HOME_DIR
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR
 from dnx_gentools.def_enums import CFG, DATA, INTF
 from dnx_gentools.file_operations import load_data, load_configuration, config, ConfigurationManager, json_to_yaml
 
-from dnx_control.control.ctl_action import system_action
-
 from dnx_iptools.cprotocol_tools import itoip, default_route
 
+from dnx_control.control.ctl_action import system_action
+
+from source.web_validate import *
 from source.web_interfaces import StandardWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage', 'get_interfaces')
 

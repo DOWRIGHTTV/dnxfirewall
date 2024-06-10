@@ -6,7 +6,6 @@ from functools import wraps
 
 from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import LOG as _LOG
-from dnx_routines.logging.log_client import direct_log as _direct_log
 
 # ================
 # TYPING IMPORTS
@@ -66,6 +65,8 @@ def dnx_assert(condition: bool, message: str, *, logger: LogHandler_T = None) ->
     # todo: figure out how or what to do for the module name in the direct log.
     #  for now we will use "system" as catch all if no logger is provided.
     else:
-        _direct_log('system', _LOG.EMERGENCY, message)
+        from dnx_routines.logging.log_client import direct_log
+
+        direct_log('system', _LOG.EMERGENCY, message)
 
     raise AssertionError(message)

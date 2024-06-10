@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from source.web_validate import *
-
-from dnx_gentools.def_constants import ONE_SEC, fast_sleep
+from dnx_gentools.def_constants import TYPE_CHECKING, ONE_SEC, fast_sleep
 from dnx_gentools.def_exceptions import err_as_value
 from dnx_gentools.file_operations import ConfigurationError, config
+
 from dnx_iptools.interface_ops import InterfaceManager, get_unified_routes, route_lookup
 from dnx_iptools.protocol_tools import Route, masktocidr
 
+from source.web_validate import *
 from source.web_interfaces import StandardWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage',)
 

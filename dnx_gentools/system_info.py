@@ -11,22 +11,26 @@ from datetime import datetime, timedelta
 from typing import NamedTuple
 from subprocess import run, CalledProcessError, DEVNULL
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, ONE_HOUR
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, fast_time, str_join, NO_DELAY, ONE_HOUR
 from dnx_gentools.file_operations import load_configuration, load_data
 
-# prior to system install this will not be available.
+# note: prior to system install, this will not be available.
 try:
     from dnx_iptools.cprotocol_tools import iptoi
 except ImportError:
     pass
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Union, Optional
+    from dnx_gentools.def_typing import ConfigChain
+
+    Timestamp = Union[int, float]
 
 __all__ = (
     'Interface', 'System', 'Services'
 )
 
 util_shell = partial(run, shell=True, capture_output=True, text=True)
-Timestamp = Union[int, float]
 
 class DiskStats(NamedTuple):
     size: tuple[float, float]

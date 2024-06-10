@@ -8,24 +8,27 @@ import string
 from typing import NamedTuple as _NamedTuple
 from collections import defaultdict
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from source.web_validate import *
-from source.object_manager import FWObjectManager, USER_RANGE
-
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_configuration, config
 
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 
+from source.web_validate import *
 from source.web_interfaces import RulesWebPage
+
+from source.object_manager import FWObjectManager, USER_RANGE
 
 # ===============
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from source.web_typing import *
+
     from dnx_gentools.def_namedtuples import FW_OBJECT
 
 __all__ = ('WebPage',)

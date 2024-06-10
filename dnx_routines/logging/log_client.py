@@ -415,24 +415,26 @@ def _log_handler():
 
 
 Log = LogHandler = _log_handler()
-LogHandler_T: TypeAlias = Type[LogHandler]
+
+if (TYPE_CHECKING):
+    LogHandler_T: TypeAlias = Type[LogHandler]
 
 # ========================
 # DIRECT ACCESS FUNCTIONS
 # ========================
 # TODO: test direct access functions after a log level is changed and methods are reset.
 #  - im pretty sure this reference will change so it will not work unless we setattr on the globals
-LogLevel: TypeAlias = Callable[[str], None]
-
-emergency: LogLevel = LogHandler.emergency
-alert: LogLevel = LogHandler.alert
-critical: LogLevel = LogHandler.critical
-error: LogLevel = LogHandler.error
-warning: LogLevel = LogHandler.warning
-notice: LogLevel = LogHandler.notice
-informational: LogLevel = LogHandler.informational
-debug: LogLevel = LogHandler.debug
-cli: LogLevel = LogHandler.cli
+# LogLevel: TypeAlias = Callable[[str], None]
+#
+# emergency: LogLevel = LogHandler.emergency
+# alert: LogLevel = LogHandler.alert
+# critical: LogLevel = LogHandler.critical
+# error: LogLevel = LogHandler.error
+# warning: LogLevel = LogHandler.warning
+# notice: LogLevel = LogHandler.notice
+# informational: LogLevel = LogHandler.informational
+# debug: LogLevel = LogHandler.debug
+# cli: LogLevel = LogHandler.cli
 
 # ========================
 # EXCEPTION HOOKS

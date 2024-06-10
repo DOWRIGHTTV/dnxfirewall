@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from source.web_validate import *
-
-from dnx_gentools.def_constants import space_join
+from dnx_gentools.def_constants import TYPE_CHECKING, space_join
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 from dnx_gentools.system_info import Services
@@ -17,7 +15,11 @@ from dnx_control.control.ctl_action import system_action
 
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 
+from source.web_validate import *
 from source.web_interfaces import StandardWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage',)
 

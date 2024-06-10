@@ -14,6 +14,16 @@ def web_module_load_callout(filename: str) -> None:
     if os.environ.get('FLASK_ENV') == 'development':
         print(f'<| file import >> {filename} |>')
 
+def web_module_load_checkpoint(filename: str, message: str) -> None:
+    '''print passed in filename to stdout.
+
+    only active when WEBUI_DEVELOPMENT is present in the environment.
+    '''
+    import os
+
+    if os.environ.get('FLASK_ENV') == 'development':
+        print(f'<| {filename} | CHECKPOINT >> {message} |>')
+
 
 if (TYPE_CHECKING):
     from typing import TypeAlias, Type, Any, Callable, Optional, Union

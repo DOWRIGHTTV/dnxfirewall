@@ -6,21 +6,24 @@ import re
 
 from flask import session
 
-from source.web_typing import *
+from source.web_typing import web_module_load_callout
 
 web_module_load_callout(__file__)
 
-from source.web_validate import *
-
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from source.main.dfe_authentication import Authentication
+from source.web_validate import *
 from source.web_interfaces import StandardWebPage
+from source.main.dfe_authentication import Authentication
 
 __all__ = ('WebPage',)
 
 _VALID_ACCT_ROLES = ['admin', 'user', 'messenger', 'cli']
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 
 class WebPage(StandardWebPage):
