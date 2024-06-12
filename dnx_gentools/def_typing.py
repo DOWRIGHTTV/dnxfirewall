@@ -3,13 +3,33 @@
 from __future__ import annotations
 
 # runtime imports
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, NewType, cast
+
+# =======================================
+# Custom Types
+# =======================================
+# note: may be used during runtime, so they need to be available.
+DNS_CAT_LABEL = NewType('DNS_CAT_LABEL', str)
+SEC_PROFILE = NewType('SEC_PROFILE', int)
+
+IP_ADDRESS = NewType('IP_ADDRESS', str)
+IP_ADDRINT = NewType('IP_ADDRINT', int)
+
+NET_PROTO = NewType('NET_PROTO', int)  # note: this should not be used anymore. use NETWORK_PROTOCOL instead.
+
+NET_PORT = NewType('NET_PORT', int)
+TCP_PORT = NewType('TCP_PORT', NET_PORT)
+UDP_PORT = NewType('UDP_PORT', NET_PORT)
+
+ConfigLock = NewType('ConfigLock', type('FileLock'))  # verbose type str
+IPTablesLock = NewType('IPTablesLock', type('FileLock'))  # verbose type str
+FirewallDBLock = NewType('FirewallDBLock', type('FileLock'))  # verbose type str
 
 
 if (TYPE_CHECKING):
     # standard lib imports
     from typing import TypeAlias
-    from typing import Type, NewType, Annotated, Protocol, Callable, Generator, Iterator, Iterable
+    from typing import Type, Annotated, Protocol, Callable, Generator, Iterator, Iterable
     from typing import ClassVar, Union, Optional, Any, NoReturn, TextIO
 
     from threading import Lock as _Lock, Event as _Event
@@ -27,18 +47,6 @@ if (TYPE_CHECKING):
     # =======================================
     # custom types
 
-    DNS_CAT_LABEL = NewType('DNS_CAT_LABEL', str)
-    SEC_PROFILE = NewType('SEC_PROFILE', int)
-
-    IP_ADDRESS = NewType('IP_ADDRESS', str)
-    IP_ADDRINT = NewType('IP_ADDRINT', int)
-
-    NET_PROTO = NewType('NET_PROTO', int)  # note: this should not be used anymore. use NETWORK_PROTOCOL instead.
-
-    NET_PORT = NewType('NET_PORT', int)
-    TCP_PORT = NewType('TCP_PORT', NET_PORT)
-    UDP_PORT = NewType('UDP_PORT', NET_PORT)
-
     NET_ADDRESS: TypeAlias = tuple[IP_ADDRESS, NET_PORT]
     NET_ADDRINT: TypeAlias = tuple[IP_ADDRINT, NET_PORT]
 
@@ -49,10 +57,6 @@ if (TYPE_CHECKING):
     Callable_T: TypeAlias = Callable[..., Any]
 
     StructUnpack: TypeAlias = tuple[int, ...]
-
-    ConfigLock   = NewType('ConfigLock', type('FileLock'))  # verbose type str
-    IPTablesLock = NewType('IPTablesLock', type('FileLock'))  # verbose type str
-    FirewallDBLock = NewType('FirewallDBLock', type('FileLock'))  # verbose type str
 
     FileLock: TypeAlias = Union[ConfigLock, IPTablesLock, FirewallDBLock]
 

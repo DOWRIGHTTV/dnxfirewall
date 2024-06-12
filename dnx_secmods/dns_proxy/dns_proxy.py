@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from threading import Thread
 
+from dnx_gentools.def_typing import DNS_CAT_LABEL
 from dnx_gentools.def_constants import TYPE_CHECKING, RUN_FOREVER, INSPECT_PACKET, DONT_INSPECT_PACKET
 from dnx_gentools.def_enums import DNS, DNS_CAT, TLD_CAT
 from dnx_gentools.def_namedtuples import DNS_INSPECTION_RESULTS
@@ -17,7 +18,7 @@ from dns_proxy_log import Log
 
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Callable, ClassVar, NoReturn
-    from dnx_gentools.def_typing import ProxyParser, DNS_CAT_LABEL
+    from dnx_gentools.def_typing import ProxyParser
 
     from dns_proxy_automate import CFG_PROFILE
 
