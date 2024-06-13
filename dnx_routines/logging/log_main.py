@@ -39,6 +39,9 @@ class LogService:
             x for x in os.listdir(f'{HOME_DIR}/dnx_profile/log') if x not in EXCLUDED_MODULES
         ]
 
+    log_length: int
+    log_level:  int
+
     __slots__ = (
         'log_length', 'log_level', '_initialize'
     )
@@ -52,8 +55,8 @@ class LogService:
     def __init__(self) -> None:
         self._initialize = Initialize(Log, 'LogService')
 
-        self.log_length: int = 999
-        self.log_level:  int = -1
+        self.log_length = 999
+        self.log_level  = -1
 
         threading.Thread(target=self.get_settings).start()
 

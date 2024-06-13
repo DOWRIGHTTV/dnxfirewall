@@ -334,15 +334,15 @@ class IPS_EVENT_LOG(_NamedTuple):
         return f'{self.attack_type[0]}/{self.attack_type[1]}'
 
     def encode(self, encoding='utf-8') -> bytes:
-        # return f'{self.timestamp},{self.src_ip},{self.request},{self.category_str},{self.reason},{self.action}'.encode(encoding)
-
-        return b'not implemented'
+        return f'{self.timestamp},{self.attacker},{self.protocol},{self.attack_type_str},{self.action}'.encode(encoding)
 
 class GEOLOCATION_LOG(_NamedTuple):
     '''GENERAL GEOLOCATION LOG TUPLE.
 
     provides properties to convert integer values to a std string form.
             (cty_name, dir_name, act_name)
+
+    note: the db service will have all attrs in string form so calling int() within the properties.
     '''
     country:   int
     direction: int
@@ -350,15 +350,27 @@ class GEOLOCATION_LOG(_NamedTuple):
 
     @property
     def cty_name(self) -> str:
-        return _GEO(self.country).name.lower()
+        '''converts country enum as int to associated string name.
+
+        calls int() on the country for proper handling by the database.
+        '''
+        return _GEO(int(self.country)).name.lower()
 
     @property
     def dir_name(self) -> str:
-        return _DIR(self.direction).name.lower()
+        '''converts direction enum as int to associated string name.
+
+        calls int() on the direction for proper handling by the database.
+        '''
+        return _DIR(int(self.direction)).name.lower()
 
     @property
     def act_name(self) -> str:
-        return 'allowed' if self.action == 1 else 'blocked'
+        '''converts action as int to associated string name.
+
+        calls int() on the action for proper handling by the database.
+        '''
+        return 'allowed' if int(self.action) == 1 else 'blocked'
 
 
 class INF_EVENT_LOG(_NamedTuple):
