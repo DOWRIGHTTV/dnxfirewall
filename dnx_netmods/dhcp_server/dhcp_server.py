@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 
+from dnx_gentools.def_typing import cast
 from dnx_gentools.def_constants import TYPE_CHECKING, INADDR_ANY, BROADCAST, fast_time
 from dnx_gentools.def_enums import DHCP, PROTO_DHCP_SVR
 from dnx_gentools.def_namedtuples import DHCP_RECORD
@@ -22,7 +23,8 @@ from dhcp_server_automate import ServerConfiguration
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import *
+    from dnx_gentools.def_typing import ClassVar
+    from dnx_gentools.def_typing import Socket_T
 
     from dnx_netmods.dhcp_server import ClientRequest_T, RequestID
 
