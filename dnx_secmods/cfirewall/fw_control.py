@@ -110,7 +110,7 @@ class FirewallControl:
             # -> file swapping across multiple files to retain a raw and encoded version of the rules
             fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath=DEFAULT_PATH, strict=False)
 
-            fw_rules_copy: dict[str, Any] = fw_rules.get_dict()
+            fw_rules_copy = fw_rules.get_dict()
 
             convert_ruleset(self.sections, fw_rules_copy)
 

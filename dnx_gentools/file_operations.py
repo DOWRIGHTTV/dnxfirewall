@@ -598,7 +598,7 @@ class ConfigurationManager:
         # replacing the need for load_configuration method to be called every time the context is created.
         # note: this is for forward compatibility and the original method is still available for use.
         #  - locking behind err_as_value because it will be used on new code and will prevent double loading for now.
-        if (self._err_as_value):
+        if (self._err_as_value and not self._name):
             self.config_data: Optional[ConfigChain] = self.load_configuration(strict=self._strict)
 
         self.log.debug(f'Config file lock acquired for {self._filename}.')
@@ -609,13 +609,10 @@ class ConfigurationManager:
     # configuration file. if an exception is raised, the temporary file will be deleted. the file lock will be released
     # upon exiting
     def __exit__(self, exc_type, exc_val, traceback) -> bool:
-        # lock only mode
-        if (not self._name):
-            pass
 
         # !test: this was changed to allow forward compatibility with the new automatic api.
         #  make sure the original and new api are working correctly.
-        elif (exc_type is None):
+        if (exc_type is None and not self._name):
             # old method for writing, requires calling load/write_configuration methods
             if (self._data_written):
                 self.__write_to_disk(json.dumps(self._config_data, indent=2))
