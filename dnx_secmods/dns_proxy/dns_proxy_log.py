@@ -90,7 +90,7 @@ def _generate_log(pkt: DNSPacket, req: DNS_INSPECTION_RESULTS) -> LOG_ENTRIES:
             log_entries.append((
                 DNS_EVENT_LOG(pkt.timestamp, pkt.request_identifier[0], pkt.qname, req.category, 'logging', 'allowed'),
                 LOG.NOTICE,
-                b'dns_request'
+                b'dns_event'
             ))
 
     return log_entries
