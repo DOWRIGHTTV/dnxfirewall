@@ -612,7 +612,7 @@ class ConfigurationManager:
 
         # !test: this was changed to allow forward compatibility with the new automatic api.
         #  make sure the original and new api are working correctly.
-        if (exc_type is None and not self._name):
+        if (exc_type is None and self._name):
             # old method for writing, requires calling load/write_configuration methods
             if (self._data_written):
                 self.__write_to_disk(json.dumps(self._config_data, indent=2))
