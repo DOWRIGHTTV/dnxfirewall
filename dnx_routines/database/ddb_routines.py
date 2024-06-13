@@ -48,9 +48,9 @@ db = _db_conn.DBConnector
 # ========================================
 # INSERT ROUTINES
 # ========================================
-@db.register('dns_request', routine_type='write')
+@db.register('dns_event', routine_type='write')
 # standard input for dns proxy module database entries
-def dns_request(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
+def dns_event(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
     cur.execute(
         'select count, last_seen from dnsproxy where src_ip=? and domain=? and action=?',
         (log.src_ip, log.request, log.action)

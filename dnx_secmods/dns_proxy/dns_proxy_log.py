@@ -74,7 +74,7 @@ def _generate_log(pkt: DNSPacket, req: DNS_INSPECTION_RESULTS) -> LOG_ENTRIES:
             log_entries.append((
                 DNS_EVENT_LOG(pkt.timestamp, pkt.request_identifier[0], pkt.qname, req.category, req.reason, 'blocked'),
                 LOG.WARNING,
-                b'dns_request'
+                b'dns_event'
             ))
 
     elif (not req.redirect):
@@ -83,7 +83,7 @@ def _generate_log(pkt: DNSPacket, req: DNS_INSPECTION_RESULTS) -> LOG_ENTRIES:
             log_entries.append((
                 INF_EVENT_LOG(pkt.timestamp, get_arp_table(host=client_ip), client_ip, pkt.qname, req.category),
                 LOG.ALERT,
-                b'inf_event'
+                b'dns_event'
             ))
 
         if (Log.current_lvl >= LOG.NOTICE):

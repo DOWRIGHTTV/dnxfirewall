@@ -72,6 +72,7 @@ class _DBConnector:
 
             return wrapper
 
+        console_log(f'DB ROUTINE REGISTERED -> {routine_name}')
         # print(f'RETURNING REGISTRATION FOR {routine_name}')
 
         return registration
