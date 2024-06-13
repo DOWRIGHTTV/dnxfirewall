@@ -598,7 +598,7 @@ class ConfigurationManager:
         # replacing the need for load_configuration method to be called every time the context is created.
         # note: this is for forward compatibility and the original method is still available for use.
         #  - locking behind err_as_value because it will be used on new code and will prevent double loading for now.
-        if (self._err_as_value and not self._name):
+        if (self._err_as_value and self._name):
             self.config_data: Optional[ConfigChain] = self.load_configuration(strict=self._strict)
 
         self.log.debug(f'Config file lock acquired for {self._filename}.')
