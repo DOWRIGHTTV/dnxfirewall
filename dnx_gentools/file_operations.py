@@ -368,7 +368,7 @@ class ConfigChain:
 
     def __setitem__(self, key: str, value: Union[bool, int, float, str, list, None]):
         dnx_assert(
-            self._strict and key not in self.__mutable_config, f'unknown key "{key}" cannot be applied in strict mode.')
+            not self._strict or (self._strict and key in self.__mutable_config), f'unknown key "{key}" cannot be applied in strict mode.')
 
         self.__mutable_config[key] = value
 
