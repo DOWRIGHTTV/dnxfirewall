@@ -140,7 +140,7 @@ def _log_handler():
 
     log_path: str = f'{HOME_DIR}/dnx_profile/log/'
 
-    initializer: list[int] = []
+    # initializer: list[int] = []
     syslog: bool = False
 
     # keeping file open for performance.
@@ -177,9 +177,7 @@ def _log_handler():
             '''
             nonlocal initialized, handler_name, cli_output, log_path, db_client
 
-            # TODO: wtf is this? initializer doesnt seem to be used anywhere or even set so None.
-            #  - i think this is left over from a previous implementation.
-            if (initializer is None):
+            if (initialized):
                 raise RuntimeError('the log handler has already been started.')
 
             handler_name = name
@@ -459,13 +457,16 @@ def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
         _os._exit(1)
 
     err_report = _format_output(exc_type, exc_value, exc_traceback)
+    err_file = f'{_err_report_path}/{_system_date(string=True)}_err.log'
 
-    _dump_to_file(_err_report_path, err_report, lock=_err_report_write_lock)
+    _dump_to_file(err_file, err_report, lock=_err_report_write_lock)
 
     # checking for Log handler initialization to prevent additional errors on early runtime exceptions
     if (Log.is_running):
-        err_file = f'{_err_report_path}/{_system_date(string=True)}_err.log'
         Log.alert(f'{str(exc_type).split()[1][:-1]} -> {exc_value} :: see {err_file}')
+
+    else:
+        console_log(f'{str(exc_type).split()[1][:-1]} -> {exc_value} :: see {err_file}')
 
 _sys.excepthook = _handle_unhandled_exception
 
@@ -475,13 +476,16 @@ def _handle_unhandled_thread_exception(args, /):
     ''' args = exc_type, exc_value, exc_traceback, thread
     '''
     err_report = _format_output(args.exc_type, args.exc_value, args.exc_traceback)
+    err_file = f'{_err_report_path}/{_system_date(string=True)}_err.log'
 
-    _dump_to_file(_err_report_path, err_report, lock=_err_report_write_lock)
+    _dump_to_file(err_file, err_report, lock=_err_report_write_lock)
 
     # checking for Log handler initialization to prevent additional errors on early runtime thread exceptions
     if (Log.is_running):
-        err_file = f'{_err_report_path}/{_system_date(string=True)}_err.log'
         Log.critical(f'{str(args.exc_type).split()[1][:-1]} -> {args.exc_value} :: see {err_file}')
+
+    else:
+        console_log(f'{str(args.exc_type).split()[1][:-1]} -> {args.exc_value} :: see {err_file}')
 
 
 threading.excepthook = _handle_unhandled_thread_exception

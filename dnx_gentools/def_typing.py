@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, NewType, cast
 DNS_CAT_LABEL = NewType('DNS_CAT_LABEL', str)
 SEC_PROFILE = NewType('SEC_PROFILE', int)
 
+MAC_ADDRESS = NewType('MAC_ADDRESS', str)
+
 IP_ADDRESS = NewType('IP_ADDRESS', str)
 IP_ADDRINT = NewType('IP_ADDRINT', int)
 

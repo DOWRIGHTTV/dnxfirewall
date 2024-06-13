@@ -5,8 +5,7 @@ from __future__ import annotations
 import threading
 import socket
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING, ONE_MIN, fast_time
 from dnx_gentools.def_enums import DHCP
 from dnx_gentools.def_namedtuples import DHCP_INTERFACE, DHCP_OPTION, RECORD_CONTAINER, DHCP_RECORD, Item
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, cfg_read_poller
@@ -20,6 +19,8 @@ from dnx_routines.logging.log_client import Log
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import *
+
     from dnx_routines.logging import LogHandler_T
 
 
@@ -69,7 +70,7 @@ class ServerConfiguration(ConfigurationMixinBase):
             # NOTE ex. ident: eth0, lo, enp0s3
             identity: str = intf['ident']
 
-            # filtering out interfaces not configured at install time
+            # filtering out interfaces not configured during install time
             if (identity is None):
                 continue
 
@@ -184,6 +185,8 @@ class ServerConfiguration(ConfigurationMixinBase):
 class Leases(dict):
     _setup: ClassVar[bool] = False
 
+    reservations: dict[str, int]
+
     __slots__ = (
         'reservations',
     )
@@ -191,7 +194,7 @@ class Leases(dict):
     def __init__(self):
         super().__init__()
 
-        self.reservations: dict[str, int] = {}
+        self.reservations = {}
 
         self._load_leases()
 
