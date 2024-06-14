@@ -23,8 +23,8 @@ from dns_proxy_cache import dns_cache, QNAME_NOT_FOUND
 from dns_proxy_log import Log
 
 if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import Optional, ClassVar
-    from dnx_gentools.def_typing import Lock_T, Socket_T
+    from dnx_gentools.def_typing import Optional, ClassVar, Callable
+    from dnx_gentools.def_typing import Lock_T, Socket_T, DNSCache_T
 
     from dnx_gentools.def_namedtuples import QNAME_RECORD_UPDATE
 

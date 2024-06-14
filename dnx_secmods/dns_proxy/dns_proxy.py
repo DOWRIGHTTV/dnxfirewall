@@ -163,7 +163,7 @@ def inspect(packet: DNSPacket) -> DNS_INSPECTION_RESULTS:
             return DNS_INSPECTION_RESULTS(True, 'category', (label, category, packet.dns_profile))
 
         # adding the returned cat to the enum list. this will be used to identify categories for allowed requests.
-        enum_categories.append(category)
+        enum_categories.append((label, category))
 
     # TODO: expand keyword search to be able to specify locations of sub-string ex. [>start, <end]
     #  (the endian points towards which side has the remainder of the string.)
@@ -174,10 +174,12 @@ def inspect(packet: DNSPacket) -> DNS_INSPECTION_RESULTS:
         return DNS_INSPECTION_RESULTS(True, 'keyword', ('_', keyword_match[0][1], packet.dns_profile))
 
     # pulling the most specific category that is not none otherwise returned value will be DNS_CAT.NONE.
-    for category in enum_categories:
+    for label, category in enum_categories:
         if category is not DNS_CAT.NONE: break
 
-    else: category = DNS_CAT.NONE
+    else:
+        label = LABEL_NA
+        category = DNS_CAT.NONE
 
     # DEFAULT ACTION | ALLOW
-    return DNS_INSPECTION_RESULTS(False, REASON_NA, (LABEL_NA, category, packet.dns_profile))
+    return DNS_INSPECTION_RESULTS(False, REASON_NA, (label, category, packet.dns_profile))

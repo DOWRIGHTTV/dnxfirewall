@@ -59,7 +59,10 @@ def dns_event(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
     if existing_record := cur.fetchone():
 
         i, t = existing_record[0] + 1, existing_record[1]
-        if (log.timestamp - t > 10):
+        # idea:: make this configurable via the webui. a global setting would be easier, but per profile might be best.
+        #  maybe we could use the dns idea to detect retries and filter that way. this could be done in the dns module.
+        # event log suppression. limit one every 10 seconds.
+        if (int(log.timestamp) - t > 10):
             cur.execute(
                 'update dnsproxy set count=?, last_seen=?, reason=? where src_ip=? and domain=? and action=?',
                 (i, log.timestamp, log.reason, log.src_ip, log.request, log.action)
@@ -94,8 +97,9 @@ def ips_event(cur: Cursor, log: IPS_EVENT_LOG) -> bool:
     existing_record = cur.fetchone()
     if (existing_record):
 
+        # idea:: make this configurable via the webui. a global setting would be easier, but per profile might be best.
         # event log suppression. limit one every 10 seconds.
-        if (log.timestamp - existing_record[0] < 10):
+        if (int(log.timestamp) - existing_record[0] < 10):
             return True
 
     cur.execute(
