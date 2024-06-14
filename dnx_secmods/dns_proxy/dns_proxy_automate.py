@@ -88,6 +88,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
         signatures: DNS_SIGNATURES = self.__class__.cfg_profiles[profile_idx].signatures
 
         # CATEGORY SETTINGS
+        signatures.filter[DNS_CAT.NONE] = DNS_CATEGORY_INFO(DNS_CAT_LABEL('na'), SWITCH_OFF)
         # enabled_keywords: list[DNS_CAT] = []
         for label in proxy_config.get_list('categories->built-in'):
 
@@ -101,7 +102,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
                     signatures.filter[DNS_CAT[cat]] = DNS_CATEGORY_INFO(DNS_CAT_LABEL(label), SWITCH_ON)
 
                 else:
-                    signatures.filter[DNS_CAT[cat]] = DNS_CATEGORY_INFO(DNS_CAT_LABEL(label), SWITCH_ON)
+                    signatures.filter[DNS_CAT[cat]] = DNS_CATEGORY_INFO(DNS_CAT_LABEL(label), SWITCH_OFF)
 
         # KEYWORD SETTINGS
         # copying the keyword signature list in memory to a local object, then iterating over the list.
