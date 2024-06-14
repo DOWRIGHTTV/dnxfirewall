@@ -121,8 +121,8 @@ def pre_inspect(packet: DNSPacket) -> bool:
     return DONT_INSPECT_PACKET
 
 
-REASON_NA = '_'
-LABEL_NA = DNS_CAT_LABEL('_')
+REASON_NA = 'na'
+LABEL_NA = DNS_CAT_LABEL('na')
 
 # this is where the system decides whether to block dns query/sinkhole or to allow.
 def inspect(packet: DNSPacket) -> DNS_INSPECTION_RESULTS:
@@ -136,7 +136,7 @@ def inspect(packet: DNSPacket) -> DNS_INSPECTION_RESULTS:
 
     # direct references to proxy class data structure methods
     # ========================================================
-    _enabled_categories = inspection_profile.signatures.filter
+    _filter_settings = inspection_profile.signatures.filter
 
     _dns_whitelist = inspection_profile.whitelist.dns
     _dns_blacklist = inspection_profile.blacklist.dns
@@ -159,11 +159,13 @@ def inspect(packet: DNSPacket) -> DNS_INSPECTION_RESULTS:
 
         # determining the domain category
         category = DNS_CAT(CAT_LOOKUP(enum_request))
-        if label := _enabled_categories.get(category):
-            return DNS_INSPECTION_RESULTS(True, 'category', (label, category, packet.dns_profile))
+        cat_settings = _filter_settings.get(category)
+        if (cat_settings.enabled):
+
+            return DNS_INSPECTION_RESULTS(True, 'category', (cat_settings.label, category, packet.dns_profile))
 
         # adding the returned cat to the enum list. this will be used to identify categories for allowed requests.
-        enum_categories.append((label, category))
+        enum_categories.append((cat_settings.label, category))
 
     # TODO: expand keyword search to be able to specify locations of sub-string ex. [>start, <end]
     #  (the endian points towards which side has the remainder of the string.)

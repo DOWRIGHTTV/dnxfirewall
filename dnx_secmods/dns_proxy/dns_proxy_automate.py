@@ -8,10 +8,11 @@ import ssl
 
 from typing import NamedTuple
 
-
+from dnx_gentools.def_typing import DNS_CAT_LABEL
 from dnx_gentools.def_constants import TYPE_CHECKING, CONNECT_TIMEOUT, CERTIFICATE_STORE, FIVE_SEC
-from dnx_gentools.def_namedtuples import DNS_SERVERS, DNS_SIGNATURES, DNS_WHITELIST, DNS_BLACKLIST
+from dnx_gentools.def_namedtuples import DNS_SERVERS, DNS_SIGNATURES, DNS_WHITELIST, DNS_BLACKLIST, DNS_CATEGORY_INFO
 from dnx_gentools.def_enums import NETWORK_PROTOCOL, PROTO_NOT_SET, PROTO_UDP, PROTO_DNS, PROTO_DNS_TLS, DNS_CAT
+from dnx_gentools.def_enums import SWITCH_ON, SWITCH_OFF
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
 
@@ -95,13 +96,12 @@ class ProxyConfiguration(ConfigurationMixinBase):
                 # if (setting['keyword']):
                 #     enabled_keywords.append(DNS_CAT[cat])
 
-                # identifying enabled general categories
+                # keeping all categories in memory, so we can query label. flipping the enable flag as needed.
                 if (setting['enabled']):
-                    signatures.filter[DNS_CAT[cat]] = label
+                    signatures.filter[DNS_CAT[cat]] = DNS_CATEGORY_INFO(DNS_CAT_LABEL(label), SWITCH_ON)
 
-                # removing category if present in memory
                 else:
-                    signatures.filter.pop(DNS_CAT[cat], None)
+                    signatures.filter[DNS_CAT[cat]] = DNS_CATEGORY_INFO(DNS_CAT_LABEL(label), SWITCH_ON)
 
         # KEYWORD SETTINGS
         # copying the keyword signature list in memory to a local object, then iterating over the list.

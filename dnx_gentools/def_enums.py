@@ -269,6 +269,18 @@ class DNXEnum(int):
     def name(self) -> str:
         return self._name
 
+
+class _Switch(_IntEnum):
+    OFF = 0
+    ON  = 1
+
+class SWITCH(DNXEnum):
+
+    _members = {x.value: x.name for x in _Switch}
+
+SWITCH_OFF = SWITCH(_Switch.OFF)
+SWITCH_ON  = SWITCH(_Switch.ON)
+
 # ----------------------
 # NETWORK PROTOCOLS
 # ----------------------

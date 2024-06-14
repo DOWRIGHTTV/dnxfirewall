@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, NamedTuple as _NamedTuple
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import TypeAlias, Union, Optional, Any, Bytes, Callable
     from dnx_gentools.def_typing import Socket_T, Lock_T, SEC_PROFILE, DNS_CAT_LABEL
-    from dnx_gentools.def_typing import NET_ADDRESS, IP_ADDRINT
+    from dnx_gentools.def_typing import NET_ADDRESS, IP_ADDRINT, SWITCH
 
     from dnx_gentools.def_enums import NETWORK_PROTOCOL, GEOLOCATION, REPUTATION
     # NET_PORT as _NET_PORT, IP_ADDRESS as _IP_ADDRESS
@@ -207,9 +207,17 @@ class DNS_SIGNATURES(_NamedTuple):  # todo: type this out better using NewTypes.
     tld:     dict[str, int]
     keyword: list[tuple[str, _DNS_CAT]]
     '''
-    filter:  dict[_DNS_CAT, DNS_CAT_LABEL]  # note: trying out new attr name
+    filter:  dict[_DNS_CAT, DNS_CATEGORY_INFO]  # note: trying out new attr name
     tld:     dict[str, int]
     keyword: list[tuple[str, _DNS_CAT]]
+
+class DNS_CATEGORY_INFO(_NamedTuple):
+    '''
+    label: DNS_CAT_LABEL
+    enabled: SWITCH
+    '''
+    label: DNS_CAT_LABEL
+    enabled: SWITCH
 
 if (TYPE_CHECKING):
     _DNS_EVENT_CATEGORY: TypeAlias = tuple[DNS_CAT_LABEL, _DNS_CAT, SEC_PROFILE]
