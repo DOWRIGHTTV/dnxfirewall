@@ -26,8 +26,12 @@ if INITIALIZE_MODULE('logging'):
 # TYPING IMPORTS
 # ================
 if (TYPE_CHECKING):
-    from log_client import LogHandler_T
+    from typing import Type, TypeAlias
 
     __all__ = (
         'LogHandler_T',
     )
+
+    from log_client import LogHandler
+
+    LogHandler_T: TypeAlias = Type[LogHandler]

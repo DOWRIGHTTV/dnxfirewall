@@ -24,11 +24,14 @@ from dnx_gentools.system_info import System
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import *
+    from dnx_gentools.def_typing import Type, TypeAlias, Optional, ClassVar, Union, TextIO
+    from dnx_gentools.def_typing import Lock_T, Socket_T, EVENT_LOGS
+
+    from dnx_gentools.file_operations import ConfigChain
 
 
 __all__ = (
-    'LogHandler', 'Log', 'LogHandler_T',
+    'LogHandler', 'Log',
 
     'direct_log', 'message', 'db_message', 'convert_level',
 
@@ -416,9 +419,6 @@ def _log_handler():
 
 
 Log = LogHandler = _log_handler()
-
-if (TYPE_CHECKING):
-    LogHandler_T: TypeAlias = Type[LogHandler]
 
 # ========================
 # DIRECT ACCESS FUNCTIONS
