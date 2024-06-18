@@ -75,7 +75,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         return Log, threads, len(threads)
 
-    @cfg_read_poller('profiles/profile_x', cfg_type='security/ip')
+    @cfg_read_poller('profiles/profile_x', profiles=(1, 15), cfg_type='security/ip')
     def _get_settings(self, profile_idx: int, proxy_settings: ConfigChain) -> None:
 
         cfg_profile: CFG_PROFILE = self.__class__.cfg_profiles[profile_idx]
