@@ -34,7 +34,7 @@ class CFG_PROFILE(NamedTuple):
     ip_whitelist: dict
     tor_whitelist: dict
 
-    ids_mode: int = 0
+    # ids_mode: int = 0
     '''
     idx: int
 
@@ -44,7 +44,7 @@ class CFG_PROFILE(NamedTuple):
     ip_whitelist:  dict
     tor_whitelist: dict
 
-    ids_mode: int = 0
+    # ids_mode: int = 0
 
 class ProxyConfiguration(ConfigurationMixinBase):
     '''IP proxy configuration Mixin.
@@ -80,7 +80,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         cfg_profile: CFG_PROFILE = self.__class__.cfg_profiles[profile_idx]
 
-        cfg_profile.ids_mode = proxy_settings['ids_mode']
+        # cfg_profile.ids_mode = proxy_settings['ids_mode']
 
         # REPUTATION SETTINGS
         rep_settings = proxy_settings.get_items('reputation->built-in')
