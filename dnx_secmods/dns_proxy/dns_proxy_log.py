@@ -25,7 +25,7 @@ class Log(LogHandler):
     def log(cls, pkt: DNSPacket, req: DNS_INSPECTION_RESULTS):
 
         for event, lvl, method in _generate_log(pkt, req):
-            cls.event_log(event, method=method)
+            cls.event_log(event, method)
 
         # if (cls.syslog_enabled and logs):
         #     cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(logs['dns_request']))

@@ -31,7 +31,7 @@ class Log(LogHandler):
     def log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS) -> None:
 
         for log, lvl, method in _generate_log(pkt, inspection):
-            cls.event_log(pkt.timestamp, log, method=method)
+            cls.event_log(log, method)
 
         # if (cls.syslog_enabled and log):
         #     cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(log))
