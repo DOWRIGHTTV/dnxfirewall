@@ -24,7 +24,7 @@ from dnx_gentools.system_info import System
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import Type, TypeAlias, Optional, ClassVar, Union, TextIO
+    from dnx_gentools.def_typing import Optional, ClassVar, Union, TextIO
     from dnx_gentools.def_typing import Lock_T, Socket_T, EVENT_LOGS
 
     from dnx_gentools.file_operations import ConfigChain

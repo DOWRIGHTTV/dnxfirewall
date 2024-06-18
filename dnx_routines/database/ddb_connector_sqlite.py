@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3
-import importlib
 
 from dnx_gentools.def_constants import module_import_callout
 
@@ -17,8 +16,6 @@ if (TYPE_CHECKING):
 
     from dnx_routines.logging import LogHandler_T
 
-    NO_ROUTINE: tuple[None, None]
-
 
 __all__ = (
     'DBConnector',
@@ -27,7 +24,7 @@ __all__ = (
 NO_ROUTINE = (None, None)
 
 
-class _DBConnector:
+class DBConnector:
     DB_PATH: ClassVar[str] = f'{HOME_DIR}/dnx_profile/data/dnxfirewall.sqlite3'
 
     _valid_tables_cleaning: ClassVar[tuple[str, str, str, str]] = ('dnsproxy', 'ipproxy', 'ips', 'infectedclients')
@@ -91,7 +88,7 @@ class _DBConnector:
 
         self._data_written: bool = False
 
-        self._routines_get: Callable_T = self._routines.get
+        self._routines_get = self._routines.get
 
         # used to notify a calling process whether a failure occurred within the context.
         # this does not distinguish if multiple calls/returns are done.
@@ -121,7 +118,6 @@ class _DBConnector:
         return True
 
     def execute(self, routine_name: str, *args, **kwargs):
-
         routine_type, routine = self._routines_get(routine_name, NO_ROUTINE)
 
         dnx_assert(routine, f'Database routine {routine_name} not registered.')
@@ -147,7 +143,7 @@ class _DBConnector:
     def table_cleaner(self, log_length: int, table: str) -> None:
         dnx_assert(table in self._valid_tables_cleaning, f'invalid table specified for cleaning: {table}')
 
-        expire_threshold = fast_time() - (ONE_DAY * log_length)
+        expire_threshold = fast_time() - (log_length * ONE_DAY)
         self._cur.execute(f'delete from {table} where last_seen < {expire_threshold}')
 
         self._data_written = True
@@ -269,9 +265,3 @@ class _DBConnector:
             )
             """
         )
-
-
-DBConnector: DBConnector_T = _DBConnector
-
-# routines will be registered with DBConnector class
-importlib.import_module('dnx_routines.database.ddb_routines')

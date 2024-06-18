@@ -12,12 +12,16 @@ if INITIALIZE_MODULE('database'):
 
     import os
     import threading
+    import importlib
 
     from dnx_routines.logging.log_client import LogHandler as Log
 
     Log.run(name='system')
 
     import ddb_main
+
+    # routines will be registered with DBConnector class
+    importlib.import_module('dnx_routines.database.ddb_routines')
 
 if INITIALIZE_MODULE('db-tables'):
     from ddb_connector_sqlite import DBConnector
