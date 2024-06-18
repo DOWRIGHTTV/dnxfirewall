@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import sys
 import time
-import json
 import socket
 import readline
 
@@ -14,11 +13,11 @@ from functools import partial
 from subprocess import run as _run, DEVNULL, CalledProcessError
 
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, INITIALIZE_MODULE, hardout, str_join
-# from dnx_gentools.def_namedtuples import SigFile
 from dnx_gentools.file_operations import ConfigurationManager, json_to_yaml
 from dnx_gentools.file_operations import write_file, load_data, write_data,  change_file_owner
 
 from dnx_iptools.iptables import IPTablesManager
+
 from dnx_routines.logging.log_client import Log
 
 from dnx_cli.utils.shell_colors import text
@@ -56,6 +55,8 @@ class Args:
     verbose: int = 0
     packages: int = 0
     iptables: int = 0
+
+    force: int = 0  # only applies to signature updates at this time
 
     _update_system: int = 0
     _update_signatures: int = 0
@@ -653,6 +654,7 @@ def set_signature_permissions() -> None:
 # ============================
 # SERVICE FILE SETUP
 # ============================
+# todo: make this availed to be called separately or
 def set_services() -> None:
     ignore_list = ['dnx-syslog.service']
 
@@ -694,7 +696,7 @@ def mark_completion_flag() -> None:
 def store_default_mac():
     pass
 
-def signature_update(system_update: bool = False) -> bool:
+def signature_update(force: bool = False, system_update: bool = False) -> bool:
     import dnx_control.system.signature_update as signature_updater
 
     sprint('security signature updater initiated.')
@@ -734,7 +736,7 @@ def signature_update(system_update: bool = False) -> bool:
         hardout('exiting...')
 
     # system update will ignore the signature version check and force the update.
-    if not signature_updater.compare_signature_version(remote_version, system_update=True):
+    if not signature_updater.compare_signature_version(remote_version):
         hardout('a system update is required to support the latest signature sets.')
 
     # ===========================================
@@ -761,6 +763,10 @@ def signature_update(system_update: bool = False) -> bool:
     # ===========================================
     # FILTERING UNCHANGED FILES - EARLY EXIT
     # ===========================================
+    # note: a force removes the local manifest file which makes the file check think we need to download everything.
+    if (force):
+        os.remove(f'dnx_profile/signatures/{rsm_name}')
+
     update_msg = []
     # checking local manifest for files that have not changed and removing them from the list.
     # separate lists are for better reporting to the user.
@@ -866,7 +872,8 @@ def signature_update(system_update: bool = False) -> bool:
 
     ipp_default_profile['geolocation'] = geolocation_cfg['geolocation']
 
-    # writing to temp file, changing the owner and permissions, the renaming over the original file.
+    # :bug: this is not terrible, but overwrites a file tracked by git, and can make some operations more difficult.
+    # writing to temp file, changing the owner and permissions, then renaming over the original file.
     write_data(ipp_default_profile, 'profile_0.temp', cfg_type='system/security/ip/profiles')
 
     geo_cfg_path_temp = 'dnx_profile/data/system/security/ip/profiles/profile_0.temp'
@@ -901,7 +908,7 @@ def run():
 
     # signature updates are handled separately from the rest of the build process unless the system is being updated.
     if (args._update_signatures):
-        signature_update()
+        signature_update(args.force)
 
         return
 
@@ -1013,6 +1020,7 @@ if INITIALIZE_MODULE('autoloader'):
     Log.run(name=LOG_NAME, suppress_output=True)
     ConfigurationManager.set_log_reference(Log)
 
+    # checks that do not apply to signature update command.
     if (not args._update_signatures):
         # this uses the config manager, so must be called after log initialization
         check_already_ran()

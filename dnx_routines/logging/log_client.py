@@ -172,7 +172,7 @@ def _log_handler():
         suppress_output: ClassVar[bool] = False
 
         @classmethod
-        def run(cls, *, name: str, console_output: bool = False, suppress_output: bool = False):
+        def run(cls, *, name: str, console_output: bool = False, suppress_output: bool = False) -> None:
             '''
             initialize log handler settings and monitor system configs for changes with log/syslog settings.
 

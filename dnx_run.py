@@ -412,7 +412,7 @@ if (__name__ == '__main__'):
     elif (command == 'modstat'):
         modstat_command()
 
-    elif(command == 'compile'):
+    elif (command == 'compile'):
         file_path = f'{HOME_DIR}/dnx_profile/utils/compiler/{mod_name.replace("-", "_")}.py'
         try:
             dnx_run_v(f'sudo HOME_DIR={HOME_DIR} python3 {file_path} build_ext --inplace', shell=True)
