@@ -607,15 +607,10 @@ def internal_server_error(error):
     if (WEBUI_DEVELOPMENT):
         tb = traceback.format_exc().split('\n')
 
-        first_line = tb.pop(0).strip()
-        last_line = tb.pop(-1).strip()
-
         error = '\n'.join([
-            first_line,
-            '-' * 32,
-            *[f'{s}\n' if (i % 2) else s for i, s in enumerate(tb)],
-            '-' * 32,
-            last_line
+            tb[0], '-' * 32,
+            *[f'{s}\n' if (i % 2) else s for i, s in enumerate(tb[1:-1])], '\n',
+            '=' * 32, tb[-1], '=' * 32
         ])
 
         return render_template('main/dev_error.html', theme=context_global.theme, general_error=error)
