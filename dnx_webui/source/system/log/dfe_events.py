@@ -43,21 +43,21 @@ class WebPage(LogWebPage):
         # direct page load (form won't be present) or page submission has an error will set webui_table to default.
         # note: when ajax is applied to page form submission, the default will be the only option returned here.
         if (error or not form):
-            table, dropdown_filter, sort = 'dns_proxy', 'all', 'last'
+            table_type, dropdown_filter, sort = 'dns_proxy', 'all', 'last'
 
         # if sent from the dashboard link, infected-clients table will open directly.
         elif uri_query.get('view_clients'):
-            table, dropdown_filter, sort = 'infected_clients', 'all', 'last'
+            table_type, dropdown_filter, sort = 'infected_clients', 'all', 'last'
 
         else:
-            table, dropdown_filter, sort = form.get('webui_table').split('/')
+            table_type, dropdown_filter, sort = form.get('webui_table').split('/')
 
         return {
             'webui_tables': VALID_WEBUI_TABLES,
             'dropdown_filters': VALID_DROPDOWN_FILTERS,
-            'selected_webui_table': table,
+            'selected_webui_table': table_type,
             'dropdown_filter': dropdown_filter,
-            'table_data': get_table_data(action=dropdown_filter, table=DB_TABLE_LOOKUP(table), routine=sort)
+            'table_data': get_table_data(action=dropdown_filter, table=DB_TABLE_LOOKUP(table_type), routine=sort)
         }
 
     @staticmethod
@@ -67,22 +67,18 @@ class WebPage(LogWebPage):
 
         if (vbtn == 'change_view'):
             try:
-                table_type, sort = form.get('table', DATA.MISSING).split('/')
+                table_type, dropdown_filter, sort = form.get('webui_table', DATA.MISSING).split('/')
             except:
-                return 1, 'Invalid table or sort type format.'
+                return 1, 'Invalid table, dropdown-filter, and sort type format.'
 
             if (table_type not in VALID_WEBUI_TABLES):
                 return 2, 'Invalid table type.'
 
-            if (sort not in ['last', 'top']):
-                return 3, 'Invalid Sort type specified.'
-
-            dropdown_filter = form.get('dropdown_filter', DATA.MISSING)
-            if (dropdown_filter is DATA.MISSING):
-                return 4, 'Menu type not specified.'
-
             if (dropdown_filter not in VALID_DROPDOWN_FILTERS):
-                return 5, 'Invalid dropdown filter.'
+                return 3, 'Invalid dropdown filter.'
+
+            if (sort not in ['last', 'top']):
+                return 4, 'Invalid Sort type specified.'
 
         elif (vbtn == 'inf_client_remove'):
             ic_rh = form.get('inf_client_remove', DATA.MISSING)
