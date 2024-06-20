@@ -40,7 +40,9 @@ class WebPage(LogWebPage):
     @staticmethod
     def load(form: Form, error: bool = False, uri_query: Optional[Args] = None) -> WebLoadResponse:
 
-        if (error):
+        # direct page load (form won't be present) or page submission has an error will set webui_table to default.
+        # note: when ajax is applied to page form submission, the default will be the only option returned here.
+        if (error or not form):
             table, dropdown_filter, sort = 'dns_proxy', 'all', 'last'
 
         # if sent from the dashboard link, infected-clients table will open directly.
