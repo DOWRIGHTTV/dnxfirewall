@@ -609,7 +609,7 @@ def internal_server_error(error):
 
         error = '\n'.join([
             tb[0], '-' * 32,
-            *[f'{s}\n' if (i % 2) else s for i, s in enumerate(tb[1:-1])], '\n',
+            *[f'{s}\n' if (i % 2) else s for i, s in enumerate(tb[1:-1])],
             '=' * 32, tb[-1], '=' * 32
         ])
 
