@@ -605,7 +605,7 @@ def internal_server_error(error):
     # --------------------------------------------- #
     # LABEL: DEVELOPMENT_ONLY_CODE
     if (WEBUI_DEVELOPMENT):
-        tb = traceback.format_exc().split('\n')
+        tb = traceback.format_exc()[:-1].split('\n')
 
         error = '\n'.join([
             tb[0], '-' * 32,
