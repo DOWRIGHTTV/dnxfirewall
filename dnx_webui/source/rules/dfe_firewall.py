@@ -204,7 +204,7 @@ class WebPage(RulesWebPage):
         return '', section
 
     @staticmethod
-    def handle_ajax(aform: JSON) -> return_data:
+    def handle_ajax(aform: JSON) -> WebAjaxResponse:
 
         section: str = aform.get('section', '')
         if (not section or section not in valid_sections):

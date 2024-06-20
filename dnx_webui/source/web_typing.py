@@ -47,9 +47,10 @@ if (TYPE_CHECKING):
     ERROR_CODE: TypeAlias = int
     ERROR_MESSAGE: TypeAlias = str
     WebUpdateError: TypeAlias = tuple[ERROR_CODE, ERROR_MESSAGE]
-    WebAjaxError: TypeAlias = dict[str, Union[int, str]]
 
-    WebAjaxResponse: TypeAlias = [STATUS, WebAjaxError]
+    from source.web_interfaces import WebAjaxContent as _WebAjaxContent
+
+    WebAjaxResponse: TypeAlias = tuple[STATUS, _WebAjaxContent]
 
     from source.web_interfaces import StandardWebPage as _StandardWebPage
     from source.web_interfaces import LogWebPage as _LogWebPage

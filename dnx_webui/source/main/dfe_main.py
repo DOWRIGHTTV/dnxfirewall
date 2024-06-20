@@ -143,19 +143,15 @@ def dnx_dashboard(session_info: dict):
 @app.route('/rules/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_firewall(session_info: dict):
-
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
+    page_specific_info = {
         'ajax': True, 'dnx_table': True, 'auto_colorize': True,
-        'tab': validate.get_convert_int(request.args, 'tab'),
         'dnx_network_objects': {},
         'dnx_service_objects': {},
-        'selected': 'MAIN',
-        'sections': ['BEFORE', 'MAIN', 'AFTER'],
-        'uri_path': ['rules', 'firewall']
+        'selected':            'MAIN',
+        'sections':            ['BEFORE', 'MAIN', 'AFTER']
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['rules', 'firewall'])
 
     page_action = firewall_page_logic(
         dnx_fwall, page_settings, 'firewall_settings', page_name='rules/firewall/firewall.html'
@@ -199,16 +195,12 @@ def rules_firewall_diff(session_info: dict):
 @app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_nat(session_info: dict):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_convert_int(request.args, 'tab'),
-        'menu': validate.get_convert_int(request.args, 'menu'),
+    page_specific_info = {
         'selected': 'WAN_ZONE',
         'zones': ['WAN', 'DMZ', 'LAN'],
-        'uri_path': ['rules', 'nat']
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['rules', 'nat'])
 
     page_action = firewall_page_logic(
         dnx_nat, page_settings, 'nat_settings', page_name='rules/nat.html'
@@ -342,14 +334,11 @@ def system_backups(session_info: dict):
 @app.route('/system/log/traffic', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
 def system_logs_traffic(session_info: dict):
-    page_settings = {
-        'navi':        True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu':        '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
-        'table_types': ['firewall', '.nat'],
-        'uri_path':    ['system', 'log', 'traffic']
+    page_specific_info = {
+        'log_timeout': True, 'dnx_table': True, 'ajax': False, 'auto_colorize': True  # 'menu': '1', 'table': '1',
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['system', 'log', 'traffic'])
 
     page_action = log_page_logic(traffic_logs, page_settings, page_name='system/log/traffic/traffic.html')
 
@@ -357,15 +346,12 @@ def system_logs_traffic(session_info: dict):
 
 @app.route('/system/log/events', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs_traffic_events(session_info: dict):
-    page_settings = {
-        'navi':        True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu':        '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
-        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
-        'uri_path':    ['system', 'log', 'events']
+def system_logs_events(session_info: dict):
+    page_specific_info = {
+        'log_timeout': True, 'ajax': False, 'dnx_table': True, 'auto_colorize': True,  # 'menu': '1', 'table': '1',
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['system', 'log', 'events'])
 
     page_action = log_page_logic(sec_events, page_settings, page_name='system/log/events/events.html')
 
@@ -374,16 +360,11 @@ def system_logs_traffic_events(session_info: dict):
 @app.route('/system/log/system', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
 def system_logs_system(session_info: dict):
-    page_settings = {
-        'navi':      True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu':      '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
-        'log_files': [
-            'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server',  # 'syslog'
-        ],
-        'uri_path':  ['system', 'log', 'system']
+    page_specific_info = {
+        'log_timeout': True, 'ajax': True, 'dnx_table': True, 'auto_colorize': True,  # 'menu':      '1',
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['system', 'log', 'system'])
 
     page_action = log_page_logic(sys_logs, page_settings, page_name='system/log/system/system.html')
 
@@ -394,9 +375,9 @@ def system_logs_system(session_info: dict):
 def system_logs_get(session_info: dict):
     json_data = request.get_json(force=True)
 
-    _, _, table_data = sys_logs.handle_ajax(json_data)
+    status, response = sys_logs.handle_ajax(json_data)
 
-    return ajax_response(status=True, data=table_data)
+    return ajax_response(status=status, data=response)
     #  END OF LOG SUB MENU
     # ----------------------------------------- #
 
@@ -635,7 +616,7 @@ def internal_server_error(error):
 # all standard page loads use this logic to decide the page action/ call the correct
 # lower level functions residing in each page's module
 def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key: str, *, page_name: str) -> str:
-    # todo: err_as_value semantic will make bypass the application error exception and show it in std_error.
+    # todo: err_as_value semantic will bypass the application error exception and show it in std_error.
     #  we should check the error type and send application error page if it is a ConfigurationError.
     #  this also means we should return the exception itself and not the message string.
     if (request.method == 'POST'):
@@ -669,7 +650,6 @@ def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
 def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: str, *, page_name: str) -> str:
-
     if (request.method == 'POST'):
         try:
             error, selected = dnx_page.update(request.form)
@@ -679,7 +659,6 @@ def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: s
             )
 
         page_settings.update({
-            'tab': validate.get_convert_int(request.form, 'tab'),
             'selected': selected,
             'standard_error': error
         })
@@ -693,24 +672,25 @@ def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: s
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
+# note: log pages do not have a data_key in the page_settings dict.
 def log_page_logic(log_page: LogWebPage, page_settings: dict, *, page_name: str) -> str:
-    # can now accept redirects from other places on the webui to load specific tables directly on load
-    # using uri queries fixme: this has been temporarily suspended and should be reintroduced.
+    if (request.method == 'POST'):
+        try:
+            error, err_msg = log_page.update(request.form)
+        except ConfigurationError as ce:
+            return render_template(
+                application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+            )
 
-    # todo: this logic is weird. update method just returns the load method. improve this.
+        page_settings['standard_error'] = f'{err_msg} code={error}' if err_msg else ''
 
+    # can accept redirects from other places on the webui to load specific tables directly on load using uri queries.
     try:
-        table, menu, table_data = log_page.update(request.form)
+        page_settings.update(log_page.load(request.form, page_settings['standard_error'], request.args))
     except ConfigurationError as ce:
         return render_template(
             application_error_page, application_error=ce, theme=context_global.theme, **page_settings
         )
-
-    page_settings.update({
-        'table': table,
-        'menu': menu,
-        'table_data': table_data
-    })
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
@@ -778,7 +758,7 @@ def handle_system_action(page_settings: dict):
 # =================================
 # HELPERS
 # =================================
-def get_default_page_settings(session_info, *, uri_path: list[str]) -> dict:
+def get_default_page_settings(session_info: dict, page_specific_info: dict = None, *, uri_path: list[str]) -> dict:
     '''sets the following values:
 
         - navi->True
@@ -786,7 +766,8 @@ def get_default_page_settings(session_info, *, uri_path: list[str]) -> dict:
         - standard_error->None
         - tab from request args "?tab".
 
-    page_settings will be updated with passed in session data.
+    page_settings will be updated with passed in session data and page_specific_info [if provided].
+    page_specific_info can be passed in to update page_settings with the page-specific info.
     '''
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
@@ -795,6 +776,9 @@ def get_default_page_settings(session_info, *, uri_path: list[str]) -> dict:
     }
 
     page_settings.update(session_info)
+
+    if (page_specific_info):
+        page_settings.update(page_specific_info)
 
     return page_settings
 

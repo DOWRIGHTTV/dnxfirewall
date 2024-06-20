@@ -7,8 +7,7 @@ import shutil
 
 from random import randint
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration, write_configuration
 from dnx_gentools.file_operations import calculate_file_hash  # load_data
@@ -17,12 +16,16 @@ from dnx_routines.logging.log_client import Log
 
 from dnx_webui.source.object_manager import FWObjectManager
 
+if (TYPE_CHECKING):
+    from typing import Optional, ClassVar
+
+    from dnx_gentools.file_operations import ConfigChain, config
+
 
 __all__ = (
     'DEFAULT_VERSION', 'DEFAULT_PATH', 'PENDING_RULE_FILE', 'ACTIVE_RULE_FILE', 'PUSH_RULE_FILE', 'ACTIVE_COPY_FILE',
     'convert_ruleset', 'FirewallControl'
 )
-
 
 DEFAULT_VERSION: str = 'pending'
 DEFAULT_PATH:    str = 'dnx_profile/iptables'

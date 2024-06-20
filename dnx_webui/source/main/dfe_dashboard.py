@@ -25,7 +25,7 @@ __all__ = ('WebPage',)
 
 class WebPage(StandardWebPage):
     '''
-    available methods: load, update
+    available methods: load
     '''
     @staticmethod
     def load(_: Form) -> dict[str, Any]:

@@ -9,56 +9,58 @@ from source.web_typing import web_module_import_callout
 web_module_import_callout(__file__)
 
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR
+from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import tail_file
 from dnx_gentools.system_info import System
 
-from source.web_interfaces import LogWebPage
+from source.web_validate import NO_STANDARD_ERROR
+from source.web_interfaces import LogWebPage, WebAjaxContent
 
 if (TYPE_CHECKING):
-    from source.web_typing import *
+    from source.web_typing import Optional
+
+    from source.web_typing import Form, Args, JSON, WebLoadResponse, WebUpdateError, WebAjaxResponse
+
+    LOG_ENTRY = tuple[str, str, str, str]
 
 __all__ = ('WebPage',)
 
 LOG_DIR = f'{HOME_DIR}/dnx_profile/log'
-LOG_FILES = [
-    'combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins'
+VALID_LOG_TYPES = [
+    'combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'logins', 'system', 'web_app',  # 'syslog',
 ]
-
 class WebPage(LogWebPage):
     '''
-    available methods: load, update
+    available methods: load, update, handle_ajax
     '''
     @staticmethod
     # NOTE: this will likely not be needed anymore with the ajax client implementation
-    def load(_: Optional[Args]) -> tuple[str, None, list[str]]:
-        file_path = f'{HOME_DIR}/dnx_profile/log'
-
-        return 'combined', None, get_log_entries(file_path)
+    def load(form: Form, error: bool = False, uri_query: Optional[Args] = None) -> WebLoadResponse:
+        return {
+            'webui_tables': VALID_LOG_TYPES,
+            'selected_webui_table': 'combined',
+            'table_data': get_log_entries(LOG_DIR)
+        }
 
     @staticmethod
-    def handle_ajax(aform: JSON) -> tuple[str, None, list[str]]:
-        log_table = aform.get('table', 'combined')
+    def update(form: Form) -> WebUpdateError:
+        return NO_STANDARD_ERROR
 
-        # ternary to handle initial page load.
-        # TODO: this should be done better, but i am waiting until reports page gets converted to ajax to support both
-        log_table = 'combined' if log_table == 'default' else log_table
+    @staticmethod
+    def handle_ajax(aform: JSON) -> WebAjaxResponse:
+        table_type = aform.get('webui_table', DATA.MISSING)
+        if (table_type is DATA.MISSING):
+            return False, WebAjaxContent(error=1, message='Log type not specified.', data=[])
 
-        if (log_table not in LOG_FILES):
-            return log_table, None, []
+        elif (table_type not in VALID_LOG_TYPES):
+            return False, WebAjaxContent(error=1, message=f'Invalid log type -> {table_type}.', data=[])
 
         # combined log is now a single file that reflects recent aggregated log at the time of loading
-        file_path = LOG_DIR if log_table == 'combined' else f'{LOG_DIR}/{log_table}'
+        file_path = LOG_DIR if table_type == 'combined' else f'{LOG_DIR}/{table_type}'
 
-        # returning none to fill table_args var on the calling function to allow reuse with the report's page method
-        return log_table, None, get_log_entries(file_path)
+        return True, WebAjaxContent(error=0, message='Log data retrieved.', data=get_log_entries(file_path))
 
-    @staticmethod
-    # basically worthless, but needed for now because of weird handler logic.
-    def update(form: Form) -> tuple[str, None, list]:
-
-        return WebPage.load(None)
-
-def get_log_entries(file_path: str) -> list[str]:
+def get_log_entries(file_path: str) -> list[LOG_ENTRY]:
     log_files = reversed(sorted(os.listdir(file_path))[:-1])
 
     temp_logs = []
@@ -80,5 +82,8 @@ def get_log_entries(file_path: str) -> list[str]:
         date_time = System.format_log_time(date_time)
 
         combined_logs_append((date_time, *log_entry))
+
+    if (not combined_logs):
+        combined_logs.append(('-', '-', '-', '-'))
 
     return combined_logs

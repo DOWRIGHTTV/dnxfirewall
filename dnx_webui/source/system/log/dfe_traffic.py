@@ -11,18 +11,22 @@ from source.web_typing import web_module_import_callout
 web_module_import_callout(__file__)
 
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR
+from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import tail_file
 
+from source.web_validate import NO_STANDARD_ERROR
 from source.web_interfaces import LogWebPage
 
 if (TYPE_CHECKING):
-    from source.web_typing import *
+    from source.web_typing import Optional
+    from source.web_typing import Form, Args, WebLoadResponse, WebUpdateError
+
 
 __all__ = ('WebPage',)
 
 LOG_DIR = f'{HOME_DIR}/dnx_profile/log/traffic'
-LOG_FILES = [
-    'firewall', 'nat',
+VALID_LOG_TYPES = [
+    'firewall', '.nat',
 ]
 
 
@@ -48,20 +52,35 @@ class FIREWALL_LOG(_NamedTuple):
 
 class WebPage(LogWebPage):
     '''
-    available methods: update
+    available methods: load, update
     '''
     @staticmethod
-    def update(form: Form) -> tuple[str, None, list[FIREWALL_LOG]]:
-        log_table = form.get('table', 'firewall')
+    def load(form: Form, error: bool = None, uri_query: Optional[Args] = None) -> WebLoadResponse:
 
-        if (log_table not in LOG_FILES):
-            return log_table, None, []
+        # note: default table will only be hit when the page is first loaded.
+        table_type = 'firewall' if error else form.get('table', 'firewall')
+        table_data = [] if error else get_log_entries(f'{LOG_DIR}/{table_type}')
 
-        # combined log is now a single file that reflects recent aggregated log at the time of loading
-        file_path = f'{LOG_DIR}/{log_table}'
+        return {
+            'webui_tables': VALID_LOG_TYPES,
+            'selected_webui_table': table_type,
+            'table_data': table_data
+        }
 
-        # returning none to fill table_args var on the calling function to allow reuse with the report's page method
-        return log_table, None, get_log_entries(file_path)
+    @staticmethod
+    def update(form: Form) -> WebUpdateError:
+        table_type = form.get('table', DATA.MISSING)
+
+        if (table_type is DATA.MISSING):
+            return 1, 'Log type not specified.'
+
+        if (table_type not in VALID_LOG_TYPES):
+            return 2, f'Invalid log type -> {table_type}.'
+
+        if table_type.startswith('.'):
+            return 3, f'Log type [{table_type[1:]}] is unavailable at this time.'
+
+        return NO_STANDARD_ERROR
 
 def get_log_entries(file_path: str) -> list[FIREWALL_LOG]:
     log_files = reversed(sorted(os.listdir(file_path))[:-1])
