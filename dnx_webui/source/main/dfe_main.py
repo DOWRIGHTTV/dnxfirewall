@@ -608,11 +608,11 @@ def internal_server_error(error):
         tb = traceback.format_exc().split('\n')
 
         error = ''.join([
-            error.pop(0).strip(),
+            tb.pop(0).strip(),
             '-' * 32,
-            *[f'{s}\n' if (i % 2) else s for i, s in enumerate(error)],
+            *[f'{s}\n' if (i % 2) else s for i, s in enumerate(tb)],
             '-' * 32,
-            error.pop(-1)
+            tb.pop(-1)
         ])
 
         return render_template('main/dev_error.html', theme=context_global.theme, general_error=error)
