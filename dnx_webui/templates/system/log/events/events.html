@@ -106,13 +106,12 @@
                 </thead>
                 <tbody>
                 {% for entry in table_data %}
-                  {% set geo, rep, sec_prof = entry[2].split('/') if entry[2] != '-' else '-','-','-' %}
                   <tr>
                     <td>{{ entry[0]|int|itoip }}</td>
                     <td>{{ entry[1]|int|itoip }}</td>
-                    <td>{{ geo }}</td>
-                    <td>{{ rep }}</td>
-                    <td>{{ sec_prof }}</td>
+                    <td>{{ merged_field_index(entry[2], 0) }}</td>
+                    <td>{{ merged_field_index(entry[2], 1) }}</td>
+                    <td>{{ merged_field_index(entry[2], 2) }}</td>
                     <td>{{ entry[3] }}</td>
                     <td>{{ entry[4] }}</td>
                     <td>{{ entry[5] }}</td>

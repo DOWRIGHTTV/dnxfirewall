@@ -194,6 +194,20 @@ def decrement_wrap_positive(i: int, max: int) -> int:
     return max if i == 1 else i - 1
 
 @app.template_global()
+def merged_field_index(idx: int, field: str, *, sep: str = '/') -> str:
+    '''returns a string containing the merged index and field name.
+    '''
+    field_l = field.split(sep)
+
+    if (idx < 0):
+        raise ValueError('field index must be a positive integer.')
+
+    elif idx > len(field_l):
+        return '-'
+
+    return field_l[idx]
+
+@app.template_global()
 def merge_items(a1, a2):
     '''accepts 2 arguments of item or list and merges them into one list. int can be replaced with any singular object.
 
