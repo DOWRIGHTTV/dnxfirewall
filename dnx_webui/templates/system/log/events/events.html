@@ -25,7 +25,7 @@
                     <option value="{{ selected_webui_table }}/all/last" selected>ALL</option>
                   {% else %}
                     {% for filter in dropdown_filters %}
-                      <option value="{{ selected_webui_table }}{{ filter }}" {% if filter == dropdown_filter %} selected {% endif %}>{{ filter.upper() }}</option>
+                      <option value="{{ selected_webui_table }}/{{ filter }}/last" {% if filter == dropdown_filter %} selected {% endif %}>{{ filter.upper() }}</option>
                     {% endfor %}
                   {% endif %}
                 </select>
@@ -88,10 +88,11 @@
                 </div>
                 <thead>
                 <tr>
-                  <th style="width:14%">Local IP</th>
-                  <th style="width:14%">Remote IP</th>
-                  <th style="width:14%">Geo</th>
-                  <th style="width:14%">Rep</th>
+                  <th style="width:12%">Local IP</th>
+                  <th style="width:12%">Remote IP</th>
+                  <th style="width:12%">Geo</th>
+                  <th style="width:12%">Rep</th>
+                  <th style="width:8%">Profile</th>
                   <th style="width:12%">Direction</th>
                   <th style="width:12%">Action</th>
                   <th style="width:20%">
@@ -104,12 +105,13 @@
                 </thead>
                 <tbody>
                 {% for entry in table_data %}
-                  {% set geo, rep = entry[2].split('/') %}
+                  {% set geo, rep, sec_prof = entry[2].split('/') %}
                   <tr>
                     <td>{{ entry[0]|int|itoip }}</td>
                     <td>{{ entry[1]|int|itoip }}</td>
                     <td>{{ geo }}</td>
                     <td>{{ rep }}</td>
+                    <td>{{ sec_prof }}</td>
                     <td>{{ entry[3] }}</td>
                     <td>{{ entry[4] }}</td>
                     <td>{{ entry[5] }}</td>
