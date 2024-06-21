@@ -49,8 +49,10 @@
                 <thead>
                 <tr>
                   <th style="width:10%">Source</th>
-                  <th style="width:25%">Domain</th>
-                  <th style="width:20%">Category</th>
+                  <th style="width:20%">Domain</th>
+                  <th style="width:10%">Label</th>
+                  <th style="width:15%">Category</th>
+                  <th style="width:5%">Profile</th>
                   <th style="width:10%">Reason</th>
                   <th style="width:10%">Action</th>
                   <th style="width:10%">
@@ -60,7 +62,7 @@
                         <i class="material-icons tiny">arrow_drop_up</i></button> Ct.
                     </form>
                   </th>
-                  <th style="width:15%">
+                  <th style="width:10%">
                     <form method="post">
                       <input type="hidden" name="webui_table" value="{{ selected_webui_table }}/{{ dropdown_filter }}/last">
                       <button class="btn btn-small waves-effect waves-light" name="vbtn" value="change_view">
@@ -74,7 +76,9 @@
                   <tr>
                     <td>{{ entry[0]|int|itoip }}</td>
                     <td>{{ entry[1] }}</td>
-                    <td>{{ entry[2] }}</td>
+                    <td>{{ merged_field_index(0, entry[2]) }}</td>
+                    <td>{{ merged_field_index(1, entry[2]) }}</td>
+                    <td>{{ merged_field_index(2, entry[2]) }}</td>
                     <td>{{ entry[3] }}</td>
                     <td>{{ entry[4] }}</td>
                     <td>{{ entry[5] }}</td>
