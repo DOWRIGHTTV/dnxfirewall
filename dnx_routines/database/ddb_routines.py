@@ -114,7 +114,7 @@ def ips_event(cur: Cursor, log: IPS_EVENT_LOG) -> bool:
 def ipp_event(cur: Cursor, log: IPP_EVENT_LOG) -> bool:
     cur.execute(
         'insert into ipproxy values (?, ?, ?, ?, ?, ?)',
-        (log.local_ip, log.tracked_ip, '/'.join(log.category), log.direction, log.action, log.timestamp)
+        (log.local_ip, log.tracked_ip, log.category, log.direction, log.action, log.timestamp)
     )
 
     return True
@@ -189,6 +189,7 @@ def blocked_domain(cur: Cursor, *, domain: str, src_ip: str) -> _BLOCKED_DOM:
         except TypeError:
             _fsleep(.25)
 
+# todo: look into whether the optional src_ip is needed.
 @db.register('last', routine_type=DB_MODE_READ)
 # most recent X matching rows
 def last(cur: Cursor, count: int, src_ip: Optional[str] = None, *, table: str, action: str) -> list:
