@@ -202,7 +202,7 @@ def merged_field_index(idx: int, field: str, *, sep: str = '/') -> str:
     if (idx < 0):
         raise ValueError('field index must be a positive integer.')
 
-    elif idx > len(field_l):
+    elif idx >= len(field_l):  # inclusivity covers index offset.
         return '-'
 
     return field_l[idx]
