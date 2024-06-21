@@ -19,6 +19,7 @@
               </div>
             </form>
             <form method="post">
+              <input type="hidden" name="vbtn" value="change_view">
               <div class="input-field col s5 m3 offset-m1 {{ input_color }}">
                 <select name="webui_table" id="menu" onchange="this.form.submit()">
                   {% if selected_webui_table in ['infected_clients', 'intrusion_prevention'] %}
@@ -105,7 +106,7 @@
                 </thead>
                 <tbody>
                 {% for entry in table_data %}
-                  {% set geo, rep, sec_prof = entry[2].split('/') %}
+                  {% set geo, rep, sec_prof = entry[2].split('/') if entry[2] != '-' else '-','-','-' %}
                   <tr>
                     <td>{{ entry[0]|int|itoip }}</td>
                     <td>{{ entry[1]|int|itoip }}</td>
