@@ -270,6 +270,26 @@ class DNXEnum(int):
         return self._name
 
 
+class _DB_Mode(_IntEnum):
+    NONE  = 0
+    READ  = 1
+    WRITE = 2
+    CLEAR = 4
+    WR_CL = 6
+    ALL   = 7
+
+class DB_MODE(DNXEnum):
+
+    _members = {x.value: x.name for x in _DB_Mode}
+
+DB_MODE_NONE  = DB_MODE(_DB_Mode.NONE)
+DB_MODE_READ  = DB_MODE(_DB_Mode.READ)
+DB_MODE_WRITE = DB_MODE(_DB_Mode.WRITE)
+DB_MODE_CLEAR = DB_MODE(_DB_Mode.CLEAR)
+DB_MODE_WR_CL = DB_MODE(_DB_Mode.WR_CL)
+DB_MODE_ALL   = DB_MODE(_DB_Mode.ALL)
+
+
 class _Switch(_IntEnum):
     OFF = 0
     ON  = 1

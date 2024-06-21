@@ -6,22 +6,23 @@ from __future__ import annotations
 # RUNTIME IMPORTS
 # ================
 from dnx_gentools.def_constants import INITIALIZE_MODULE, DATABASE_SOCKET
+from dnx_gentools.def_enums import DB_MODE_ALL
 
 if INITIALIZE_MODULE('database'):
     __all__ = ('run',)
 
     import os
     import threading
-    import importlib
 
     from dnx_routines.logging.log_client import LogHandler as Log
 
     Log.run(name='system')
 
     import ddb_main
+    from ddb_connector_sqlite import DBConnector
 
     # routines will be registered with DBConnector class
-    importlib.import_module('dnx_routines.database.ddb_routines')
+    DBConnector.init_routines(DB_MODE_ALL)
 
 if INITIALIZE_MODULE('db-tables'):
     from ddb_connector_sqlite import DBConnector

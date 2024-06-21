@@ -9,7 +9,7 @@ from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED
 
 from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING, DATABASE_SOCKET, ONE_SEC, NO_DELAY, fast_sleep, fast_time
 from dnx_gentools.standard_tools import dnx_queue, looper
 
 from dnx_iptools.protocol_tools import authenticate_sender

@@ -9,13 +9,16 @@ from collections import deque
 from struct import Struct
 from functools import wraps
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, str_join, space_join, comma_join
+from dnx_gentools.def_constants import TYPE_CHECKING, RUN_FOREVER, MSEC
+from dnx_gentools.def_constants import fast_time, fast_sleep, str_join, space_join, comma_join
 
 # ===============
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import NoReturn, Any, Callable, Optional, Union
+    from dnx_gentools.def_typing import Event_T, ListenerPackets, ProxyPackets, ModuleClasses
+
     from dnx_routines.logging import LogHandler_T
 
 __all__ = [

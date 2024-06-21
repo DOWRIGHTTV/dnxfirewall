@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import sqlite3
 
 from dnx_gentools.def_constants import module_import_callout
@@ -10,11 +11,16 @@ module_import_callout(__file__)
 
 from dnx_gentools.def_exceptions import dnx_assert
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, ONE_DAY, FIVE_MIN, fast_time, console_log
+from dnx_gentools.def_enums import DB_MODE, DB_MODE_NONE, DB_MODE_READ, DB_MODE_WR_CL
 
 if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import Callable_T, ClassVar
+    from dnx_gentools.def_typing import Optional, ClassVar, Callable_T
 
     from dnx_routines.logging import LogHandler_T
+
+    from sqlite3 import Cursor, Connection
+
+    ROUTINE_MAP: dict[str, list[DB_MODE, Callable_T]]
 
 
 __all__ = (
@@ -25,12 +31,29 @@ NO_ROUTINE = (None, None)
 
 
 class DBConnector:
+    '''Database connector class for sqlite3.
+
+    .init_routines(DB_MODE) is required to set the running mode of the context per process.
+        - available modes: DB_MODE_NONE, DB_MODE_READ, DB_MODE_WR_CL
+        - routines will be imported from database.ddb_routines and passed through a filtered for registration.
+    '''
     DB_PATH: ClassVar[str] = f'{HOME_DIR}/dnx_profile/data/dnxfirewall.sqlite3'
 
     _valid_tables_cleaning: ClassVar[tuple[str, str, str, str]] = ('dnsproxy', 'ipproxy', 'ips', 'infectedclients')
 
-    # format: {'func name': [routine_type('write/query/clear'), ref(function pointer)]}
-    _routines: ClassVar[dict[str, list[str, Callable_T]]] = {}
+    _routines: ClassVar[ROUTINE_MAP] = {}
+    _mode:     ClassVar[int] = DB_MODE_NONE
+
+    # _log: LogHandler_T
+    # _table: str
+    _readonly: bool
+    _connect:  bool
+    _data_written: bool
+
+    _conn: Optional[Connection]
+    _cur:  Optional[Cursor]
+
+    failed: bool
 
     __slots__ = (
         '_log', '_table', '_data_written',
@@ -39,28 +62,38 @@ class DBConnector:
     )
 
     @classmethod
-    def register(cls, routine_name: str, *, routine_type: str) -> Callable_T:
+    def init_routines(cls, mode: DB_MODE) -> None:
+        '''initialize database routines based on mode.
+
+        initialization is only needed when importing the DBConnector class from external modules.
+        '''
+        cls._mode = mode
+
+        importlib.import_module('dnx_routines.database.ddb_routines')
+
+    @classmethod
+    def register(cls, routine_name: str, *, routine_type: DB_MODE) -> Callable_T:
         '''register routine with database connector that can be called initiated with the "execute" method.
         '''
-        name_in_use: list = cls._routines.get(routine_name, None)
+        name_in_use: list = cls._routines.get(routine_name, [])
 
         dnx_assert(not name_in_use, f'routine with name {routine_name} already exists')
 
         def registration(func_ref: Callable_T):
 
-            # print(f'FUNC_REF {func_ref}')
-            # converting routine function to static method
-            registered_routine = staticmethod(func_ref)
+            if (routine_type & cls._mode):
 
-            # print(f'REGISTERED FUNC_REF {registered_routine}')
-            # defines a static method as the db connector class attribute
-            setattr(cls, routine_name, registered_routine)
+                # converting routine function to static method
+                registered_routine = staticmethod(func_ref)
 
-            # storing routines in class dictionary to make it easier to associate name, type and function ref.
-            # note: getattr is used to store the staticmethod reference as it's bounded to the class.
-            cls._routines[routine_name] = [routine_type, getattr(cls, routine_name)]  # note: type issue fine here.
+                # defines a static method as the db connector class attribute
+                setattr(cls, routine_name, registered_routine)
 
-            # print(f'REGISTERED {routine_name}')
+                # storing routines in class dictionary to make it easier to associate name, type and function ref.
+                # note: getattr is used to store the staticmethod reference as it's bounded to the class.
+                cls._routines[routine_name] = [routine_type, getattr(cls, routine_name)]  # note: type issue fine here.
+
+                console_log(f'DB ROUTINE REGISTERED [{routine_type.name}] -> {routine_name}')
 
             # returning callable to make the decorator happy. the function will be called via reference and not by name.
             def wrapper(*args, **kwargs):
@@ -68,8 +101,6 @@ class DBConnector:
                 func_ref(args, **kwargs)
 
             return wrapper
-
-        console_log(f'DB ROUTINE REGISTERED -> {routine_name}')
 
         return registration
 
@@ -86,14 +117,14 @@ class DBConnector:
         self._conn = None
         self._cur  = None
 
-        self._data_written: bool = False
+        self._data_written = False
 
         self._routines_get = self._routines.get
 
         # used to notify a calling process whether a failure occurred within the context.
         # this does not distinguish if multiple calls/returns are done.
         # note: only usable if class is initialized prior to entering the context.
-        self.failed: bool = False
+        self.failed = False
 
     def __enter__(self) -> DBConnector:
         if (self._connect):
@@ -122,10 +153,12 @@ class DBConnector:
 
         dnx_assert(routine, f'Database routine {routine_name} not registered.')
 
-        if (routine_type in ['write', 'clear']):
+        if (routine_type & DB_MODE_WR_CL):
+            dnx_assert(not self._readonly, 'The database context cannot update the database in readonly mode.')
+
             self._data_written = routine(self._cur, *args, **kwargs)
 
-        elif (routine_type == 'query'):
+        elif (routine_type & DB_MODE_READ):
             return routine(self._cur, *args, **kwargs)
 
         else:

@@ -11,7 +11,7 @@ from source.web_typing import web_module_import_callout, web_module_import_check
 web_module_import_callout(__file__)
 
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, FIVE_SEC, WEBUI_DEVELOPMENT
-from dnx_gentools.def_enums import CFG
+from dnx_gentools.def_enums import CFG, DB_MODE_ALL
 from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration
 from dnx_gentools.system_info import System
 
@@ -22,8 +22,10 @@ from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
 
 web_module_import_checkpoint(__file__, 'DNX IP Utilities initialized.')
 
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.database.ddb_connector_sqlite import DBConnector
+
+DBConnector.init_routines(DB_MODE_ALL)
 
 web_module_import_checkpoint(__file__, 'DNX Routines initialized.')
 

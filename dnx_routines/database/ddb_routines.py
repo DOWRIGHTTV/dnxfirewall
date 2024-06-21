@@ -28,6 +28,7 @@ module_import_callout(__file__)
 import dnx_routines.database.ddb_connector_sqlite as _db_conn
 
 from dnx_gentools.def_constants import TYPE_CHECKING, fast_sleep as _fsleep
+from dnx_gentools.def_enums import DB_MODE_READ, DB_MODE_WRITE, DB_MODE_CLEAR
 from dnx_gentools.def_namedtuples import BLOCKED_DOM as _BLOCKED_DOM
 from dnx_gentools.system_info import System as _System
 
@@ -37,8 +38,7 @@ from dnx_gentools.system_info import System as _System
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Optional
 
-    from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG
-    from dnx_gentools.def_namedtuples import INF_EVENT_LOG
+    from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 
     from sqlite3 import Cursor
 
@@ -48,7 +48,7 @@ db = _db_conn.DBConnector
 # ========================================
 # INSERT ROUTINES
 # ========================================
-@db.register('dns_event', routine_type='write')
+@db.register('dns_event', routine_type=DB_MODE_WRITE)
 # standard input for dns proxy module database entries
 def dns_event(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
     cur.execute(
@@ -60,7 +60,7 @@ def dns_event(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
 
         i, t = existing_record[0] + 1, existing_record[1]
         # idea:: make this configurable via the webui. a global setting would be easier, but per profile might be best.
-        #  maybe we could use the dns idea to detect retries and filter that way. this could be done in the dns module.
+        #  maybe we could use the dns id to detect retries and filter that way. this could be done in the dns module.
         # event log suppression. limit one every 10 seconds.
         if (int(log.timestamp) - t > 10):
             cur.execute(
@@ -76,7 +76,7 @@ def dns_event(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
 
     return True
 
-@db.register('dns_blocked', routine_type='write')
+@db.register('dns_blocked', routine_type=DB_MODE_WRITE)
 # used by dns proxy to authorize front end block page access.
 def dns_blocked(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
     cur.execute(
@@ -86,7 +86,7 @@ def dns_blocked(cur: Cursor, log: DNS_EVENT_LOG) -> bool:
 
     return True
 
-@db.register('ips_event', routine_type='write')
+@db.register('ips_event', routine_type=DB_MODE_WRITE)
 # standard input for ips module database entries
 def ips_event(cur: Cursor, log: IPS_EVENT_LOG) -> bool:
     cur.execute(
@@ -109,7 +109,7 @@ def ips_event(cur: Cursor, log: IPS_EVENT_LOG) -> bool:
 
     return True
 
-@db.register('ipp_event', routine_type='write')
+@db.register('ipp_event', routine_type=DB_MODE_WRITE)
 # standard input for ip proxy module database entries.
 def ipp_event(cur: Cursor, log: IPP_EVENT_LOG) -> bool:
     cur.execute(
@@ -119,7 +119,7 @@ def ipp_event(cur: Cursor, log: IPP_EVENT_LOG) -> bool:
 
     return True
 
-@db.register('inf_event', routine_type='write')
+@db.register('inf_event', routine_type=DB_MODE_WRITE)
 def infected_event(cur: Cursor, log: INF_EVENT_LOG) -> bool:
     cur.execute(
         'select * from infectedclients where mac=? and detected_host=?',
@@ -140,7 +140,7 @@ def infected_event(cur: Cursor, log: INF_EVENT_LOG) -> bool:
 
     return True
 
-@db.register('geolocation', routine_type='write')
+@db.register('geolocation', routine_type=DB_MODE_WRITE)
 def geo_record(cur: Cursor, log: GEOLOCATION_LOG) -> bool:
     month = ','.join(_System.date()[:2])
 
@@ -159,7 +159,7 @@ def geo_record(cur: Cursor, log: GEOLOCATION_LOG) -> bool:
 
     return True
 
-@db.register('send_message', routine_type='write')
+@db.register('send_message', routine_type=DB_MODE_WRITE)
 def send_message(cur: Cursor, *, msg_id: str, message) -> bool:
     cur.execute('insert into messenger values (?, ?, ?, ?, ?, ?, ?)', (msg_id, *message))
 
@@ -168,7 +168,7 @@ def send_message(cur: Cursor, *, msg_id: str, message) -> bool:
 # ===============================
 # REMOVE / CLEAR ROUTINES
 # ===============================
-@db.register('clear_infected', routine_type='clear')
+@db.register('clear_infected', routine_type=DB_MODE_CLEAR)
 # TODO: see why this wasnt being committed. i feel like it was an oversight.
 # TODO: also type this
 def clear_infected(cur: Cursor, infected_client, detected_host):
@@ -179,7 +179,7 @@ def clear_infected(cur: Cursor, infected_client, detected_host):
 # ================================
 # QUERY ROUTINES
 # ================================
-@db.register('blocked_domain', routine_type='query')
+@db.register('blocked_domain', routine_type=DB_MODE_READ)
 # query to authorize viewing of web block page and show block info for reference
 def blocked_domain(cur: Cursor, *, domain: str, src_ip: str) -> _BLOCKED_DOM:
     for _ in range(6):
@@ -189,7 +189,7 @@ def blocked_domain(cur: Cursor, *, domain: str, src_ip: str) -> _BLOCKED_DOM:
         except TypeError:
             _fsleep(.25)
 
-@db.register('last', routine_type='query')
+@db.register('last', routine_type=DB_MODE_READ)
 # most recent X matching rows
 def last(cur: Cursor, count: int, src_ip: Optional[str] = None, *, table: str, action: str) -> list:
     if (action in ['all']):
@@ -205,7 +205,7 @@ def last(cur: Cursor, count: int, src_ip: Optional[str] = None, *, table: str, a
 
     return cur.fetchall()
 
-@db.register('top', routine_type='query')
+@db.register('top', routine_type=DB_MODE_READ)
 def top(cur: Cursor, count: int, *, table: str, action: str) -> list:
     if (action in ['all']):
         cur.execute(f'select * from {table} order by count desc limit {count}')
@@ -215,7 +215,7 @@ def top(cur: Cursor, count: int, *, table: str, action: str) -> list:
 
     return cur.fetchall()
 
-@db.register('top_dashboard', routine_type='query')
+@db.register('top_dashboard', routine_type=DB_MODE_READ)
 def top_dashboard(cur: Cursor, count, *, action):
     if (action in ['all']):
         cur.execute(f'select domain, category, sum(count) from dnsproxy group by domain order by count desc limit {count}')
@@ -229,7 +229,7 @@ def top_dashboard(cur: Cursor, count, *, action):
 
     return [(x[0], x[1]) for x in cur.fetchall()]
 
-@db.register('top_geolocation', routine_type='query')
+@db.register('top_geolocation', routine_type=DB_MODE_READ)
 def top_geolocation(cur: Cursor, count: int, *, action: str, direction: str) -> list[str]:
     month = ','.join(_System.date()[:2])
 
@@ -242,7 +242,7 @@ def top_geolocation(cur: Cursor, count: int, *, action: str, direction: str) -> 
 
     return [x[0].replace('_', ' ') for x in cur.fetchall()]
 
-@db.register('unique_domain_count', routine_type='query')
+@db.register('unique_domain_count', routine_type=DB_MODE_READ)
 # TODO: see if this should use sum() instead of len() on the results
 def unique_domain_count(cur: Cursor, *, action: str) -> int:
     if (action in ['all']):
@@ -253,7 +253,7 @@ def unique_domain_count(cur: Cursor, *, action: str) -> int:
 
     return len(cur.fetchall())
 
-@db.register('total_request_count', routine_type='query')
+@db.register('total_request_count', routine_type=DB_MODE_READ)
 # TODO: see if this should use sum() instead of iter add
 def total_request_count(cur: Cursor, *, table: str, action: str) -> int:
     # todo: put a dnx_assert here.
@@ -273,7 +273,7 @@ def total_request_count(cur: Cursor, *, table: str, action: str) -> int:
 
     return count
 
-@db.register('malware_count', routine_type='query')
+@db.register('malware_count', routine_type=DB_MODE_READ)
 # TODO: see if this should use sum() instead of iter add
 def malware_count(cur: Cursor, *, table: str) -> int:
     cur.execute(
@@ -290,11 +290,10 @@ def malware_count(cur: Cursor, *, table: str) -> int:
 
     return count
 
-@db.register('get_messages', routine_type='query')
+@db.register('get_messages', routine_type=DB_MODE_READ)
 def get_messages(cur: Cursor, *, sender: str, recipients: str) -> list:
     cur.execute(
         'select * from messenger where sender=? and recipients=? order by sent_at', (sender, recipients)
     )
 
     return cur.fetchall()
-
