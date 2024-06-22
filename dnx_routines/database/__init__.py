@@ -31,8 +31,12 @@ elif INITIALIZE_MODULE('db-tables'):
     with DBConnector() as FirewallDB:
         FirewallDB.create_db_tables()
 
-# note: export definitions to be used by other modules
+# export definitions to be used by other modules
 else:
+    # injecting the database module path into the system path so inter-module imports can resolve.
+    import sys
+    sys.path.insert(0, __file__.rsplit('/', 1)[0])
+
     __all__ = ('DBConnector',)
 
     from ddb_connector_sqlite import DBConnector as DBConnector
