@@ -5,7 +5,7 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_constants import INITIALIZE_MODULE
+from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('dns-proxy'):
     __all__ = ('run',)
@@ -52,10 +52,8 @@ def run():
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
-    from typing import Type, TypeAlias
+    from dnx_gentools.def_typing import Type, TypeAlias
 
     __all__ = (
         'DNSProxy', 'DNSServer',

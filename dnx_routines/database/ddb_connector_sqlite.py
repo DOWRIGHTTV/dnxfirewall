@@ -69,7 +69,7 @@ class DBConnector:
         '''
         cls._mode = mode
 
-        importlib.import_module('dnx_routines.database.ddb_routines')
+        importlib.import_module('ddb_routines')
 
     @classmethod
     def register(cls, routine_name: str, *, routine_type: DB_MODE) -> Callable_T:

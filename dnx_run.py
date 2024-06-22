@@ -280,7 +280,7 @@ def modstat_command() -> None:
     svc_len: int = 0
     down_detected: bool = False
 
-    status: list[list[str, str]] = []
+    status: list[list[str]] = []
     for svc in SERVICE_MODULES:
         svc_len = len(svc) if len(svc) > svc_len else svc_len
 

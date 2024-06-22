@@ -5,30 +5,29 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_constants import INITIALIZE_MODULE
+from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('ips-ids'):
     __all__ = ('run',)
 
     from dnx_gentools.def_enums import Queue
 
-    from ids_ips import IDS_IPS
     from ids_ips_log import Log
 
     Log.run(name='ips')
 
+    import ids_ips
+
 
 def run():
-    IDS_IPS.run(Log, q_num=Queue.IDS_IPS)
+    ids_ips.IDS_IPS.run(Log, q_num=Queue.IDS_IPS)
 
 
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type
-
 if (TYPE_CHECKING):
-    from typing import TypeAlias
+    from dnx_gentools.def_typing import TypeAlias, Type
 
     __all__ = (
         'IDS_IPS', 'IPSPacket',

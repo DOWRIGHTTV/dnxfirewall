@@ -6,7 +6,6 @@ from __future__ import annotations
 # RUNTIME IMPORTS
 # ================
 from dnx_gentools.def_constants import INITIALIZE_MODULE, DATABASE_SOCKET
-from dnx_gentools.def_enums import DB_MODE_ALL
 
 if INITIALIZE_MODULE('database'):
     __all__ = ('run',)
@@ -18,17 +17,20 @@ if INITIALIZE_MODULE('database'):
 
     Log.run(name='system')
 
-    import ddb_main
-    from ddb_connector_sqlite import DBConnector
+    from dnx_gentools.def_enums import DB_MODE_ALL
 
+    from ddb_connector_sqlite import DBConnector
     # routines will be registered with DBConnector class
     DBConnector.init_routines(DB_MODE_ALL)
+
+    import ddb_main
 
 if INITIALIZE_MODULE('db-tables'):
     from ddb_connector_sqlite import DBConnector
 
     with DBConnector() as FirewallDB:
         FirewallDB.create_db_tables()
+
 
 def run():
     # init db tables only

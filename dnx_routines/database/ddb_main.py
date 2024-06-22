@@ -7,15 +7,15 @@ import traceback
 
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED
 
-from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
-
 from dnx_gentools.def_constants import TYPE_CHECKING, DATABASE_SOCKET, ONE_SEC, NO_DELAY, fast_sleep, fast_time
+from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 from dnx_gentools.standard_tools import dnx_queue, looper
 
 from dnx_iptools.protocol_tools import authenticate_sender
 
 from dnx_routines.logging.log_client import Log
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+
+from ddb_connector_sqlite import DBConnector
 
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Type, NoReturn, Callable, Optional, Union

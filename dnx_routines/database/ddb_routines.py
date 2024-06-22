@@ -25,12 +25,12 @@ module_import_callout(__file__)
 #   it will be passed through connector without
 #   accessing the data.
 
-import dnx_routines.database.ddb_connector_sqlite as _db_conn
-
 from dnx_gentools.def_constants import TYPE_CHECKING, fast_sleep as _fsleep
 from dnx_gentools.def_enums import DB_MODE_READ, DB_MODE_WRITE, DB_MODE_CLEAR
 from dnx_gentools.def_namedtuples import BLOCKED_DOM as _BLOCKED_DOM
 from dnx_gentools.system_info import System as _System
+
+from ddb_connector_sqlite import DBConnector as _DBConnector
 
 # ===============
 # TYPING IMPORTS
@@ -43,7 +43,7 @@ if (TYPE_CHECKING):
     from sqlite3 import Cursor
 
 
-db = _db_conn.DBConnector
+db = _DBConnector
 
 # ========================================
 # INSERT ROUTINES

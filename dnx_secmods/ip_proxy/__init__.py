@@ -5,7 +5,7 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_constants import INITIALIZE_MODULE
+from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('ip-proxy'):
     __all__ = ('run',)
@@ -47,17 +47,15 @@ def run():
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type
-
 if (TYPE_CHECKING):
-    from typing import TypeAlias
-
     __all__ = (
         'IPProxy', 'IPPPacket',
 
         # TYPES
         'IPProxy_T', 'IPPPacket_T'
     )
+
+    from dnx_gentools.def_typing import TypeAlias, Type
 
     from ip_proxy import IPProxy
     from ip_proxy_packets import IPPPacket
