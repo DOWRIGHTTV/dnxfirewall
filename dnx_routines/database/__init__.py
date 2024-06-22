@@ -25,11 +25,17 @@ if INITIALIZE_MODULE('database'):
 
     import ddb_main
 
-if INITIALIZE_MODULE('db-tables'):
+elif INITIALIZE_MODULE('db-tables'):
     from ddb_connector_sqlite import DBConnector
 
     with DBConnector() as FirewallDB:
         FirewallDB.create_db_tables()
+
+# note: export definitions to be used by other modules
+else:
+    __all__ = ('DBConnector',)
+
+    from ddb_connector_sqlite import DBConnector as DBConnector
 
 
 def run():

@@ -14,7 +14,7 @@ from dnx_gentools.file_operations import ConfigurationManager
 from dnx_iptools.iptables import IPTablesManager as IPTables
 
 from dnx_routines.logging.log_client import Log
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+from dnx_routines.database import DBConnector
 
 LOG_NAME = 'system'
 

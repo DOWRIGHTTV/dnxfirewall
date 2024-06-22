@@ -22,7 +22,7 @@ from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
 web_module_import_checkpoint(__file__, 'DNX IP Utilities initialized.')
 
 from dnx_routines.logging.log_client import LogHandler as Log
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+from dnx_routines.database import DBConnector
 
 DBConnector.init_routines(DB_MODE_ALL)
 

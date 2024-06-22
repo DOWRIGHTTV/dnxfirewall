@@ -11,8 +11,8 @@ web_module_import_callout(__file__)
 from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.system_info import System
 
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.database import DBConnector
 
 from source.web_interfaces import StandardWebPage
 from source.system.settings.dfe_interface import get_interfaces

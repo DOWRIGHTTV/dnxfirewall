@@ -11,7 +11,7 @@ from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import ConfigurationError, load_data, config
 from dnx_gentools.system_info import System
 
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+from dnx_routines.database import DBConnector
 
 from source.web_validate import *
 from source.web_interfaces import LogWebPage

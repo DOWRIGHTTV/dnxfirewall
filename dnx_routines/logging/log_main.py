@@ -15,7 +15,7 @@ from dnx_gentools.file_operations import cfg_read_poller
 from dnx_gentools.system_info import System
 
 from dnx_routines.logging.log_client import Log
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+from dnx_routines.database import DBConnector
 
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import ClassVar

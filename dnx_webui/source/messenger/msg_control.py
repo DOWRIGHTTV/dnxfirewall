@@ -16,7 +16,7 @@ from dnx_gentools.def_constants import TYPE_CHECKING, fast_time
 from dnx_gentools.file_operations import load_configuration
 from dnx_gentools.system_info import System
 
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+from dnx_routines.database import DBConnector
 
 if (TYPE_CHECKING):
     from source.web_typing import *
