@@ -57,7 +57,7 @@ COMMANDS: dict[str, dict[str, bool]] = {
 # =========================
 MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # HELPERS
-    'all': {'module': '', 'exclude': ['status', 'cli', 'install', 'update'], 'priv': True, 'service': False},
+    'all': {'module': '', 'exclude': ['cli', 'install', 'update'], 'priv': True, 'service': False},
 
     # UPDATES
     'system': {'module': '', 'exclude': exclude(['install', 'update'], COMMANDS), 'priv': True, 'service': False},
@@ -357,7 +357,9 @@ def sysctl_status(mod: str, brief: bool = False) -> bool:
             text.lightgrey(memory),
         ]
 
-        print('=' * 32, f'{nl_join([x for x in stats if x])}', '=' * 32)
+        print('=' * 32)
+        print(f'{nl_join([x for x in stats if x])}')
+        print('=' * 32)
 
     return status == 'up'
 
