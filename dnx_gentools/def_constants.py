@@ -88,6 +88,7 @@ str_join:   Callable[[Iterable[str]], str] = ''.join
 dot_join:   Callable[[Iterable[str]], str] = '.'.join
 space_join: Callable[[Iterable[str]], str] = ' '.join
 comma_join: Callable[[Iterable[str]], str] = ', '.join
+nl_join:    Callable[[Iterable[str]], str] = '\n'.join
 
 # USER, GROUP, HOME_DIR - user set dynamically for development convenience (DNX user used in production deployment)
 __usr = _pwd.getpwuid(_os.getuid())

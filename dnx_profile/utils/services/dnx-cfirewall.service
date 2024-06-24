@@ -1,13 +1,14 @@
 [Unit]
 Description=DNXFIREWALL Packet Filter Service
-After=dnx-log.service
-StartLimitIntervalSec=10
+After=dnx-logging.service
+StartLimitBurst=2
+StartLimitIntervalSec=3
 
 [Service]
 Type=simple
 Restart=always
-RestartSec=3
-StartLimitBurst=3
+RestartMode=direct
+RestartSec=69ms
 User=root
 ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli cfirewall
 Environment=HOME_DIR=/home/dnx/dnxfirewall

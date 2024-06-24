@@ -1,13 +1,14 @@
 [Unit]
 Description=DNXFIREWALL Web Application Service
-After=nginx.service dnx-log.service
-StartLimitIntervalSec=10
-StartLimitBurst=3
+After=nginx.service dnx-logging.service
+StartLimitBurst=2
+StartLimitIntervalSec=3
 
 [Service]
 Type=simple
 Restart=always
-RestartSec=3
+RestartMode=direct
+RestartSec=69ms
 User=dnx
 Group=dnx
 WorkingDirectory=/home/dnx/dnxfirewall

@@ -11,10 +11,12 @@ import importlib
 import traceback
 
 from functools import partial
-from subprocess import run, DEVNULL, CalledProcessError
+from subprocess import run, check_output, DEVNULL, CalledProcessError
+
+from dnx_gentools.def_constants import HOME_DIR, nl_join
 
 from dnx_cli.utils.shell_colors import text, styles
-from dnx_gentools.def_constants import HOME_DIR
+from dnx_cli.utils.ux import Spinner
 
 _AUTOLOADER = False
 
@@ -75,7 +77,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'cfirewall': {'module': 'dnx_secmods.cfirewall', 'exclude': [], 'priv': True, 'service': True},
     'dns-proxy': {'module': 'dnx_secmods.dns_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
     'ip-proxy': {'module': 'dnx_secmods.ip_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
-    'ips-ids': {'module': 'dnx_secmods.ids_ips', 'exclude': ['compile'], 'priv': True, 'service': True},
+    'ids-ips': {'module': 'dnx_secmods.ids_ips', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # NETWORK MODULES
     'dhcp-server': {
@@ -275,6 +277,77 @@ def service_command(mod: str, cmd: str) -> None:
         else:
             sprint(text.lightgrey(f'svc ') + text.lightgrey(f'service "{cmd}"') + text.green(' successful.'))
 
+def sysctl_start(mod: str) -> None:
+    svc = f'dnx-{mod.replace("_", "-")}'
+
+    with Spinner(f'Starting service {mod}: ') as spinner:
+        try:
+            dnx_run(f'sudo systemctl start {svc}', shell=True)
+        except CalledProcessError:
+            pass
+        else:
+            time.sleep(2)
+
+            try:
+                out = check_output(f'systemctl status {svc}', shell=True, text=True).splitlines()
+            except CalledProcessError as cpe:
+                out = cpe.output.splitlines()
+
+    active = out[2].split()
+    if (active[1] == 'active'):
+        result = text.green('active')
+
+    else:
+        result = text.red('failed')
+
+    f'Starting service {mod}: {result}'
+
+def sysctl_status(mod: str) -> None:
+    svc = f'dnx-{mod.replace("_", "-")}'
+
+    try:
+        out = check_output(f'systemctl status {svc}', shell=True, text=True).splitlines()
+    except CalledProcessError as cpe:
+        out = cpe.output.splitlines()
+
+    warning = '' if not out[0].startswith('Warning:') else out.pop(0)
+
+    title = out[0].split()
+    loaded = out[1]  # .split()
+    active = out[2].split()
+    main_pid = out[3]  # .split()
+    memory = out[5]  # .split()
+
+    if (active[1] == 'active'):
+        title[0] = text.green(title[0])
+        active[1] = text.green(active[1])
+        active[2] = text.green(active[2])
+
+    elif (active[1] == 'activating'):
+        title[0] = text.yellow(title[0])
+        active[1] = text.yellow(active[1])
+
+    elif (active[1] == 'inactive'):
+        title[0] = text.lightgrey(title[0])
+        active[1] = text.orange(active[1])
+
+    elif (active[1] == 'failed'):
+        title[0] = text.red(title[0])
+        active[1] = text.red(active[1])
+
+    stats = [
+        text.yellow(warning),
+        f'{title[0]} {text.darkgrey(" ".join(title[1:]))}',
+        text.lightgrey(loaded),
+        f'{text.lightgrey(active[0].rjust(12))} {active[1]} {active[2]} {text.lightgrey(" ".join(active[3:]))}',
+        text.lightgrey(main_pid),
+        text.lightgrey(memory),
+    ]
+
+    print('=' * 32)
+    print(f'{nl_join([x for x in stats if x])}')
+    print('=' * 32)
+
 def modstat_command() -> None:
 
     svc_len: int = 0
@@ -425,7 +498,14 @@ if (__name__ == '__main__'):
             sprint(text.lightgrey(f'{mod_name} compile has') + text.green(' succeeded') + text.lightgrey('!'))
 
     elif (mod_name == 'all' or mod_set['service']):
-        service_command(mod_name, command)
+        if (command == 'status' and mod_name != 'all'):
+            sysctl_status(mod_name)
+
+        elif (command == 'start' and mod_name != 'all'):
+            sysctl_start(mod_name)
+
+        else:
+            service_command(mod_name, command)
 
     else:
         sprint(text.lightgrey(f'<dnx> ') + text.red(f'missing command logic for -> mod={mod_name} command={command}'))

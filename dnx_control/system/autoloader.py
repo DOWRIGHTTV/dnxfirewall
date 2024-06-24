@@ -21,6 +21,7 @@ from dnx_iptools.iptables import IPTablesManager
 from dnx_routines.logging.log_client import Log
 
 from dnx_cli.utils.shell_colors import text
+from dnx_cli.utils.ux import create_progress_bar
 
 # todo: rework this module to hot reload if the file was changed/updated within the current update session.
 
@@ -197,91 +198,6 @@ def set_branch() -> None:
         dnx_settings['branch'] = available_branches[int(selection) - 1]
 
         dnx.write_configuration(dnx_settings.expanded_user_data)
-
-# ----------------------------
-# PROGRESS BAR
-# ----------------------------
-def clear_line() -> None:
-    '''clears the current line in the terminal.
-
-        useful for writes that are not on a new line to prevent previous character overflow.
-    '''
-    sys.stdout.write(' ' * os.get_terminal_size().columns + '\r')
-
-    sys.stdout.flush()
-
-
-# starting at -1 to compensate for the first process. todo: (we arent though....)
-bar_len: int = 30
-completed_count: int = 0
-def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int] = None) -> None:
-    '''prints a progress bar to the terminal.
-
-    if complete and total are not passed in, the global completed_count and PROGRESS_TOTAL_COUNT will be used.
-    '''
-    global completed_count
-
-    primary_progress_bar = completed is None and total is None
-
-    if (primary_progress_bar):
-        completed = completed_count
-        total = PROGRESS_TOTAL_COUNT
-
-    # this will ensure completed count does not exceed total count when rendering.
-    # this would only happen if I miscalculated the total count somewhere. (happens too often LOL :/)
-    if (completed > total):
-        completed = total
-
-    # calculating bar %
-    ratio: float = completed / total
-    filled_len: int = int(bar_len * ratio)
-
-    # COLORIZING COMPLETION STATUS BAR
-    # --------------------------------------------------------------------
-    perc = f'{int(100 * ratio)}'.rjust(3)
-    filled = '#' * filled_len
-    if (ratio < .34):
-        progress_fill = text.red(filled, style=None)
-        percentage = text.red(perc, style=None)
-
-    elif (ratio < .67):
-        progress_fill = text.orange(filled, style=None)
-        percentage = text.orange(perc, style=None)
-
-    elif (ratio < 1):
-        progress_fill = text.green(filled, style=None)
-        percentage = text.yellow(perc, style=None)
-
-    else:
-        progress_fill = text.green(filled, style=None)
-        percentage = text.green(perc, style=None)
-
-    progress_fill += text.lightgrey('=' * (bar_len - filled_len))
-
-    # RENDERING UPDATED TIMESTAMP, BAR, DESCRIPTION
-    # --------------------------------------------------------------------
-    clear_line()
-
-    # 1. timestamp, 2. x/total | 3. | [##########] 4. 100% | 5. | description
-    bar  = text.lightgrey(f'{time.strftime("%H:%M:%S")}| ')
-    bar += text.yellow(f'{completed}'.rjust(2), style=None) + text.lightgrey(f'/{total} |')
-    bar += text.lightgrey(f'| [', style=None) + progress_fill + text.lightgrey(f'] ', style=None)
-    bar += percentage + text.lightgrey('% |', style=None)
-    bar += text.yellow(f'| {desc}\r')
-
-    sys.stdout.write(bar)
-
-    # allows for rendering bar without moving the completion %.
-    if (primary_progress_bar and desc):
-        completed_count += 1
-
-    # prevents bar from being overwritten once complete
-    if (filled_len == bar_len):
-        sys.stdout.write('\n')
-
-    # forces current stdout buffer to be written to terminal
-    sys.stdout.flush()
-
 
 # ============================
 # INTERFACE CONFIGURATION
@@ -533,7 +449,7 @@ def checkout_configured_branch() -> str:
 
     return branch_name
 
-def update_local_branch(branch: str) -> list[tuple]:
+def update_local_branch(branch: str) -> list[tuple[str, Optional[str]]]:
 
     commands: list[tuple[str, str]] = [
         ('git stash', None),  # resetting any local changes before pulling
@@ -560,7 +476,7 @@ def compile_extensions(*, count_only: bool = False) -> Optional[list[tuple]]:
 
     return commands
 
-def configure_webui() -> list[tuple]:
+def configure_webui() -> list[tuple[str, Optional[str]]]:
     cert_subject: str = str_join([
         '/C=US',
         '/ST=Arizona',
@@ -799,24 +715,28 @@ def signature_update(force: bool = False, system_update: bool = False) -> bool:
     download_failure_list: SIGNATURE_MANIFEST = []
     checksum_failure_list: SIGNATURE_MANIFEST = []
 
+    signature_update_progress = create_progress_bar(len(download_targets))
+
     for attempt in range(3):
 
         success = 0
         # retries only need to download the files that are remaining
         # converting to set to remove duplicates
         if (attempt > 0):
-            progress('incomplete', completed=success, total=len(download_targets))
+            signature_update_progress('incomplete', success)
             eprint(f'({len(checksum_failure_list)}) signature download errors detected. tries: {attempt}/3')
 
             # dedup with a set then converting back to a list
             download_targets = list({*download_failure_list, *checksum_failure_list})
+
+            signature_update_progress = create_progress_bar(len(download_targets))
 
             # clearing trackers for the next attempt if needed.
             download_failure_list.clear()
             checksum_failure_list.clear()
 
         for target in download_targets:
-            progress(f'downloading {target.name}', completed=success, total=len(download_targets))
+            signature_update_progress(f'downloading {target.name}', progress_override=success)
 
             # downloading signatures and running checksum validation.
             if not signature_updater.download_signature_file(target):
@@ -835,7 +755,7 @@ def signature_update(force: bool = False, system_update: bool = False) -> bool:
                     #     sprint(f'checksum failed for {file}')
 
         if (not download_failure_list and not checksum_failure_list):
-            progress('done. installing...', completed=success, total=len(download_targets))
+            signature_update_progress('done. installing...', progress_override=success)
             break
 
     # will give the user the option to load the signatures that downloaded successfully or exit.
@@ -901,7 +821,8 @@ def signature_update(force: bool = False, system_update: bool = False) -> bool:
 #    cython does this automatically, but the updater will still run the compile steps and show the progress bar as if
 #    it is doing something.
 def run():
-    global PROGRESS_TOTAL_COUNT
+    # global PROGRESS_TOTAL_COUNT
+    NUMBER_OF_TASKS = 0
 
     # to simplify folder/file naming
     os.chdir(HOME_DIR)
@@ -913,12 +834,12 @@ def run():
         return
 
     if (not args._update_system):
-        PROGRESS_TOTAL_COUNT += 1  # copying service files
+        NUMBER_OF_TASKS += 1  # copying service files
         set_branch()
         configure_interfaces()
 
     if (not args._update_system) and (args._update_system and args.iptables):
-        PROGRESS_TOTAL_COUNT += 1  # building iptables
+        NUMBER_OF_TASKS += 1  # building iptables
 
     # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
     dynamic_commands: list[tuple[str, Optional[str]]] = []
@@ -942,7 +863,7 @@ def run():
 
     compile_extensions(count_only=True)
 
-    PROGRESS_TOTAL_COUNT += len([1 for k, v in dynamic_commands if v])
+    NUMBER_OF_TASKS += len([1 for k, v in dynamic_commands if v])
 
     action = 'update' if args._update_system else 'deployment'
     sprint(f'starting dnxfirewall {action}...')
@@ -952,11 +873,13 @@ def run():
     if (not args._update_system):
         build_libraries(count_only=True)
 
-    progress('')  # this will render 0% bar, so we don't need to use offsets.
+    system_update_progress = create_progress_bar(NUMBER_OF_TASKS)
+
+    system_update_progress('')  # this will render 0% bar, so we don't need to use offsets.
     for command, desc in dynamic_commands:
 
         if (desc):
-            progress(desc)
+            system_update_progress(desc)
 
         dnx_run(command)
 
@@ -970,7 +893,7 @@ def run():
     for command, desc in compile_extensions():
 
         if (desc):
-            progress(desc)
+            system_update_progress(desc)
 
         dnx_run(command)
 
@@ -983,7 +906,7 @@ def run():
         set_services()
         mark_completion_flag()
 
-    progress(f'dnxfirewall {action} complete...')
+    system_update_progress(f'dnxfirewall {action} complete...')
 
     # signatures will be updated during initial installation or system update automatically.
     signatures_updated = signature_update(system_update=True)

@@ -1,6 +1,5 @@
 [Unit]
-Description=DNXFIREWALL Startup Tasks
-
+Description=DNXFIREWALL Startup Routines
 Before=network-pre.target
 Wants=network-pre.target
 DefaultDependencies=no

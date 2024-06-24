@@ -1,5 +1,5 @@
 [Unit]
-Description=DNXFIREWALL DNS Proxy Service
+Description=DNXFIREWALL Intrusion Detection/Prevention Service
 After=dnx-logging.service
 StartLimitBurst=2
 StartLimitIntervalSec=3
@@ -10,7 +10,7 @@ Restart=always
 RestartMode=direct
 RestartSec=69ms
 User=root
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli dns-proxy
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli ids-ips
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 
 [Install]
