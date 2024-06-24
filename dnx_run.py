@@ -113,7 +113,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     },
 }
 SERVICE_MODULES = [mod for mod, modset in MODULE_MAPPING.items() if modset['service']]
-SERVICE_JUSTIFY = max([len(svc) for svc in SERVICE_MODULES])
+SERVICE_JUSTIFY = max([len(svc) for svc in SERVICE_MODULES]) + 4  # added space for dnx prefix.
 
 systemctl_ret_codes: dict[int, str] = {
     0: text.lightgrey('program ') + text.yellow('is running or service is ', style=None) + text.green('OK'),
