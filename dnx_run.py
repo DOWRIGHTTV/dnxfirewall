@@ -113,6 +113,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     },
 }
 SERVICE_MODULES = [f'dnx-{mod}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
+SERVICE_JUSTIFY = max([len(svc) for svc in SERVICE_MODULES])
 
 systemctl_ret_codes: dict[int, str] = {
     0: text.lightgrey('program ') + text.yellow('is running or service is ', style=None) + text.green('OK'),
@@ -240,6 +241,10 @@ def help_command() -> None:
 
 def service_command(mod: str, cmd: str) -> None:
     if (mod == 'all'):
+        if (cmd == 'start'):
+            for svc in SERVICE_MODULES:
+                sysctl_start(svc)
+
         for svc in SERVICE_MODULES:
             try:
                 if (mod == 'webui'):
@@ -304,8 +309,9 @@ def sysctl_start(mod: str) -> None:
 
         print(f'\rStarting service {mod}: {result}')
 
-def sysctl_status(mod: str) -> None:
+def sysctl_status(mod: str, brief: bool = False) -> bool:
     svc = f'dnx-{mod.replace("_", "-")}'
+    status = 'down'
 
     try:
         out = check_output(f'systemctl status {svc}', shell=True, text=True).splitlines()
@@ -324,6 +330,7 @@ def sysctl_status(mod: str) -> None:
         title[0] = text.green(title[0])
         active[1] = text.green(active[1])
         active[2] = text.green(active[2])
+        status = 'up'
 
     elif (active[1] == 'activating'):
         title[0] = text.yellow(title[0])
@@ -337,18 +344,22 @@ def sysctl_status(mod: str) -> None:
         title[0] = text.red(title[0])
         active[1] = text.red(active[1])
 
-    stats = [
-        text.yellow(warning),
-        f'{title[0]} {text.darkgrey(" ".join(title[1:]))}',
-        text.lightgrey(loaded),
-        f'{text.lightgrey(active[0].rjust(12))} {active[1]} {active[2]} {text.lightgrey(" ".join(active[3:]))}',
-        text.lightgrey(main_pid),
-        text.lightgrey(memory),
-    ]
+    if (brief):
+        print(text.darkgrey(f'{svc.ljust(SERVICE_JUSTIFY)} -> {status.rjust(4)}'))
 
-    print('=' * 32)
-    print(f'{nl_join([x for x in stats if x])}')
-    print('=' * 32)
+    else:
+        stats = [
+            text.yellow(warning),
+            f'{title[0]} {text.darkgrey(" ".join(title[1:]))}',
+            text.lightgrey(loaded),
+            f'{text.lightgrey(active[0].rjust(12))} {active[1]} {active[2]} {text.lightgrey(" ".join(active[3:]))}',
+            text.lightgrey(main_pid),
+            text.lightgrey(memory),
+        ]
+
+        print('=' * 32, f'{nl_join([x for x in stats if x])}', '=' * 32)
+
+    return status == 'up'
 
 def modstat_command() -> None:
 
@@ -499,12 +510,39 @@ if (__name__ == '__main__'):
         else:
             sprint(text.lightgrey(f'{mod_name} compile has') + text.green(' succeeded') + text.lightgrey('!'))
 
-    elif (mod_name == 'all' or mod_set['service']):
-        if (command == 'status' and mod_name != 'all'):
+    elif (mod_name == 'all'):
+        # =================================
+        # OUTPUT - Justified left<==>right
+        # =================================
+        # dnx-cfirewall   => down (code=4)
+        services_banner = text.lightblue('\n'.join([
+            ' __..___.__ .  .._. __ .___ __.',
+            '(__ [__ [__)\  / | /  `[__ (__ ',
+            '.__)[___|  \ \/ _|_\__.[___.__)'
+        ]))
+        print(services_banner)
+        for svc in SERVICE_MODULES:
+            if (command == 'status'):
+                sysctl_status(svc, brief=True)
+
+            elif (command == 'start'):
+                sysctl_start(svc)
+
+            elif (command == 'restart'):
+                sysctl_start(svc, restart=True)
+
+            else:
+                service_command(svc, command)
+
+    elif (mod_set['service']):
+        if (command == 'status'):
             sysctl_status(mod_name)
 
-        elif (command == 'start' and mod_name != 'all'):
+        elif (command == 'start'):
             sysctl_start(mod_name)
+
+        elif (command == 'restart'):
+            sysctl_start(mod_name, restart=True)
 
         else:
             service_command(mod_name, command)
