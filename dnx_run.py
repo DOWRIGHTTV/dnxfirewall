@@ -300,7 +300,7 @@ def sysctl_start(mod: str) -> None:
     else:
         result = text.red('failed')
 
-    f'Starting service {mod}: {result}'
+    print(f'Starting service {mod}: {result}')
 
 def sysctl_status(mod: str) -> None:
     svc = f'dnx-{mod.replace("_", "-")}'
