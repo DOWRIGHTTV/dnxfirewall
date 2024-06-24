@@ -311,7 +311,7 @@ def sysctl_start(mod: str) -> None:
 
 def sysctl_status(mod: str, brief: bool = False) -> bool:
     svc = f'dnx-{mod.replace("_", "-")}'
-    status = 'down'
+    status = text.red('down')
 
     try:
         out = check_output(f'systemctl status {svc}', shell=True, text=True).splitlines()
@@ -335,7 +335,7 @@ def sysctl_status(mod: str, brief: bool = False) -> bool:
         title[0]  = text.green(title[0])
         active[1] = text.green(active[1])
         active[2] = text.green(active[2])
-        status = 'up'
+        status = text.green('up')
 
     elif (active[1] == 'activating'):
         title[0]  = text.yellow(title[0])
@@ -366,7 +366,7 @@ def sysctl_status(mod: str, brief: bool = False) -> bool:
         print(f'{nl_join([x for x in stats if x])}')
         print('=' * 32)
 
-    return status == 'up'
+    return status == text.green('up')
 
 def modstat_command() -> None:
 
