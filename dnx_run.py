@@ -112,7 +112,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
         'priv': False, 'service': False
     },
 }
-SERVICE_MODULES = [f'dnx-{mod}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
+SERVICE_MODULES = [mod for mod, modset in MODULE_MAPPING.items() if modset['service']]
 SERVICE_JUSTIFY = max([len(svc) for svc in SERVICE_MODULES])
 
 systemctl_ret_codes: dict[int, str] = {
