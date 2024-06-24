@@ -280,7 +280,7 @@ def service_command(mod: str, cmd: str) -> None:
 def sysctl_start(mod: str) -> None:
     svc = f'dnx-{mod.replace("_", "-")}'
 
-    with Spinner(f'Starting service {mod}: ') as spinner:
+    with Spinner(f'Starting service {mod}:') as spinner:
         try:
             dnx_run(f'sudo systemctl start {svc}', shell=True)
         except CalledProcessError:
@@ -300,7 +300,7 @@ def sysctl_start(mod: str) -> None:
     else:
         result = text.red('failed')
 
-    print(f'Starting service {mod}: {result}')
+    print(f'\rStarting service {mod}: {result}')
 
 def sysctl_status(mod: str) -> None:
     svc = f'dnx-{mod.replace("_", "-")}'
