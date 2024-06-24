@@ -320,28 +320,33 @@ def sysctl_status(mod: str, brief: bool = False) -> bool:
 
     warning = '' if not out[0].startswith('Warning:') else out.pop(0)
 
-    title = out[0].split()
+    title  = out[0].split()
     loaded = out[1]  # .split()
     active = out[2].split()
-    main_pid = out[3]  # .split()
-    memory = out[5]  # .split()
+
+    try:
+        main_pid = out[3]  # .split()
+        memory = out[5]  # .split()
+    except:
+        main_pid = ''
+        memory = ''
 
     if (active[1] == 'active'):
-        title[0] = text.green(title[0])
+        title[0]  = text.green(title[0])
         active[1] = text.green(active[1])
         active[2] = text.green(active[2])
         status = 'up'
 
     elif (active[1] == 'activating'):
-        title[0] = text.yellow(title[0])
+        title[0]  = text.yellow(title[0])
         active[1] = text.yellow(active[1])
 
     elif (active[1] == 'inactive'):
-        title[0] = text.lightgrey(title[0])
+        title[0]  = text.lightgrey(title[0])
         active[1] = text.orange(active[1])
 
     elif (active[1] == 'failed'):
-        title[0] = text.red(title[0])
+        title[0]  = text.red(title[0])
         active[1] = text.red(active[1])
 
     if (brief):
@@ -354,7 +359,7 @@ def sysctl_status(mod: str, brief: bool = False) -> bool:
             text.lightgrey(loaded),
             f'{text.lightgrey(active[0].rjust(12))} {active[1]} {active[2]} {text.lightgrey(" ".join(active[3:]))}',
             text.lightgrey(main_pid),
-            text.lightgrey(memory),
+            text.lightgrey(memory)
         ]
 
         print('=' * 32)
