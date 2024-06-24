@@ -15,7 +15,7 @@ if (TYPE_CHECKING):
 
 
 __all__ = (
-    'create_progress_bar', 'create_spinner',
+    'create_progress_bar', 'Spinner',
 )
 
 
@@ -110,7 +110,7 @@ class Spinner:
     def __init__(self, msg: str) -> None:
         self.msg = msg
 
-    def __enter__(self) -> None:
+    def __enter__(self) -> Spinner:
         self.start = time.time()
 
         self.animate = threading.Event()
@@ -118,6 +118,8 @@ class Spinner:
 
         self._spin_thread = threading.Thread(target=self._spin)
         self._spin_thread.start()
+
+        return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         self.animate.clear()

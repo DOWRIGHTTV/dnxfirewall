@@ -293,14 +293,16 @@ def sysctl_start(mod: str) -> None:
             except CalledProcessError as cpe:
                 out = cpe.output.splitlines()
 
-    active = out[2].split()
-    if (active[1] == 'active'):
-        result = text.green('active')
+        spinner.animate.clear()
 
-    else:
-        result = text.red('failed')
+        active = out[2].split()
+        if (active[1] == 'active'):
+            result = text.green('active')
 
-    print(f'\rStarting service {mod}: {result}')
+        else:
+            result = text.red('failed')
+
+        print(f'\rStarting service {mod}: {result}')
 
 def sysctl_status(mod: str) -> None:
     svc = f'dnx-{mod.replace("_", "-")}'
