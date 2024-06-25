@@ -38,6 +38,9 @@ def main() -> None:
     elif command in ['start', 'stop', 'restart', 'status']:
         service_command(mod, command)
 
+    elif (command == 'journal'):
+        journalctl_command(mod)
+
     elif (command == 'install'):
         install_command()
 

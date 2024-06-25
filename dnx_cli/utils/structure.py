@@ -138,6 +138,7 @@ COMMANDS: dict[str, Command] = {
     'restart': Command(module_required=True, priv_required=True, module_list=['all', *SERVICE_LIST]),
     'stop': Command(module_required=True, priv_required=True, module_list=['all', *SERVICE_LIST]),
     'status': Command(module_required=True, priv_required=True, module_list=['all', *SERVICE_LIST]),
+    'journal': Command(module_required=True, priv_required=True, module_list=SERVICE_LIST),
 
     'cli': Command(module_required=True, priv_required=False, module_list=SERVICE_LIST),
 

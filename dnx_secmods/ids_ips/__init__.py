@@ -7,7 +7,7 @@ from __future__ import annotations
 # ================
 from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
-if INITIALIZE_MODULE('ips-ids'):
+if INITIALIZE_MODULE('ids-ips'):
     __all__ = ('run',)
 
     from dnx_gentools.def_enums import Queue
