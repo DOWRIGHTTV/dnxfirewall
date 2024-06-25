@@ -134,7 +134,6 @@ class Command(NamedTuple):
 COMMANDS: dict[str, Command] = {
     'help': Command(module_required=False, priv_required=False, description='Displays this menu'),
 
-
     'start': Command(module_required=True, priv_required=True, module_list=['all', *SERVICE_LIST]),
     'restart': Command(module_required=True, priv_required=True, module_list=['all', *SERVICE_LIST]),
     'stop': Command(module_required=True, priv_required=True, module_list=['all', *SERVICE_LIST]),
@@ -149,5 +148,5 @@ COMMANDS: dict[str, Command] = {
     'dev': Command(module_required=False, priv_required=False, module_list=['trie-test', 'webui-dev']),
 
     # deprecated
-    'modstat': Command(module_required=False, priv_required=True)
+    'modstat': Command(module_required=False, priv_required=True, description='Deprecated. Use "dnx status all" instead.')
 }
