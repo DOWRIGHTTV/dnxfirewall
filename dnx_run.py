@@ -2,142 +2,78 @@
 
 from __future__ import annotations
 
-from typing import Union, Iterable
+# from typing import Union, Iterable
 
 import os
 import sys
-import time
+# import time
 import importlib
 import traceback
 
 from functools import partial
-from subprocess import run, check_output, DEVNULL, CalledProcessError
+from subprocess import run, CalledProcessError
 
-from dnx_gentools.def_constants import HOME_DIR, nl_join
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR
 
 from dnx_cli.utils.shell_colors import text, styles
-from dnx_cli.utils.ux import Spinner
+from dnx_cli.utils.structure import SERVICE_LIST, COMMANDS, check_command, check_module
+from dnx_cli.utils.io import dnx_run_v, sprint, run_cli
+from dnx_cli.utils.sysctl import sysctl_command, sysctl_status
+
+if (TYPE_CHECKING):
+    from dnx_cli.utils.structure import Module
+
 
 _AUTOLOADER = False
 
 # style aliases
 BOLD = styles.bold
 
-hardout = partial(os._exit, 0)
-dnx_run = partial(run, check=True, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
-dnx_run_v = partial(run, check=True, stdin=DEVNULL)
-def exclude(st: Union[str, list[str]], l: Iterable, /) -> list[str]:
-    '''return a new list with specified string removed from the passed in list, set, tuple, dict.
-    '''
-    if isinstance(st, str):
-        st = [st]
+def main() -> None:
+    command, mod, module = parse_args()
 
-    nl = list(l)
-    for s in st:
-        nl.remove(s)
+    if (command == 'help'):
+        help_command()
 
-    return nl
+    elif command in ['start', 'stop', 'restart', 'status']:
+        service_command(mod, command)
+
+    elif (command == 'install'):
+        install_command()
+
+    elif (command == 'update'):
+        update_command(mod)
+
+    elif (command == 'compile'):
+        compile_command(mod)
+
+    elif (command == 'cli'):
+        run_cli(mod, module.path)
+
+    elif (command == 'dev'):
+        if (module.bash_cmd):
+            run(module.bash_cmd, shell=True)
+
+        else:
+            run_cli(mod, module.path)
+
+    elif (command == 'modstat'):
+        print(text.yellow('Deprecated. Use "dnx status all" instead.'))
+        service_command('all', command)
+
+    else:
+        sprint(text.lightgrey(f'<dnx> ') + text.red(f'missing command logic for -> mod={mod} command={command}'))
 
 
-COMMANDS: dict[str, dict[str, bool]] = {
-    'help': {'description': 'Displays this menu', 'priv': False, 'module': False},
-    'start': {'priv': True, 'module': True},
-    'restart': {'priv': True, 'module': True},
-    'stop': {'priv': True, 'module': True},
-    'status': {'priv': True, 'module': True},
-    'cli': {'priv': False, 'module': True},
-    'modstat': {'priv': True, 'module': False},
-    'install': {'priv': True, 'module': False},
-    'update': {'priv': True, 'module': True},
-    'compile': {'priv': True, 'module': False}
-}
-
-# =========================
-# MOD NAME -> MOD LOCATION
-# =========================
-MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
-    # HELPERS
-    'all': {'module': '', 'exclude': ['cli', 'install', 'update'], 'priv': True, 'service': False},
-
-    # UPDATES
-    'system': {'module': '', 'exclude': exclude(['install', 'update'], COMMANDS), 'priv': True, 'service': False},
-    'signatures': {'module': '', 'exclude': exclude('update', COMMANDS), 'priv': True, 'service': False},
-    # AUTOLOADER
-    # 'autoloader': {
-    #     'module': 'dnx_control.system.autoloader', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
-    # },
-
-    # DB TABLES
-    'db-tables': {'module': 'dnx_routines.database', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False},
-
-    # WEBUI
-    'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True, 'environ': ['webui', '1']},
-
-    # SECURITY MODULES
-    'cfirewall': {'module': 'dnx_secmods.cfirewall', 'exclude': [], 'priv': True, 'service': True},
-    'dns-proxy': {'module': 'dnx_secmods.dns_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
-    'ip-proxy': {'module': 'dnx_secmods.ip_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
-    'ids-ips': {'module': 'dnx_secmods.ids_ips', 'exclude': ['compile'], 'priv': True, 'service': True},
-
-    # NETWORK MODULES
-    'dhcp-server': {
-        'module': 'dnx_netmods.dhcp_server', 'exclude': ['compile'], 'priv': True, 'service': True
-    },
-
-    # ROUTINES
-    'database': {'module': 'dnx_routines.database', 'exclude': ['compile'], 'priv': False, 'service': True},
-    'logging': {'module': 'dnx_routines.logging', 'exclude': ['compile'], 'priv': False, 'service': True},
-
-    'iptables': {
-        'module': 'dnx_iptools.iptables', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
-    },
-
-    # SYSTEM
-    'startup': {'module': 'dnx_control.system.startup_proc', 'exclude': ['compile'], 'priv': True, 'service': True},
-    'interface': {'module': 'dnx_control.system.interface_services', 'exclude': ['compile'], 'priv': False, 'service': True},
-    'syscontrol': {'module': 'dnx_control', 'exclude': ['compile'], 'priv': True, 'service': True},
-
-    # COMPILE ONLY
-    'dnx-nfqueue': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-    'cprotocol-tools': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-    'hash-trie': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-
-    # LABEL: DEVELOPMENT_ONLY_CODE
-    # TESTS
-    'trie-test': {
-        'module': 'dnx_profile.utils.unit_tests.trie_test', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False
-    },
-    'webui-dev': {
-        'module': None, 'bash_cmd': f'bash {HOME_DIR}/dnx_profile/utils/web_run.sh 5001', 'exclude': exclude('cli', COMMANDS),
-        'priv': False, 'service': False
-    },
-}
-SERVICE_MODULES = [mod for mod, modset in MODULE_MAPPING.items() if modset['service']]
-SERVICE_JUSTIFY = max([len(svc) for svc in SERVICE_MODULES]) + 4  # added space for dnx prefix.
-
-systemctl_ret_codes: dict[int, str] = {
-    0: text.lightgrey('program ') + text.yellow('is running or service is ', style=None) + text.green('OK'),
-    1: text.lightgrey('program ') + text.yellow('dead and /var/run pid file exists', style=None),
-    2: text.lightgrey('program ') + text.yellow('dead and /var/lock lock file exists', style=None),
-    3: text.lightgrey('program ') + text.red('not running'),
-    4: text.lightgrey('program ') + text.yellow('service status is ', style=None) + text.darkgrey('UNKNOWN'),
-}
-
-def sprint(msg: str, /) -> None:
-    print(f'\n{msg}\n')
-
-# ;)
-def sexit(msg: str, /) -> None:
-    exit(f'\n{msg}\n')
-
-def parse_args() -> tuple[str, str, dict]:
+def parse_args() -> tuple[str, str, Module]:
     global _AUTOLOADER
 
     cmd: str = get_index(1)
-    module: str = get_index(2)
+    mod: str = get_index(2)
 
-    mod_settings = check_module(module)
-    check_command(cmd, module, mod_settings)
+    check_command(cmd, mod)
+
+    module = check_module(mod)
 
     # index of first argument to be passed through to the specified module
     pt_arg_start = 2 if cmd in ['install'] else 3
@@ -155,63 +91,13 @@ def parse_args() -> tuple[str, str, dict]:
     if ('_autoloader_' in os.environ['PASSTHROUGH_ARGS']):
         _AUTOLOADER = True
 
-    return cmd, module, mod_settings
+    return cmd, mod, module
 
 def get_index(idx: int, /) -> str:
     try:
-        return sys.argv[idx]
+        return sys.argv[idx].lower()
     except IndexError:
         return 'X'
-
-def check_module(mod: str, /) -> dict:
-    return MODULE_MAPPING.get(mod, {})
-
-def check_command(cmd: str, mod: str, modset: dict) -> None:
-    cmd_info = COMMANDS.get(cmd, None)
-    if (not cmd_info):
-        sexit(
-            text.red('Error! ') +
-            text.lightgrey('Unknown Command. -> See help for existing commands')
-        )
-
-    root = not os.getuid()
-
-    # command level privilege
-    if (not root and cmd_info['priv']):
-        sexit(
-            text.lightgrey(f'DNXFIREWALL command "{cmd.upper()}" requires ') +
-            text.red('root') +
-            text.lightgrey(' privileges.')
-        )
-
-    # the command does not require a module
-    if (not cmd_info['module']):
-        return
-
-    # ================
-    # MODULE REQUIRED
-    # ================
-    if (not modset):
-        sexit(
-            text.red('Error! ') +
-            text.lightgrey('Unknown Module. Module does not exist. -> See help')
-        )
-
-    # checking if command is valid for the module
-    if (cmd in modset['exclude']):
-        sexit(
-            text.lightgrey(f' "{cmd.upper()}" ') +
-            text.red(f'not valid') +
-            text.lightgrey(f' for  "{mod.upper()}".')
-        )
-
-    # module level privilege
-    if (not root and modset['priv']):
-        sexit(
-            text.lightgrey(f'DNXFIREWALL command "{cmd.upper()}" requires ') +
-            text.red('root') +
-            text.lightgrey(' privileges.')
-        )
 
 def help_command() -> None:
     print('\n', text.blue('----------- ') + text.lightgrey(' | Commands | ') + text.blue('-----------'))
@@ -221,11 +107,12 @@ def help_command() -> None:
     # I want to replace priv with privilege for readability, will experiment.
     # TODO: better way to do this?
     for cmd, opts in COMMANDS.items():
-        description = opts.get('description', '')
+        description = opts.description
         cmd_opts = {
             'description': text.yellow(description, style=None),
-            'priv_required': convert_bool[opts['priv']],
-            'has_module': convert_bool[opts['module']]
+            'priv_required': convert_bool[opts.priv_required],
+            'module_required': convert_bool[opts.module_required],
+            'module_list': f'[{" ".join(opts.module_list)}]'
         }
         if (not description):
             cmd_opts.pop('description')
@@ -234,290 +121,16 @@ def help_command() -> None:
         for opt, val in cmd_opts.items():
             print('    ', f'{opt.ljust(14)}... {val}')
 
-    print('\n', text.blue('----------- ') + text.lightgrey(' | Ret Codes | ') + text.blue('-----------'))
-
-    for code, msg in systemctl_ret_codes.items():
-        print(text.lightgrey(f'code: {code}'.ljust(10)), msg)
-
 def service_command(mod: str, cmd: str) -> None:
+    results: list[bool] = []
+    ctl_switch = {
+        'status':  partial(sysctl_status, brief=mod == 'all'),
+        'start':   sysctl_command,
+        'restart': sysctl_command,
+        'stop':    sysctl_command
+    }
+
     if (mod == 'all'):
-        if (cmd == 'start'):
-            for svc in SERVICE_MODULES:
-                sysctl_start(svc)
-
-        for svc in SERVICE_MODULES:
-            try:
-                if (mod == 'webui'):
-                    dnx_run(f'sudo systemctl {cmd} nginx', shell=True)
-
-                dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
-            except CalledProcessError:
-                sprint(text.red(f'{svc.ljust(15)} -> {"fail".rjust(7)}'))
-            else:
-                sprint(text.green(f'{svc.ljust(15)} -> {"success".rjust(7)}'))
-
-        return
-
-    svc = f'dnx-{mod.replace("_", "-")}'
-    try:
-        if (mod == 'webui'):
-            dnx_run(f'sudo systemctl {cmd} nginx', shell=True)
-
-        dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
-    except CalledProcessError as cpe:
-        if (cmd == 'status'):
-            sprint(
-                text.lightgrey(f'{svc.ljust(15)} -> ') + text.red(f'down ') + text.lightgrey(f'code="{cpe.returncode}') +
-                text.lightgrey(f'msg="{systemctl_ret_codes.get(cpe.returncode, "")}"')
-                )
-        else:
-            sprint(
-                text.lightgrey(f'"{svc}" service "{cmd}"') + text.red(f'failed.') +
-                text.darkgrey(f'Check the journal for more details. -> msg="{cpe}"')
-            )
-
-    else:
-        if (cmd == 'status'):
-            sprint(text.lightgrey(f'{svc.ljust(15)} -> ') + text.green(f'{"up".rjust(4)}'))
-        else:
-            sprint(text.lightgrey(f'svc ') + text.lightgrey(f'service "{cmd}"') + text.green(' successful.'))
-
-def sysctl_start(mod: str) -> None:
-    svc = f'dnx-{mod.replace("_", "-")}'
-
-    with Spinner(f'Starting service {mod}:') as spinner:
-        try:
-            dnx_run(f'sudo systemctl start {svc}', shell=True)
-        except CalledProcessError:
-            pass
-        else:
-            time.sleep(2)
-
-            try:
-                out = check_output(f'systemctl status {svc}', shell=True, text=True).splitlines()
-            except CalledProcessError as cpe:
-                out = cpe.output.splitlines()
-
-        spinner.animate.clear()
-
-        active = out[2].split()
-        if (active[1] == 'active'):
-            result = text.green('active')
-
-        else:
-            result = text.red('failed')
-
-        print(f'\rStarting service {mod}: {result}')
-
-def sysctl_status(mod: str, brief: bool = False) -> bool:
-    svc = f'dnx-{mod.replace("_", "-")}'
-    status = text.red('down')
-
-    try:
-        out = check_output(f'systemctl status {svc}', shell=True, text=True).splitlines()
-    except CalledProcessError as cpe:
-        out = cpe.output.splitlines()
-
-    warning = '' if not out[0].startswith('Warning:') else out.pop(0)
-
-    title  = out[0].split()
-    loaded = out[1]  # .split()
-    active = out[2].split()
-
-    try:
-        main_pid = out[3]  # .split()
-        memory = out[5]  # .split()
-    except:
-        main_pid = ''
-        memory = ''
-
-    if (active[1] == 'active'):
-        title[0]  = text.green(title[0])
-        active[1] = text.green(active[1])
-        active[2] = text.green(active[2])
-        status = text.green('up')
-
-    elif (active[1] == 'activating'):
-        title[0]  = text.yellow(title[0])
-        active[1] = text.yellow(active[1])
-
-    elif (active[1] == 'inactive'):
-        title[0]  = text.lightgrey(title[0])
-        active[1] = text.orange(active[1])
-
-    elif (active[1] == 'failed'):
-        title[0]  = text.red(title[0])
-        active[1] = text.red(active[1])
-
-    if (brief):
-        print(text.darkgrey(f'{svc.ljust(SERVICE_JUSTIFY)} -> {status.rjust(4)}'))
-
-    else:
-        stats = [
-            text.yellow(warning),
-            f'{title[0]} {text.darkgrey(" ".join(title[1:]))}',
-            text.lightgrey(loaded),
-            f'{text.lightgrey(active[0].rjust(12))} {active[1]} {active[2]} {text.lightgrey(" ".join(active[3:]))}',
-            text.lightgrey(main_pid),
-            text.lightgrey(memory)
-        ]
-
-        print('=' * 32)
-        print(f'{nl_join([x for x in stats if x])}')
-        print('=' * 32)
-
-    return status == text.green('up')
-
-def modstat_command() -> None:
-
-    svc_len: int = 0
-    down_detected: bool = False
-
-    status: list[list[str]] = []
-    for svc in SERVICE_MODULES:
-        svc_len = len(svc) if len(svc) > svc_len else svc_len
-
-        try:
-            dnx_run(f'sudo systemctl status {svc}', shell=True)
-        except CalledProcessError as cpe:
-            status.append([svc,
-                text.red('down ') + text.darkgrey('code=') + text.lightgrey(f'{cpe.returncode} ') +
-                text.darkgrey(f'msg="{systemctl_ret_codes.get(cpe.returncode, "")}"')
-            ])
-
-            down_detected = True
-
-        else:
-            status.append([svc, text.green('up')])
-
-    # =================================
-    # OUTPUT - Justified left<==>right
-    # =================================
-    # dnx-cfirewall   => down (code=4)
-    services_banner = text.lightblue('\n'.join([
-        ' __..___.__ .  .._. __ .___ __.',
-        '(__ [__ [__)\  / | /  `[__ (__ ',
-        '.__)[___|  \ \/ _|_\__.[___.__)'
-    ]))
-    print(services_banner)
-
-    for svc, result in status:
-        time.sleep(0.05)
-        print(text.darkgrey(f'{svc.ljust(svc_len)} -> {result.rjust(4)}'))
-
-    if (down_detected):
-        print(
-            text.red(f'\nALERT! ') + text.lightgrey(f'Down service(s) detected! ')
-        )
-        print(text.lightgrey('Check journal for more details.'))
-
-    else:
-        print(text.green(f'\nAll services running!'))
-
-# function is for consistency even if it seems unnecessary
-def install_command() -> None:
-    run_cli('system', 'dnx_control.system.autoloader')
-
-def update_command(mod_name: str) -> None:
-    # update entire system. this will also update signatures.
-    # passthrough arguments and defaults:
-    #   v: int = 0
-    #   verbose: int = 0
-    #   packages: int = 0
-    #   iptables: int = 0
-    if (mod_name == 'system'):
-        # setting the env var to notify autoloader to run update process instead of full installation.
-        os.environ['_SYSTEM_UPDATE'] = 'True'
-
-        run_cli('system', 'dnx_control.system.autoloader')
-
-    # only update signatures, not the entire system, unless remote signatures are not compatible with currently
-    # installed system version.
-    elif (mod_name == 'signatures'):
-        os.environ['_SIGNATURE_UPDATE'] = 'True'
-
-        run_cli('system', 'dnx_control.system.autoloader')
-
-# using environ var to notify imported module to initialize and run.
-# this was done because a normal function was causing issues with the linter thinking a ton of stuff was not defined.
-# this could probably be done better.
-# TODO: see if can be done better
-def run_cli(mod: str, mod_loc: str) -> None:
-    # needed due to previous naming and calling conventions
-    mod_name = 'autoloader' if mod in ['system', 'signatures'] else mod
-
-    os.environ['INIT_MODULE'] = mod_name
-    os.environ['HOME_DIR'] = HOME_DIR
-
-    env = MODULE_MAPPING[mod].get('environ')
-    if (env):
-        os.environ[env[0]] = env[1]
-
-    mod_path = '/'.join([HOME_DIR, *mod_loc.split('.')[:2]])
-
-    sys.path.insert(0, HOME_DIR)
-    # inserting the module path into the system path so intra-module imports can be done locally
-    sys.path.insert(0, mod_path)
-
-    try:
-        dnx_mod = importlib.import_module(mod_loc)
-    except KeyboardInterrupt:
-        sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
-    except Exception as E:
-        sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
-        traceback.print_exc()
-
-    else:
-        try:
-            dnx_mod.run()
-        except KeyboardInterrupt:
-            sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
-        except Exception as E:
-            sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
-            traceback.print_exc()
-
-    # this will make sure there are no dangling processes or threads on exit.
-    hardout()
-
-
-if (__name__ == '__main__'):
-    command, mod_name, mod_set = parse_args()
-
-    if (command == 'help'):
-        help_command()
-
-    elif (command == 'install'):
-        install_command()
-
-    elif (command == 'update'):
-        update_command(mod_name)
-
-    elif (command == 'cli'):
-        if (mod_set['module']):
-            run_cli(mod_name, mod_set['module'])
-
-        elif mod_set['bash_cmd']:
-            run(mod_set['bash_cmd'], shell=True)
-
-        else:
-            sexit('module destination not specified.')
-
-    elif (command == 'modstat'):
-        modstat_command()
-
-    elif (command == 'compile'):
-        file_path = f'{HOME_DIR}/dnx_profile/utils/compiler/{mod_name.replace("-", "_")}.py'
-        try:
-            dnx_run_v(f'sudo HOME_DIR={HOME_DIR} python3 {file_path} build_ext --inplace', shell=True)
-        except CalledProcessError as cpe:
-            if (_AUTOLOADER): raise
-
-            sprint(text.lightgrey(f'{mod_name} compile has') + text.red(' failed ') + text.lightgrey(f'-> {cpe}!'))
-
-        else:
-            sprint(text.lightgrey(f'{mod_name} compile has') + text.green(' succeeded') + text.lightgrey('!'))
-
-    elif (mod_name == 'all'):
         # =================================
         # OUTPUT - Justified left<==>right
         # =================================
@@ -528,31 +141,59 @@ if (__name__ == '__main__'):
             '.__)[___|  \ \/ _|_\__.[___.__)'
         ]))
         print(services_banner)
-        for svc in SERVICE_MODULES:
-            if (command == 'status'):
-                sysctl_status(svc, brief=True)
 
-            elif (command == 'start'):
-                sysctl_start(svc)
+    services = SERVICE_LIST if mod == 'all' else [mod]
+    for svc in services:
 
-            elif (command == 'restart'):
-                sysctl_start(svc, restart=True)
+        results.append(ctl_switch[cmd](svc))
 
-            else:
-                service_command(svc, command)
+    # single service check will skip the summary.
+    if (mod != 'all' and cmd != 'status'): return
 
-    elif (mod_set['service']):
-        if (command == 'status'):
-            sysctl_status(mod_name)
-
-        elif (command == 'start'):
-            sysctl_start(mod_name)
-
-        elif (command == 'restart'):
-            sysctl_start(mod_name, restart=True)
-
-        else:
-            service_command(mod_name, command)
+    if down_ct := len([b for b in results if not b]):
+        print(
+            text.red(f'\nALERT! ') + text.lightgrey(f'[{down_ct}] failed service(s) detected! ')
+        )
+        print(text.lightgrey('Check journal for more details.'))
 
     else:
-        sprint(text.lightgrey(f'<dnx> ') + text.red(f'missing command logic for -> mod={mod_name} command={command}'))
+        print(text.green(f'\nAll services running!'))
+
+# function is for consistency even if it seems unnecessary
+def install_command() -> None:
+    run_cli('system', 'dnx_control.system.autoloader')
+
+def compile_command(mod: str) -> None:
+    file_path = f'{HOME_DIR}/dnx_profile/utils/compiler/{mod.replace("-", "_")}.py'
+    try:
+        dnx_run_v(f'sudo HOME_DIR={HOME_DIR} python3 {file_path} build_ext --inplace', shell=True)
+    except CalledProcessError as cpe:
+        if (_AUTOLOADER): raise
+
+        sprint(text.lightgrey(f'{mod} compile has') + text.red(' failed ') + text.lightgrey(f'-> {cpe}!'))
+
+    else:
+        sprint(text.lightgrey(f'{mod} compile has') + text.green(' succeeded') + text.lightgrey('!'))
+
+def update_command(mod: str) -> None:
+    # update dnx system + signatures.
+    # passthrough arguments and defaults:
+    #   v: int = 0
+    #   verbose: int = 0
+    #   packages: int = 0
+    #   iptables: int = 0
+    if (mod == 'system'):
+        # setting the env var to notify autoloader to run the update process instead of full installation.
+        os.environ['_SYSTEM_UPDATE'] = 'True'
+
+        run_cli('system', 'dnx_control.system.autoloader')
+
+    # only update signatures, not the entire system, unless remote signatures are not compatible with the currently
+    # installed system version.
+    elif (mod == 'signatures'):
+        os.environ['_SIGNATURE_UPDATE'] = 'True'
+
+        run_cli('system', 'dnx_control.system.autoloader')
+
+if (__name__ == '__main__'):
+    main()

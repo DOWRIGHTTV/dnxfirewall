@@ -6,12 +6,7 @@ import time
 import itertools
 import threading
 
-from dnx_gentools.def_constants import TYPE_CHECKING
-
 from dnx_cli.utils.shell_colors import text
-
-if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import Optional, Callable
 
 
 __all__ = (

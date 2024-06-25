@@ -410,14 +410,14 @@ def build_libraries(*, count_only: bool = False) -> None:
         os.chdir(libdir)
         for command, desc in commands:
             if (desc):
-                progress(desc)
+                system_iu_progress(desc)
 
             dnx_run(command)
 
         os.chdir(HOME_DIR)
 
     # libnetfilter_conntrack will be installed via package manager for now.
-    progress('building netfilter conntrack (lib)')
+    system_iu_progress('building netfilter conntrack (lib)')
     dnx_run('sudo apt install libnetfilter-conntrack-dev')
 
 # ============================
@@ -509,7 +509,7 @@ def configure_webui() -> list[tuple[str, Optional[str]]]:
 # ============================
 def set_permissions() -> None:
 
-    progress('configuring dnxfirewall permissions')
+    system_iu_progress('configuring dnxfirewall permissions')
 
     commands: list[str] = [
 
@@ -574,7 +574,7 @@ def set_signature_permissions() -> None:
 def set_services() -> None:
     ignore_list = ['dnx-syslog.service']
 
-    progress('creating dnxfirewall services')
+    system_iu_progress('creating dnxfirewall services')
 
     services = os.listdir(f'{UTILITY_DIR}/services')
     for service in services:
@@ -591,7 +591,7 @@ def set_services() -> None:
 # INITIAL IPTABLES SETUP
 # ============================
 def configure_iptables() -> None:
-    progress('loading default iptables')
+    system_iu_progress('loading default iptables')
 
     with IPTablesManager() as iptables:
         iptables.apply_defaults(suppress=True)
@@ -820,9 +820,11 @@ def signature_update(force: bool = False, system_update: bool = False) -> bool:
 #  - for example, skip recompiling cython or c modules if they have not changed.
 #    cython does this automatically, but the updater will still run the compile steps and show the progress bar as if
 #    it is doing something.
+NUMBER_OF_IU_TASKS = 0
+system_iu_progress = create_progress_bar(NUMBER_OF_IU_TASKS)  # dummy bar
 def run():
-    # global PROGRESS_TOTAL_COUNT
-    NUMBER_OF_TASKS = 0
+    global NUMBER_OF_IU_TASKS
+    global system_iu_progress
 
     # to simplify folder/file naming
     os.chdir(HOME_DIR)
@@ -834,12 +836,12 @@ def run():
         return
 
     if (not args._update_system):
-        NUMBER_OF_TASKS += 1  # copying service files
+        NUMBER_OF_IU_TASKS += 1  # copying service files
         set_branch()
         configure_interfaces()
 
     if (not args._update_system) and (args._update_system and args.iptables):
-        NUMBER_OF_TASKS += 1  # building iptables
+        NUMBER_OF_IU_TASKS += 1  # building iptables
 
     # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
     dynamic_commands: list[tuple[str, Optional[str]]] = []
@@ -863,7 +865,7 @@ def run():
 
     compile_extensions(count_only=True)
 
-    NUMBER_OF_TASKS += len([1 for k, v in dynamic_commands if v])
+    NUMBER_OF_IU_TASKS += len([1 for k, v in dynamic_commands if v])
 
     action = 'update' if args._update_system else 'deployment'
     sprint(f'starting dnxfirewall {action}...')
@@ -873,13 +875,13 @@ def run():
     if (not args._update_system):
         build_libraries(count_only=True)
 
-    system_update_progress = create_progress_bar(NUMBER_OF_TASKS)
+    system_iu_progress = create_progress_bar(NUMBER_OF_IU_TASKS)
 
-    system_update_progress('')  # this will render 0% bar, so we don't need to use offsets.
+    system_iu_progress('')  # this will render 0% bar, so we don't need to use offsets.
     for command, desc in dynamic_commands:
 
         if (desc):
-            system_update_progress(desc)
+            system_iu_progress(desc)
 
         dnx_run(command)
 
@@ -893,7 +895,7 @@ def run():
     for command, desc in compile_extensions():
 
         if (desc):
-            system_update_progress(desc)
+            system_iu_progress(desc)
 
         dnx_run(command)
 
@@ -906,7 +908,7 @@ def run():
         set_services()
         mark_completion_flag()
 
-    system_update_progress(f'dnxfirewall {action} complete...')
+    system_iu_progress(f'dnxfirewall {action} complete...')
 
     # signatures will be updated during initial installation or system update automatically.
     signatures_updated = signature_update(system_update=True)
