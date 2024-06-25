@@ -148,16 +148,16 @@ def service_command(mod: str, cmd: str) -> None:
         results.append(ctl_switch[cmd](svc))
 
     # single service check will skip the summary.
-    if (mod != 'all' and cmd != 'status'): return
+    if (mod != 'all' or cmd != 'status'): return
 
     if down_ct := len([b for b in results if not b]):
         print(
             text.red(f'\nALERT! ') + text.lightgrey(f'[{down_ct}] failed service(s) detected! ')
         )
-        print(text.lightgrey('Check journal for more details.'))
+        print(text.lightgrey('Check journal for more details.\n'))
 
     else:
-        print(text.green(f'\nAll services running!'))
+        print(text.green(f'\nAll services running!\n'))
 
 # function is for consistency even if it seems unnecessary
 def install_command() -> None:
