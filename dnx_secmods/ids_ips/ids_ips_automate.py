@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from typing import NamedTuple
+from dataclasses import dataclass
+from dataclasses import dataclass
 
 from dnx_gentools.def_exceptions import dnx_assert
 from dnx_gentools.def_constants import TYPE_CHECKING, FIVE_MIN, ONE_HOUR, NO_DELAY
@@ -30,6 +32,15 @@ ConfigurationManager.set_log_reference(Log)
 
 PROFILE_CT = 15
 
+@dataclass
+class PROFILE_OPTIONS:
+    ids_mode: int = 0  # TODO: this should probably [maybe] be reworked.
+    ddos_enabled: int = 0
+    pscan_enabled: int = 0
+    pscan_reject: int = 0
+    all_enabled: int = 0
+    block_length: int = 0
+
 class CFG_PROFILE(NamedTuple):
     '''idx: int -> so the profile can be identified after dereferencing.
     ip_whitelist: set[int]
@@ -48,12 +59,7 @@ class CFG_PROFILE(NamedTuple):
 
     ddos_limits: dict[NETWORK_PROTOCOL, int]
 
-    ids_mode:      int = 0  # TODO: this should probably [maybe] be reworked.
-    ddos_enabled:  int = 0
-    pscan_enabled: int = 0
-    pscan_reject:  int = 0
-    all_enabled:   int = 0
-    block_length:  int = 0
+    opt: PROFILE_OPTIONS
 
 class IPSConfiguration(ConfigurationMixinBase):
     '''IDS/IPS configuration Mixin.
@@ -89,16 +95,16 @@ class IPSConfiguration(ConfigurationMixinBase):
 
         # GENERAL CFG FLAGS
         # ===================================================
-        cfg_profile.ids_mode = proxy_settings['ids_mode']
-        cfg_profile.ddos_enabled = proxy_settings['ddos->enabled']
-        cfg_profile.pscan_enabled = proxy_settings['port_scan->enabled']
-        cfg_profile.pscan_reject  = proxy_settings['port_scan->reject']
-        cfg_profile.all_enabled = proxy_settings['ddos->enabled'] and proxy_settings['port_scan->enabled']
-        if (cfg_profile.ddos_enabled and not cfg_profile.ids_mode):
+        cfg_profile.opt.ids_mode = proxy_settings['ids_mode']
+        cfg_profile.opt.ddos_enabled = proxy_settings['ddos->enabled']
+        cfg_profile.opt.pscan_enabled = proxy_settings['port_scan->enabled']
+        cfg_profile.opt.pscan_reject  = proxy_settings['port_scan->reject']
+        cfg_profile.opt.all_enabled = proxy_settings['ddos->enabled'] and proxy_settings['port_scan->enabled']
+        if (cfg_profile.opt.ddos_enabled and not cfg_profile.opt.ids_mode):
 
             # checking length(hours) to leave IP table rules in place for hosts part of ddos attacks
             # note: minimum of 5 minutes to prevent active attackers from being cleared too soon.
-            cfg_profile.block_length = max(FIVE_MIN, proxy_settings['passive_block_ttl']) * ONE_HOUR
+            cfg_profile.opt.block_length = max(FIVE_MIN, proxy_settings['passive_block_ttl']) * ONE_HOUR
 
         # if ddos engine is disabled
         else:

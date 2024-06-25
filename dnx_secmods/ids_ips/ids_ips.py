@@ -28,7 +28,7 @@ if (TYPE_CHECKING):
     from ids_ips_automate import CFG_PROFILE
 
     # todo: try to make these type definitions less convoluted and more accurate.
-    HOST_TRACKER: TypeAlias = dict[str, Union[bool, int, dict]]
+    HOST_TRACKER: TypeAlias = dict[str, Union[bool, int, set, dict]]
     PROTO_TRACKER: TypeAlias = dict[int, HOST_TRACKER]
 
     PRE_DETECTION: TypeAlias = Union[dict[NET_PORT, list[tuple[int, int]]], dict[NET_PORT, tuple[int, int]]]
@@ -70,11 +70,11 @@ class IDS_IPS(IPSConfiguration, NFQueue):
 
             return DONT_INSPECT_PACKET
 
-        if (inspection_profile.ddos_enabled):
+        if (inspection_profile.opt.ddos_enabled):
             # ddos inspection is independent of pscan and does not invoke action on packets
             self.ddos_queue.add(packet)
 
-        if (inspection_profile.pscan_enabled and self.open_ports[packet.protocol]):
+        if (inspection_profile.opt.pscan_enabled and self.open_ports[packet.protocol]):
             return INSPECT_PACKET
 
         # packet accepted, no inspection
@@ -164,7 +164,7 @@ def inspect_portscan(packet: IPSPacket, inspection_profile: CFG_PROFILE) -> None
 
         return
 
-    elif (inspection_profile.ids_mode):
+    elif (inspection_profile.opt.ids_mode):
         packet.nfqueue.accept()
 
         block_status = IPS.LOGGED
@@ -172,12 +172,12 @@ def inspect_portscan(packet: IPSPacket, inspection_profile: CFG_PROFILE) -> None
         Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
     # dropping the packet then checking for further action.
-    elif (inspection_profile.pscan_enabled):
+    elif (inspection_profile.opt.pscan_enabled):
 
         packet.nfqueue.drop()
 
         # if reject is enabled on top of prevention, port-unreachable packets will be sent back to the scanner.
-        if (inspection_profile.pscan_reject):
+        if (inspection_profile.opt.pscan_reject):
             PREPARE_AND_SEND(packet)
 
             Log.debug(f'[pscan/reject] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
@@ -299,10 +299,10 @@ def inspect_ddos(packet: IPSPacket, inspection_profile: CFG_PROFILE) -> None:
 
         else: return
 
-    if (inspection_profile.ids_mode):
+    if (inspection_profile.opt.ids_mode):
         Log.log(packet, IPS.LOGGED, engine=IPS.DDOS)
 
-    elif (inspection_profile.ddos_enabled):
+    elif (inspection_profile.opt.ddos_enabled):
         PROXY_ADD_RULE(packet.tracked_ip, packet.ids_profile, packet.timestamp, table='raw', chain='IPS')
 
         Log.log(packet, IPS.FILTERED, engine=IPS.DDOS)
