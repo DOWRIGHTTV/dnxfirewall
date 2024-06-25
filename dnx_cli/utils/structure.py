@@ -129,7 +129,7 @@ class Command(NamedTuple):
     module_required: bool
     priv_required: bool
     module_list: Optional[list[str]] = None
-    description: Optional[str] = None
+    description: str = ''
 
 COMMANDS: dict[str, Command] = {
     'help': Command(module_required=False, priv_required=False, description='Displays this menu'),
