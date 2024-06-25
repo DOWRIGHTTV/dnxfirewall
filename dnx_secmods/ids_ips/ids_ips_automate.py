@@ -34,6 +34,14 @@ PROFILE_CT = 15
 
 @dataclass
 class PROFILE_OPTIONS:
+    '''
+    ids_mode:      int = 0
+    ddos_enabled:  int = 0
+    pscan_enabled: int = 0
+    pscan_reject:  int = 0
+    all_enabled:   int = 0
+    block_length:  int = 0
+    '''
     ids_mode: int = 0  # TODO: this should probably [maybe] be reworked.
     ddos_enabled: int = 0
     pscan_enabled: int = 0
@@ -46,13 +54,6 @@ class CFG_PROFILE(NamedTuple):
     ip_whitelist: set[int]
 
     ddos_limits: dict[PROTO, int]
-
-    ids_mode:      int = 0
-    ddos_enabled:  int = 0
-    pscan_enabled: int = 0
-    pscan_reject:  int = 0
-    all_enabled:   int = 0
-    block_length:  int = 0
     '''
     idx: int
     ip_whitelist: set[int]
@@ -69,7 +70,7 @@ class IPSConfiguration(ConfigurationMixinBase):
 
     cfg_profiles: ClassVar[tuple[CFG_PROFILE, ...]] = tuple(
         CFG_PROFILE(
-            i, set(), {PROTO_TCP: -1, PROTO_UDP: -1, PROTO_ICMP: -1}
+            i, set(), {PROTO_TCP: -1, PROTO_UDP: -1, PROTO_ICMP: -1}, PROFILE_OPTIONS()
         ) for i in range(PROFILE_CT+1)  # note: +1 is to allow for [1] start index. [0] is reserved for the system.
     )
 
