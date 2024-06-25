@@ -13,7 +13,7 @@ from dnx_cli.utils.io import dnx_run
 WAIT_TIME = 2
 SERVICE_JUSTIFY = 16
 
-def sysctl_command(mod: str, cmd: str) -> None:
+def sysctl_command(mod: str, *, cmd: str) -> None:
     svc = f'dnx-{mod.replace("_", "-")}'
 
     with Spinner(f'Attempting [{cmd.upper()}] on {mod}:') as spinner:

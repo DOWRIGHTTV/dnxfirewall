@@ -125,9 +125,9 @@ def service_command(mod: str, cmd: str) -> None:
     results: list[bool] = []
     ctl_switch = {
         'status':  partial(sysctl_status, brief=mod == 'all'),
-        'start':   sysctl_command,
-        'restart': sysctl_command,
-        'stop':    sysctl_command
+        'start':   partial(sysctl_command, cmd='start'),
+        'restart': partial(sysctl_command, cmd='restart'),
+        'stop':    partial(sysctl_command, cmd='stop')
     }
 
     if (mod == 'all'):
