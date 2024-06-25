@@ -173,7 +173,7 @@ class IPSConfiguration(ConfigurationMixinBase):
     def _passively_blocked_timeout(self) -> None:
         for profile in self.__class__.cfg_profiles:
 
-            expired_hosts = System.ips_passively_blocked(profile_idx=profile.idx, block_length=profile.block_length)
+            expired_hosts = System.ips_passively_blocked(profile_idx=profile.idx, block_length=profile.opt.block_length)
             if (not expired_hosts):
                 continue
 

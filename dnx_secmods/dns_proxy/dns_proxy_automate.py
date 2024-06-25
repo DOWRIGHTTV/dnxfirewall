@@ -61,7 +61,8 @@ class ProxyConfiguration(ConfigurationMixinBase):
     '''
     cfg_profiles: ClassVar[tuple[CFG_PROFILE, ...]] = tuple(
         CFG_PROFILE(
-            i, DNS_WHITELIST({}), DNS_BLACKLIST({}), DNS_SIGNATURES({DNS_CAT.dns_https: 'system'}, {}, [])
+            i, DNS_WHITELIST({}), DNS_BLACKLIST({}),
+            DNS_SIGNATURES({DNS_CAT.dns_https: DNS_CATEGORY_INFO(DNS_CAT_LABEL('system'), SWITCH_ON)}, {}, [])
         ) for i in range(PROFILE_CT+1)  # note: +1 is to allow for [1] start index. [0] is reserved for the system.
     )
 
