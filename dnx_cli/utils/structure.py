@@ -117,7 +117,7 @@ def check_command(cmd: str, mod: str) -> bool:
     if (not command.module_required):
         return False
 
-    if (cmd not in command.module_list):
+    if (mod not in command.module_list):
         sexit(
             text.red('Error! ') +
             text.lightgrey(f'Module "{mod.upper()}" not available for command "{cmd.upper()}". -> See help')
