@@ -112,7 +112,7 @@ def help_command() -> None:
             'description': text.yellow(description, style=None),
             'priv_required': convert_bool[opts.priv_required],
             'module_required': convert_bool[opts.module_required],
-            'module_list': f'[{" ".join(opts.module_list)}]'
+            'module_list': f'[ {" ".join(opts.module_list) if opts.module_list else ""} ]'
         }
         if (not description):
             cmd_opts.pop('description')
