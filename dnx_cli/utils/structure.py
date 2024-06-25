@@ -114,13 +114,16 @@ def check_command(cmd: str, mod: str) -> bool:
             text.lightgrey('Module required for this command. -> See help')
         )
 
+    if (not command.module_required):
+        return False
+
     if (cmd not in command.module_list):
         sexit(
             text.red('Error! ') +
             text.lightgrey(f'Module "{mod.upper()}" not available for command "{cmd.upper()}". -> See help')
         )
 
-    return command.module_required
+    return True
 
 class Command(NamedTuple):
     module_required: bool
