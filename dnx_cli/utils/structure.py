@@ -25,12 +25,6 @@ __all__ = (
 def check_module(mod: str, /) -> Module:
     module = MODULES.get(mod, None)
 
-    if (not module):
-        sexit(
-            text.red('Error! ') +
-            text.lightgrey('Unknown Module. -> See help for existing modules')
-        )
-
     # module level privilege
     if (module.priv_required and not ROOT):
         sexit(
@@ -98,7 +92,7 @@ SERVICE_LIST = [mod for mod, module in MODULES.items() if module.is_service]
 # =========================
 # MODULES + HELPERS
 # =========================
-def check_command(cmd: str, mod: str) -> None:
+def check_command(cmd: str, mod: str) -> bool:
     command = COMMANDS.get(cmd, None)
     if (not command):
         sexit(
@@ -119,6 +113,14 @@ def check_command(cmd: str, mod: str) -> None:
             text.red('Error! ') +
             text.lightgrey('Module required for this command. -> See help')
         )
+
+    if (cmd not in command.module_list):
+        sexit(
+            text.red('Error! ') +
+            text.lightgrey(f'Module "{mod.upper()}" not available for command "{cmd.upper()}". -> See help')
+        )
+
+    return command.module_required
 
 class Command(NamedTuple):
     module_required: bool

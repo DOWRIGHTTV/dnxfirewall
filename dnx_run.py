@@ -71,9 +71,9 @@ def parse_args() -> tuple[str, str, Module]:
     cmd: str = get_index(1)
     mod: str = get_index(2)
 
-    check_command(cmd, mod)
+    module_required = check_command(cmd, mod)
 
-    module = check_module(mod)
+    module = check_module(mod) if module_required else None
 
     # index of first argument to be passed through to the specified module
     pt_arg_start = 2 if cmd in ['install'] else 3
