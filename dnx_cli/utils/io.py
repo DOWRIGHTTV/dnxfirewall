@@ -10,7 +10,7 @@ from subprocess import run, DEVNULL
 
 from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import HOME_DIR, console_log, hardout, hardout_errno
-from dnx_control.system.systemd import notify_stopping
+from dnx_control.system.systemd import sysd_notify_stopping
 
 from dnx_cli.utils.shell_colors import text
 
@@ -75,7 +75,7 @@ def run_cli(mod: str, mod_loc: str) -> None:
 
         except TerminateSignal:
             console_log(f'SIGTERM received.')
-            notify_stopping()
+            sysd_notify_stopping()
 
         except Exception as E:
             sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
