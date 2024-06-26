@@ -26,23 +26,24 @@ if (NOTIFY_SOCKET):
 # NOTIFY SENDER
 # ====================
 if (not NOTIFY_SOCKET):
-    def _notify(message: bytes) -> None:
+    def _notify(message: str) -> None:
         console_log(f'NOTIFY_SOCKET not set, skipping notification: {message}')
 
 else:
-    def _notify(message: bytes) -> None:
+    def _notify(message: str) -> None:
+        console_log(f'NOTIFYING SYSTEMD: {message}')
         with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM | socket.SOCK_CLOEXEC) as sock:
             sock.connect(NOTIFY_SOCKET)
-            sock.sendall(message)
+            sock.sendall(message.encode('utf-8'))
 
 # ====================
 # NOTIFY HELPERS
 # ====================
 def sysd_notify_ready() -> None:
-    _notify(b'READY=1')
+    _notify('READY=1')
 
 def sysd_notify_stopping() -> None:
-    _notify(b'STOPPING=1')
+    _notify('STOPPING=1')
 
 # ====================
 # SIGNAL HANDLERS
