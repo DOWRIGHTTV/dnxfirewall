@@ -16,18 +16,18 @@ __all__ = (
 # ====================
 NOTIFY_SOCKET = os.environ.get('NOTIFY_SOCKET', '')
 if (NOTIFY_SOCKET):
-    dnx_assert(NOTIFY_SOCKET[0] in ("/", "@"), "Notify socket type not supported.")
+    dnx_assert(NOTIFY_SOCKET[0] in ('/', '@'), 'Notify socket type not supported.')
 
     # abstract socket
-    if NOTIFY_SOCKET[0] == "@":
-        NOTIFY_SOCKET = "\0" + NOTIFY_SOCKET[1:]
+    if NOTIFY_SOCKET[0] == '@':
+        NOTIFY_SOCKET = '\0' + NOTIFY_SOCKET[1:]
 
 # ====================
 # NOTIFY SENDER
 # ====================
 if (not NOTIFY_SOCKET):
     def _notify(message: bytes) -> None:
-        console_log(f"NOTIFY_SOCKET not set, skipping notification: {message}")
+        console_log(f'NOTIFY_SOCKET not set, skipping notification: {message}')
 
 else:
     def _notify(message: bytes) -> None:
@@ -39,15 +39,16 @@ else:
 # NOTIFY HELPERS
 # ====================
 def sysd_notify_ready() -> None:
-    _notify(b"READY=1")
+    _notify(b'READY=1')
 
 def sysd_notify_stopping() -> None:
-    _notify(b"STOPPING=1")
+    _notify(b'STOPPING=1')
 
 # ====================
 # SIGNAL HANDLERS
 # ====================
 def _terminate_handler(signum, frame):
+    console_log(f'SIGTERM received by handler. Raising TerminateSignal...')
     raise TerminateSignal('SIGTERM')
 
 signal.signal(signal.SIGTERM, _terminate_handler)
