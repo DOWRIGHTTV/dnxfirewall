@@ -17,6 +17,8 @@ from dnx_gentools.system_info import System
 from dnx_routines.logging.log_client import Log
 from dnx_routines.database import DBConnector
 
+from dnx_control.system.systemd import sysd_notify_ready
+
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import ClassVar
 
@@ -49,6 +51,8 @@ class LogService:
     @classmethod
     def run(cls):
         self = cls()
+
+        sysd_notify_ready()
 
         self.organize()
 

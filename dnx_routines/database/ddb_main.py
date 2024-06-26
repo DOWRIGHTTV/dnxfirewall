@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import traceback
 
-from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED
+from socket import socket, AF_UNIX, SOCK_DGRAM, SOCK_CLOEXEC, SOL_SOCKET, SO_PASSCRED
 
 from dnx_gentools.def_constants import TYPE_CHECKING, DATABASE_SOCKET, ONE_SEC, NO_DELAY, fast_sleep, fast_time
 from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_EVENT_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
@@ -14,6 +14,8 @@ from dnx_gentools.standard_tools import dnx_queue, looper
 from dnx_iptools.protocol_tools import authenticate_sender
 
 from dnx_routines.logging.log_client import Log
+
+from dnx_control.system.systemd import sysd_notify_ready
 
 from ddb_connector_sqlite import DBConnector
 
@@ -36,7 +38,7 @@ NT_LOOKUP = NT_MAP.get
 if os.path.exists(DATABASE_SOCKET):
     os.remove(DATABASE_SOCKET)
 
-_db_service = socket(AF_UNIX, SOCK_DGRAM)
+_db_service = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC)
 _db_service.setsockopt(SOL_SOCKET, SO_PASSCRED, 1)
 
 _db_service.bind(DATABASE_SOCKET.encode())
@@ -50,6 +52,7 @@ _db_service_recvmsg = _db_service.recvmsg
 # the main service loop to remove the recursive callback of queue handler.
 def run() -> NoReturn:
     Log.notice('Database log entry processing queue ready.')
+    sysd_notify_ready()
 
     fail_count = 0
     fail_time = fast_time()

@@ -16,6 +16,8 @@ from dnx_iptools.cprotocol_tools import itoip
 
 from dnx_routines.logging.log_client import Log
 
+from dnx_control.system.systemd import sysd_notify_ready
+
 from dhcp_server_requests import ServerResponse, ClientRequest
 from dhcp_server_automate import ServerConfiguration
 
@@ -60,6 +62,9 @@ class DHCPServer(ServerConfiguration, Listener):
         ServerResponse.set_server_reference(self.__class__)
 
         threading.Thread(target=self.request_handler).start()
+
+        # note: this is not a complete startup, but it is enough to signal systemd
+        sysd_notify_ready()
 
     def _pre_inspect(self, packet: ClientRequest) -> bool:
         if (packet.mtype in VALID_MTYPES and packet.svr_ident in self.valid_idents):

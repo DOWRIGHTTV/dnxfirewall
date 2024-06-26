@@ -8,15 +8,15 @@ import traceback
 from functools import partial
 from subprocess import run, DEVNULL
 
-from dnx_gentools.def_constants import HOME_DIR
+from dnx_gentools.def_exceptions import TerminateSignal
+from dnx_gentools.def_constants import HOME_DIR, console_log, hardout, hardout_errno
+from dnx_control.system.systemd import notify_stopping
 
 from dnx_cli.utils.shell_colors import text
 
 
 dnx_run = partial(run, check=True, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 dnx_run_v = partial(run, check=True, stdin=DEVNULL)
-
-hardout = partial(os._exit, 0)
 
 def sprint(msg: str, /) -> None:
     '''prints a message to the terminal with an empty space above and below.
@@ -54,18 +54,34 @@ def run_cli(mod: str, mod_loc: str) -> None:
         dnx_mod = importlib.import_module(mod_loc)
     except KeyboardInterrupt:
         sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
+
+    except SystemExit:
+        sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('exited!'))
+
     except Exception as E:
         sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
         traceback.print_exc()
+
+        hardout_errno(1, f'module import failure -> {mod_loc}')
 
     else:
         try:
             dnx_mod.run()
         except KeyboardInterrupt:
             sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
+
+        except SystemExit:
+            sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('exited!'))
+
+        except TerminateSignal:
+            console_log(f'SIGTERM received.')
+            notify_stopping()
+
         except Exception as E:
             sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
             traceback.print_exc()
+
+            hardout_errno(1, f'module run failure -> {mod_loc}')
 
     # this will make sure there are no dangling processes or threads on exit.
     hardout()

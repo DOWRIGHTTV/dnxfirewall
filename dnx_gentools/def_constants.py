@@ -71,13 +71,22 @@ def fast_time(_int=int, _time=_time.time) -> int: return _int(_time())
 def hardout(msg: Optional[str] = None) -> None:
     '''exit the application.
 
-    guarantees all threads and processes are not left dangling.
+    guarantees all threads and processes are not left dangling, but skips "finally" blocks.
     '''
     if (msg):
         console_log(msg)
 
-    _os._exit(1)
+    _os._exit(0)
 
+def hardout_errno(errno: int, msg: Optional[str] = None) -> None:
+    '''exit the application with a specified error code.
+
+    guarantees all threads and processes are not left dangling, but skips "finally" blocks.
+    '''
+    if (msg):
+        console_log(msg)
+
+    _os._exit(errno)
 
 # used by socket sender loops
 ATTEMPTS: tuple[int, int] = (0, 1)

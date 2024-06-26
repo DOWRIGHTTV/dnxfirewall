@@ -20,8 +20,11 @@ if INITIALIZE_MODULE('ids-ips'):
 
 
 def run():
-    ids_ips.IDS_IPS.run(Log, q_num=Queue.IDS_IPS)
-
+    try:
+        ids_ips.IDS_IPS.run(Log, q_num=Queue.IDS_IPS)
+    except Exception as e:
+        Log.error(f'Error in IDS_IPS.run: {e}')
+        raise
 
 # ================
 # TYPING IMPORTS

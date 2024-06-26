@@ -7,7 +7,7 @@ import shutil
 
 from json import loads
 from functools import partial
-from socket import socket, AF_UNIX, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
+from socket import socket, AF_UNIX, AF_INET, SOCK_DGRAM, SOCK_CLOEXEC, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
 
 from dnx_gentools.def_constants import TYPE_CHECKING, CONTROL_SOCKET, NO_DELAY, shell
 from dnx_gentools.standard_tools import looper
@@ -16,6 +16,8 @@ from dnx_iptools.def_structs import scm_creds_pack
 from dnx_iptools.protocol_tools import change_socket_owner, authenticate_sender
 
 from dnx_routines.logging.log_client import Log
+
+from dnx_control.system.systemd import sysd_notify_ready
 
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Socket_T
@@ -42,7 +44,7 @@ MODULE_PERMISSIONS = {
 #     os.remove(CONTROL_SOCKET)
 #
 # _control_service = socket(AF_UNIX, SOCK_DGRAM)
-_control_sock: Socket_T = socket(AF_INET, SOCK_DGRAM)
+_control_sock: Socket_T = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC)
 # _control_sock.setsockopt(SOL_SOCKET, SO_PASSCRED, 1)
 _control_sock.bind(CONTROL_SOCKET)
 
@@ -68,6 +70,8 @@ class SystemControl:
     # expanded on to ensure it is a secure implementation and doesn't allow for any funny business.
     def run(cls) -> None:
         self = cls()
+
+        sysd_notify_ready()
 
         self._receive_control_socket()
 

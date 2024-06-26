@@ -576,16 +576,29 @@ def set_services() -> None:
 
     system_iu_progress('creating dnxfirewall services')
 
-    services = os.listdir(f'{UTILITY_DIR}/services')
-    for service in services:
+    installed_services = [f for f in os.listdir('/etc/systemd/system/') if f.startswith('dnx-')]
 
-        if (service not in ignore_list):
+    # ===========================================
+    # INSTALL / UPDATING SERVICE FILES
+    # ===========================================
+    local_services = [f for f in os.listdir(f'{UTILITY_DIR}/services') if f not in ignore_list]
+    for service in local_services:
 
-            dnx_run(f'cp -n {UTILITY_DIR}/services/{service} /etc/systemd/system/')
+        dnx_run(f'cp {UTILITY_DIR}/services/{service} /etc/systemd/system/')
+
+        if (service not in installed_services):
             dnx_run(f'systemctl enable {service}')
 
     dnx_run(f'systemctl enable nginx')
 
+    # ===========================================
+    # REMOVE DEPRECATED SERVICE FILES
+    # ===========================================
+    deprecated_services = [f for f in installed_services if f not in local_services]
+    for service in deprecated_services:
+
+        dnx_run(f'systemctl disable {service}')
+        dnx_run(f'sudo rm /etc/systemd/system/{service}')
 
 # ============================
 # INITIAL IPTABLES SETUP

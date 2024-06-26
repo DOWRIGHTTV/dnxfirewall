@@ -14,6 +14,8 @@ from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
 
+from dnx_control.system.systemd import sysd_notify_ready
+
 from ip_proxy_automate import ProxyConfiguration
 from ip_proxy_packets import IPPPacket, ProxyResponse
 # from ip_proxy_restrict import LanRestrict
@@ -46,6 +48,9 @@ class IPProxy(ProxyConfiguration, NFQueue):
 
         for i in range(self.DEFAULT_THREAD_COUNT):
             Thread(target=self.inspection_worker, args=(i,)).start()
+
+        # note: this is not a complete startup, but it is enough to signal systemd
+        sysd_notify_ready()
 
     def inspection_worker(self, i: int) -> NoReturn:
         Log.informational(f'[proxy/worker][{i}] inspection thread started')

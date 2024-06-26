@@ -41,8 +41,11 @@ if INITIALIZE_MODULE('ip-proxy'):
 
 
 def run():
-    ip_proxy.IPProxy.run(Log, q_num=Queue.IP_PROXY)
-
+    try:
+        ip_proxy.IPProxy.run(Log, q_num=Queue.IP_PROXY)
+    except Exception as e:
+        Log.error(f'Error in IPProxy.run: {e}')
+        raise
 
 # ================
 # TYPING IMPORTS

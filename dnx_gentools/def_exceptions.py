@@ -18,6 +18,11 @@ if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Optional
     from dnx_routines.logging import LogHandler_T
 
+class TerminateSignal(Exception):
+    '''SigTerm will be sent by and received from systemd
+
+    alternative to KeyboardInterrupt for when running as a service
+    '''
 
 class DNXError(Exception):
     '''Base error for all other DNX errors. '''

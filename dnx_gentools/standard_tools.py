@@ -119,7 +119,7 @@ class ConfigurationMixinBase:
 
         self.module_class = module_class
 
-        # subclass hooke will provide log handler reference and threads to start
+        # subclass hook will provide log handler reference and threads to start
         log, thread_info, thread_count = self._configure()
 
         # ===============

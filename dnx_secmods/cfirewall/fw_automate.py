@@ -65,10 +65,11 @@ class FirewallAutomate:
         ppt(self.PRE_ROUTE)
         ppt(self.POST_ROUTE)
 
-    # threads will be started and other basic setup functions will be done before releasing control back to the
-    # inspection context.
     def run(self) -> None:
+        '''threads will be started.
 
+        waits until basic setup functions are completed before returning.
+        '''
         threading.Thread(target=self._monitor_zones).start()
         threading.Thread(target=self._monitor_system_rules).start()
         threading.Thread(target=self._monitor_standard_rules).start()

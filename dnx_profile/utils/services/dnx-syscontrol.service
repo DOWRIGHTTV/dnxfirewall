@@ -5,9 +5,8 @@ StartLimitBurst=2
 StartLimitIntervalSec=3
 
 [Service]
-Type=simple
+Type=notify
 Restart=always
-RestartMode=direct
 RestartSec=69ms
 User=root
 ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli syscontrol

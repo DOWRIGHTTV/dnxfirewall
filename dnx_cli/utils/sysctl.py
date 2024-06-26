@@ -10,7 +10,7 @@ from dnx_cli.utils.ux import Spinner
 from dnx_cli.utils.io import dnx_run
 
 
-WAIT_TIME = 2
+WAIT_TIME = 0  # 2, this isnt needed if the systemd notify works as intended
 SERVICE_JUSTIFY = 16
 
 def sysctl_command(mod: str, *, cmd: str) -> None:

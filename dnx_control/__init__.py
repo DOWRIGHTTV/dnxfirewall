@@ -18,4 +18,8 @@ if INITIALIZE_MODULE('syscontrol'):
 
 
 def run():
-    SystemControl.run()
+    try:
+        SystemControl.run()
+    except Exception as e:
+        Log.error(f'Error in SystemControl: {e}')
+        raise

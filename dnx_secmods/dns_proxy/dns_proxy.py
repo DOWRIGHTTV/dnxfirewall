@@ -11,6 +11,8 @@ from dnx_gentools.def_namedtuples import DNS_INSPECTION_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
 
+from dnx_control.system.systemd import sysd_notify_ready
+
 from dns_proxy_server import DNSServer
 from dns_proxy_automate import ProxyConfiguration
 from dns_proxy_packets import DNSPacket, ProxyResponse
@@ -60,6 +62,9 @@ class DNSProxy(ProxyConfiguration, NFQueue):
 
         for i in range(self.DEFAULT_THREAD_COUNT):
             Thread(target=self.inspection_worker, args=(i,)).start()
+
+        # note: this is not a complete startup, but it is enough to signal systemd
+        sysd_notify_ready()
 
     def inspection_worker(self, i: int) -> NoReturn:
         Log.informational(f'[proxy/worker][{i}] inspection thread started')

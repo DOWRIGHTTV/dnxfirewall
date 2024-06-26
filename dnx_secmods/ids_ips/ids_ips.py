@@ -17,6 +17,8 @@ from dnx_gentools.standard_tools import inspection_queue
 from dnx_iptools.iptables import IPTablesManager
 from dnx_iptools.packet_classes import NFQueue
 
+from dnx_control.system.systemd import sysd_notify_ready
+
 from ids_ips_automate import IPSConfiguration
 from ids_ips_packets import IPSPacket, IPSResponse
 from ids_ips_log import Log
@@ -61,6 +63,9 @@ class IDS_IPS(IPSConfiguration, NFQueue):
 
         for i in range(self.DEFAULT_THREAD_COUNT):
             Thread(target=self.ddos_worker, args=(i,)).start()
+
+        # note: this is not a complete startup, but it is enough to signal systemd
+        sysd_notify_ready()
 
     def _pre_inspect(self, packet: IPSPacket, inspection_profile: CFG_PROFILE) -> bool:
 

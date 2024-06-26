@@ -1,13 +1,13 @@
 [Unit]
 Description=DNXFIREWALL Web Application Service
-After=nginx.service dnx-logging.service
+After=nginx.service dnx-syscontrol.service dnx-logging.service
+Wants=nginx.service
 StartLimitBurst=2
 StartLimitIntervalSec=3
 
 [Service]
 Type=simple
 Restart=always
-RestartMode=direct
 RestartSec=69ms
 User=dnx
 Group=dnx

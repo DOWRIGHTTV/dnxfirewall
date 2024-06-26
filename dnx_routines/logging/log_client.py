@@ -7,12 +7,13 @@ import threading
 
 from json import dumps
 from functools import partial
-from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
+from socket import socket, AF_UNIX, SOCK_DGRAM, SOCK_CLOEXEC, SOL_SOCKET, SCM_CREDENTIALS
 
 from dnx_gentools.def_constants import module_import_callout
 
 module_import_callout(__file__)
 
+from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import TYPE_CHECKING, ROOT, HOME_DIR, DATABASE_SOCKET, DNX_AUTHENTICATION
 from dnx_gentools.def_constants import fast_time, console_log
 from dnx_gentools.def_enums import LOG
@@ -161,7 +162,7 @@ def _log_handler():
     # ------------------
     # DB SERVICE SOCKET
     # ------------------
-    db_client: Socket_T = socket(AF_UNIX, SOCK_DGRAM)
+    db_client: Socket_T = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC)
 
     db_sendmsg = db_client.sendmsg
 
@@ -453,8 +454,10 @@ _err_report_path = f'{HOME_DIR}/dnx_profile/log/_err_reports'
 # Process hook -> called if an unhandled exception occurs in the Main thread or within the Thread exception hook.
 def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
-        print(f'\nProcess [{__file__.split("/", 3)[3]}] terminated by Keyboard Interrupt.')
-        _os._exit(1)
+        raise KeyboardInterrupt(f'Process [{__file__.split("/", 3)[3]}] terminated by Keyboard Interrupt.')
+
+    if issubclass(exc_type, TerminateSignal):
+        console_log(f'SIGTERM on unhandled exception handler. Process [{__file__.split("/", 3)[3]}] terminated.')
 
     err_report = _format_output(exc_type, exc_value, exc_traceback)
     err_file = f'{_err_report_path}/{_system_date(string=True)}_err.log'
@@ -486,7 +489,6 @@ def _handle_unhandled_thread_exception(args, /):
 
     else:
         console_log(f'{str(args.exc_type).split()[1][:-1]} -> {args.exc_value} :: see {err_file}')
-
 
 threading.excepthook = _handle_unhandled_thread_exception
 

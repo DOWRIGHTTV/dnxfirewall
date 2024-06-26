@@ -7,7 +7,6 @@ StartLimitIntervalSec=3
 [Service]
 Type=simple
 Restart=always
-RestartMode=direct
 RestartSec=69ms
 User=dnx
 ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli interface

@@ -46,8 +46,11 @@ def run():
         target=dns_proxy_server.DNSServer.run, args=(Log,), kwargs={'always_on': True}
     ).start()
 
-    dns_proxy.DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
-
+    try:
+        dns_proxy.DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
+    except Exception as e:
+        Log.error(f'Error in DNSProxy.run: {e}')
+        raise
 
 # ================
 # TYPING IMPORTS
