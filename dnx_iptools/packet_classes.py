@@ -8,7 +8,7 @@ import select
 
 from threading import Thread
 
-from dnx_gentools.def_exceptions import ProtocolError
+from dnx_gentools.def_exceptions import ProtocolError, TerminateSignal
 from dnx_gentools.def_constants import TYPE_CHECKING, RUN_FOREVER, FIVE_SEC, LAST_ATTEMPT, ATTEMPTS
 from dnx_gentools.def_constants import WAN_IN, HEARTBEAT_FAIL_LIMIT, fast_sleep, fast_time, console_log
 from dnx_gentools.def_enums import ICMP, DECISION, DIRECTION
@@ -111,6 +111,8 @@ class Listener:
             for fd, _ in l_socks:
 
                 sock_info: L_SOCK = registered_socks_get(fd)
+
+                # todo: we should handle a socket error better.
                 try:
                     nbytes, address = sock_info.recvfrom(recv_buffer)
                 except OSError:
@@ -123,6 +125,8 @@ class Listener:
                     packet: ListenerPackets = listener_parser(address, sock_info)
                     try:
                         packet.parse(recv_buffer[:nbytes])
+                    except (KeyboardInterrupt, TerminateSignal):
+                        raise
                     except:
                         traceback.print_exc()
                         continue
@@ -179,7 +183,11 @@ class Listener:
             Thread(target=listener.__register, args=(intf,)).start()
 
         # running main epoll/ socket loop.
-        listener.__run_listener(always_on)
+        try:
+            listener.__run_listener(always_on)
+        except (KeyboardInterrupt, TerminateSignal):
+            log.notice(f'{cls.__class__.__name__} listener stopped via signal.')
+            raise
 
     @classmethod
     def enable(cls, sock_fd: int, intf: str) -> None:
@@ -389,6 +397,11 @@ class NFQueue:
             # this is a blocking call that interacts with the system via callback.
             try:
                 nfqueue.nf_run()
+            except (KeyboardInterrupt, TerminateSignal):
+                nfqueue.nf_break()
+                self._log.notice('Netfilter binding stopped via signal.')
+                raise
+
             except:
                 nfqueue.nf_break()
 

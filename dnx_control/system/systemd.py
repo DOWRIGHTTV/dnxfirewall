@@ -48,6 +48,7 @@ def sysd_notify_stopping() -> None:
 # SIGNAL HANDLERS
 # ====================
 def _terminate_handler(signum, frame):
+    # note: should we notify here. see what systemd does on stopping notice.
     console_log(f'SIGTERM received by handler. Raising TerminateSignal...')
     raise TerminateSignal('SIGTERM')
 
