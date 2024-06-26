@@ -74,7 +74,7 @@ def run_cli(mod: str, mod_loc: str) -> None:
             sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('exited!'))
 
         except TerminateSignal:
-            console_log(f'SIGTERM received.')
+            console_log(f'Process is finalizing SIGTERM request.')
             sysd_notify_stopping()
 
         except Exception as E:
