@@ -20,7 +20,9 @@ def sysctl_command(mod: str, *, cmd: str) -> None:
         try:
             dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
         except CalledProcessError:
-            pass
+            # note: i dont think a stop cmd will ever fail, but just in case.
+            if (cmd in ['start', 'restart']):
+                result = text.red('failed')
         else:
             time.sleep(WAIT_TIME)
 
@@ -29,14 +31,17 @@ def sysctl_command(mod: str, *, cmd: str) -> None:
             except CalledProcessError as cpe:
                 out = cpe.output.splitlines()
 
+            active = out[2].split()
+            if (cmd == 'stop'):
+                result = text.yellow('inactive') if active[1] == 'inactive' else text.red(active[1])
+
+            # note: this is probably not necessary anymore now that we have the systemd notify and exit on failure.
+            else:
+                result = text.green('active') if active[1] == 'active' else text.red('failed')
+
+        # todo: see if it would be better to set a "final" message on the instance instead of printing here.
+        #  - then the __exit__ method could handle the final message after stopping the animation.
         spinner.animate.clear()
-
-        active = out[2].split()
-        if (cmd == 'stop'):
-            result = text.yellow('inactive') if active[1] == 'inactive' else text.red(active[1])
-
-        else:
-            result = text.green('active') if active[1] == 'active' else text.red('failed')
 
         print(f'\rAttempting [{cmd.upper()}] on {mod}: {result}')
 
@@ -98,3 +103,15 @@ def sysctl_status(mod: str, brief: bool = False) -> bool:
         print('=' * 32)
 
     return status == text.green('up')
+
+def journalctl_brief(mod: str) -> None:
+    try:
+        out = check_output(f'journalctl -ru {mod} -n 9', shell=True, text=True)
+    except CalledProcessError as cpe:
+        out = cpe.output
+
+    entries = reversed(out.splitlines())
+
+    print('=' * 32)
+    print(f'{nl_join([x for x in entries])}')
+    print('=' * 32)

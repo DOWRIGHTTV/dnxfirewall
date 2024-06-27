@@ -21,7 +21,7 @@ from dnx_control.system.systemd import sysd_notify_stopping
 from dnx_cli.utils.shell_colors import text, styles
 from dnx_cli.utils.structure import SERVICE_LIST, COMMANDS, check_command, check_module
 from dnx_cli.utils.io import dnx_run_v, sprint
-from dnx_cli.utils.sysctl import sysctl_command, sysctl_status
+from dnx_cli.utils.sysctl import sysctl_command, sysctl_status, journalctl_brief
 
 if (TYPE_CHECKING):
     from dnx_cli.utils.structure import Module
@@ -218,6 +218,9 @@ def service_command(mod: str, cmd: str) -> None:
 
     else:
         print(text.green(f'\nAll services running!\n'))
+
+def journalctl_command(mod: str) -> None:
+    journalctl_brief(mod)
 
 # function is for consistency even if it seems unnecessary
 def install_command() -> None:
