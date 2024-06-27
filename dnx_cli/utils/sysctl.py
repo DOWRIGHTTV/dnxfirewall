@@ -105,8 +105,9 @@ def sysctl_status(mod: str, brief: bool = False) -> bool:
     return status == text.green('up')
 
 def journalctl_brief(mod: str) -> None:
+    svc = f'dnx-{mod.replace("_", "-")}'
     try:
-        out = check_output(f'journalctl -ru {mod} -n 9', shell=True, text=True)
+        out = check_output(f'journalctl -ru {svc} -n 9', shell=True, text=True)
     except CalledProcessError as cpe:
         out = cpe.output
 
