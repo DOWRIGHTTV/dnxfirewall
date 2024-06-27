@@ -5,6 +5,7 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
+from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('dns-proxy'):
@@ -48,6 +49,9 @@ def run():
 
     try:
         dns_proxy.DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
+    except (KeyboardInterrupt, TerminateSignal):
+        raise
+
     except Exception as e:
         Log.error(f'Error in DNSProxy.run: {e}')
         raise

@@ -5,6 +5,7 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
+from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('ip-proxy'):
@@ -43,6 +44,9 @@ if INITIALIZE_MODULE('ip-proxy'):
 def run():
     try:
         ip_proxy.IPProxy.run(Log, q_num=Queue.IP_PROXY)
+    except (KeyboardInterrupt, TerminateSignal):
+        raise
+
     except Exception as e:
         Log.error(f'Error in IPProxy.run: {e}')
         raise

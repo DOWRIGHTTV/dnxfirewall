@@ -58,6 +58,7 @@ def run_cli(mod: str, mod_loc: str) -> None:
     except SystemExit:
         sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('exited!'))
 
+    # note: uncaught exception handler is not set up at this point.
     except Exception as E:
         sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
         traceback.print_exc()
@@ -76,12 +77,6 @@ def run_cli(mod: str, mod_loc: str) -> None:
         except TerminateSignal:
             console_log(f'Process is finalizing SIGTERM request.')
             sysd_notify_stopping()
-
-        except Exception as E:
-            sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
-            traceback.print_exc()
-
-            hardout_errno(1, f'module run failure -> {mod_loc}')
 
     # this will make sure there are no dangling processes or threads on exit.
     hardout()

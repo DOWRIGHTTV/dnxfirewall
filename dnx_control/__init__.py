@@ -5,6 +5,7 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
+from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('syscontrol'):
@@ -20,6 +21,9 @@ if INITIALIZE_MODULE('syscontrol'):
 def run():
     try:
         SystemControl.run()
+    except (KeyboardInterrupt, TerminateSignal):
+        raise
+
     except Exception as e:
-        Log.error(f'Error in SystemControl: {e}')
+        Log.error(f'Error in ddb_main.run: {e}')
         raise

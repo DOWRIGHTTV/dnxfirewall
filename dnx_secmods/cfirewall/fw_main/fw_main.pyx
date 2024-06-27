@@ -229,8 +229,9 @@ cdef class CFirewall:
 
             strncpy(temp_map[idx].name, zone_name.encode('utf-8'), 16)
 
-        with nogil:
-            firewall_push_zones(temp_map)
+        # note: releasing the GIL is likely unnecessary here.
+        # with nogil:
+        firewall_push_zones(temp_map)
 
         return Py_OK
 
@@ -247,8 +248,9 @@ cdef class CFirewall:
     def _update_firewall_rules(s, uintf8_t cntrl_list_idx, list rulelist):
         '''acquires FWrule lock then rewrites the corresponding section ruleset.
 
-        the current length var will also be update while the lock is held. 
-        the GIL will be explicitly acquired before any code execution to ensure calls from C are safe.
+        the current length var will also be updated while the lock is held.
+
+        the GIL is held until accesses
         '''
         cdef:
             uintf16_t   rule_idx, rule_count = len(rulelist)
@@ -263,8 +265,9 @@ cdef class CFirewall:
         # this is important to establish iter bounds during inspection.
         firewall_stage_count(cntrl_list_idx, rule_count)
 
-        with nogil:
-            firewall_push_rules(cntrl_list_idx)
+        # note: releasing the GIL is likely unnecessary here.
+        # with nogil:
+        firewall_push_rules(cntrl_list_idx)
 
         return Py_OK
 
@@ -294,6 +297,8 @@ cdef class CFirewall:
 
 
 cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
+    '''copies python dict values to C struct for firewall rule.
+    '''
 
     cdef:
         uintf8_t    i, ix, svc_list_len

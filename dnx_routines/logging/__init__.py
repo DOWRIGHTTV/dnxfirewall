@@ -5,10 +5,17 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
+from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 def run():
-    LogService.run()
+    try:
+        LogService.run()
+    except (KeyboardInterrupt, TerminateSignal):
+        raise
 
+    except Exception as e:
+        print(f'Error in LogService.run: {e}')
+        raise
 
 if INITIALIZE_MODULE('logging'):
     __all__ = (

@@ -99,7 +99,8 @@ def run():
 
     if error := dnxfirewall.nf_set(QueueType.FIREWALL, Queue.CFIREWALL):
         Log.error(f'failed to set nl socket options for queue {Queue.CFIREWALL}')
-        hardout()
+
+        raise OSError(f'failed to set nl socket options for queue {Queue.CFIREWALL}')
 
     dnx_threads.append(Thread(target=dnxfirewall.nf_run))
 
@@ -123,11 +124,7 @@ def run():
     # these functions should be explicitly identified since they will require the gil to be acquired on the Cython side
     # or else the Python interpreter will crash.
     fw_rule_monitor = FirewallAutomate(Log, cfirewall=dnxfirewall)
-    try:
-        fw_rule_monitor.run()
-    except Exception as E:
-        Log.error(f'failed to initialize firewall automate threads => {E}')
-        raise
+    fw_rule_monitor.run()
 
     if (args.verbose2_set):
         fw_rule_monitor.print_active_rules()
@@ -142,6 +139,9 @@ def run():
     try:
         for t in dnx_threads:
             t.join()
+    except (KeyboardInterrupt, SystemExit):
+        raise
+
     except Exception as E:
         # dnxfirewall.nf_break() TODO: why did we remove the teardown? was it unnecessary?
         Log.error(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')

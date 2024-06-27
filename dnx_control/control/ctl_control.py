@@ -73,7 +73,10 @@ class SystemControl:
 
         sysd_notify_ready()
 
-        self._receive_control_socket()
+        try:
+            self._receive_control_socket()
+        finally:
+            _control_sock.close()
 
     @looper(NO_DELAY)
     def _receive_control_socket(self) -> None:

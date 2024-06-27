@@ -192,6 +192,9 @@ class Initialize:
                     f'{self._thread_count-len(self._thread_ready)}/{self._thread_count} threads'
                 )
 
+                # note: this ensures the process will not hang indefinitely if a thread fails to check in.
+                raise RuntimeError(f'{self._name} initialization timed out. Cannot continue.')
+
             fast_sleep(1)
 
         self.has_ran = True

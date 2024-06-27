@@ -5,6 +5,7 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
+from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import INITIALIZE_MODULE, DATABASE_SOCKET
 
 if INITIALIZE_MODULE('database'):
@@ -50,6 +51,13 @@ def run():
     threading.Thread(target=ddb_main.receive_requests).start()
     try:
         ddb_main.run()
+    except (KeyboardInterrupt, TerminateSignal):
+        raise
+
+    except Exception as e:
+        Log.error(f'Error in ddb_main.run: {e}')
+        raise
+
     finally:
         os.remove(DATABASE_SOCKET)
 
