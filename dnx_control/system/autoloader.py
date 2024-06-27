@@ -513,6 +513,8 @@ def set_signature_permissions() -> None:
 # ============================
 # SERVICE FILE SETUP
 # ============================
+# todo: add check to to diff the installed vs local file to reduce unnecessary copies.
+#  - if all are the same, we can skip the daemon-reload.
 def set_services(update: bint = 0) -> None:
     ignore_list = ['dnx-syslog.service']
 
@@ -533,6 +535,9 @@ def set_services(update: bint = 0) -> None:
         if (service not in installed_services):
             shell_run(f'systemctl enable {service}')
 
+    # required for systemd
+    shell_run('systemctl daemon-reload')
+
     if (not update):
         shell_run(f'systemctl enable nginx')
 
@@ -542,8 +547,13 @@ def set_services(update: bint = 0) -> None:
     deprecated_services = [f for f in installed_services if f not in local_services]
     for service in deprecated_services:
 
-        shell_run(f'systemctl disable {service}')
-        shell_run(f'sudo rm /etc/systemd/system/{service}')
+        # this isn't a big deal. it's possible to have already been done, so we can ignore any error.
+        try:
+            shell_run(f'systemctl disable {service}')
+        except CalledProcessError:
+            pass
+
+        shell_run(f'rm /etc/systemd/system/{service}')
 
 # ============================
 # INITIAL IPTABLES SETUP
