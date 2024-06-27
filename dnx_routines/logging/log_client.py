@@ -15,7 +15,7 @@ module_import_callout(__file__)
 
 from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import TYPE_CHECKING, ROOT, HOME_DIR, DATABASE_SOCKET, DNX_AUTHENTICATION
-from dnx_gentools.def_constants import fast_time, console_log
+from dnx_gentools.def_constants import fast_time, console_log, hardout, hardout_errno
 from dnx_gentools.def_enums import LOG
 from dnx_gentools.standard_tools import classproperty, dnx_queue, Initialize
 from dnx_gentools.file_operations import change_file_owner, cfg_read_poller
@@ -444,7 +444,6 @@ Log = LogHandler = _log_handler()
 # TODO: consider moving this to a separate module.
 # we will put this here for now since the log client is already imported by all modules that would be using it.
 # the associated log file writing will also be handled by the log client, so it might make sense to keep it here.
-import os as _os
 import sys as _sys
 import traceback as _tb
 
@@ -454,7 +453,7 @@ _err_report_path = f'{HOME_DIR}/dnx_profile/log/_err_reports'
 # Process hook -> called if an unhandled exception occurs in the Main thread or within the Thread exception hook.
 def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
-        raise KeyboardInterrupt(f'Process [{__file__.split("/", 3)[3]}] terminated by Keyboard Interrupt.')
+        hardout(f'Process [{__file__.split("/", 3)[3]}] terminated by Keyboard Interrupt.')
 
     if issubclass(exc_type, TerminateSignal):
         console_log(f'SIGTERM on unhandled exception handler. Process [{__file__.split("/", 3)[3]}] terminated.')
@@ -470,6 +469,8 @@ def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
 
     else:
         console_log(f'{str(exc_type).split()[1][:-1]} -> {exc_value} :: see {err_file}')
+
+    hardout_errno(69)
 
 _sys.excepthook = _handle_unhandled_exception
 
