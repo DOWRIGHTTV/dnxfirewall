@@ -711,7 +711,7 @@ def signature_update(force: bool = False, system_update: bool = False) -> bool:
                     #     ts_print(f'checksum failed for {file}')
 
         if (not download_failure_list and not checksum_failure_list):
-            signature_update_progress('done. installing...', progress_override=success)
+            signature_update_progress('done. installing...', progress_override=success, final=True)
             break
 
     # will give the user the option to load the signatures that downloaded successfully or exit.
@@ -862,7 +862,7 @@ def run():
         set_services()
         mark_completion_flag()
 
-    system_iu_progress(f'dnxfirewall {action} complete...')
+    system_iu_progress(f'dnxfirewall {action} complete...', final=True)
 
     # signatures will be updated during initial installation or system update automatically.
     signatures_updated = signature_update(system_update=True)

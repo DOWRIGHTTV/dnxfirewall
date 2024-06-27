@@ -31,7 +31,7 @@ def create_progress_bar(num_tasks: int):
 
     current_progress = 0
 
-    def progress(desc: str, *, progress_override: int = 0):
+    def progress(desc: str, *, progress_override: int = 0, final: bool = False):
         '''prints a progress bar to the terminal.
         '''
         nonlocal current_progress
@@ -74,11 +74,12 @@ def create_progress_bar(num_tasks: int):
         _clear_line()
 
         # 1. timestamp, 2. x/total | 3. | [##########] 4. 100% | 5. | description
-        bar  = text.lightgrey(f'{time.strftime("%H:%M:%S")}| ')
+        bar  = '\r'
+        bar += text.lightgrey(f'{time.strftime("%H:%M:%S")}| ')
         bar += text.yellow(f'{current_progress}'.rjust(2), style=None) + text.lightgrey(f'/{num_tasks} |')
         bar += text.lightgrey(f'| [', style=None) + progress_fill + text.lightgrey(f'] ', style=None)
         bar += percentage + text.lightgrey('% |', style=None)
-        bar += text.yellow(f'| {desc}\r')
+        bar += text.yellow(f'| {desc}')
 
         sys.stdout.write(bar)
 
@@ -86,8 +87,9 @@ def create_progress_bar(num_tasks: int):
         if (desc):
             current_progress += 1
 
+        # informed by caller to drop cursor to the next line.
         # prevents bar from being overwritten once complete
-        if (filled_len == PROGRESS_BAR_SIZE):
+        if (final):
             sys.stdout.write('\n')
 
         # forces current stdout buffer to be written to terminal
