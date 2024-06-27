@@ -29,7 +29,7 @@ from dnx_cli.utils.ux import create_progress_bar
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Optional
-    from dnx_gentools.def_typing import SIGNATURE_MANIFEST
+    from dnx_gentools.def_typing import SIGNATURE_MANIFEST, bint
 
     from dnx_gentools.file_operations import ConfigChain
 
@@ -44,15 +44,15 @@ BANNER = text.lightblue('\n'.join([
 
 @dataclass
 class Args:
-    v: int = 0
-    verbose: int = 0
-    packages: int = 0
-    iptables: int = 0
+    v: bint = 0
+    verbose: bint = 0
+    packages: bint = 0
+    iptables: bint = 0
 
-    force: int = 0  # only applies to signature updates at this time
+    force: bint = 0  # only applies to signature updates at this time
 
-    _update_system: int = 0
-    _update_signatures: int = 0
+    _update_system: bint = 0
+    _update_signatures: bint = 0
 
     @property
     def verbose_set(self):
@@ -513,11 +513,12 @@ def set_signature_permissions() -> None:
 # ============================
 # SERVICE FILE SETUP
 # ============================
-# todo: make this availed to be called separately or
-def set_services() -> None:
+def set_services(update: bint = 0) -> None:
     ignore_list = ['dnx-syslog.service']
 
-    system_iu_progress('creating dnxfirewall services')
+    action = 'updating' if update else 'building'
+
+    system_iu_progress(f'{action} dnxfirewall services')
 
     installed_services = [f for f in os.listdir('/etc/systemd/system/') if f.startswith('dnx-')]
 
@@ -532,7 +533,8 @@ def set_services() -> None:
         if (service not in installed_services):
             shell_run(f'systemctl enable {service}')
 
-    shell_run(f'systemctl enable nginx')
+    if (not update):
+        shell_run(f'systemctl enable nginx')
 
     # ===========================================
     # REMOVE DEPRECATED SERVICE FILES
@@ -789,8 +791,8 @@ def run():
 
         return
 
+    NUMBER_OF_IU_TASKS += 1  # copying service files
     if (not args._update_system):
-        NUMBER_OF_IU_TASKS += 1  # copying service files
         set_branch()
         configure_interfaces()
 
@@ -858,8 +860,8 @@ def run():
 
     set_permissions()
 
+    set_services(args._update_system)
     if (not args._update_system):
-        set_services()
         mark_completion_flag()
 
     system_iu_progress(f'dnxfirewall {action} complete...', final=True)

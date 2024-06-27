@@ -27,6 +27,11 @@ ConfigLock = NewType('ConfigLock', type('FileLock'))  # verbose type str
 IPTablesLock = NewType('IPTablesLock', type('FileLock'))  # verbose type str
 FirewallDBLock = NewType('FirewallDBLock', type('FileLock'))  # verbose type str
 
+class bint(int):
+    def __init__(self, arg):
+        if arg not in (0, 1):
+            raise ValueError(f'{arg} out of bounds. must be in 0/1.')
+
 
 if (TYPE_CHECKING):
     # standard lib imports

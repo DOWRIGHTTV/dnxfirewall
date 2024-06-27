@@ -6,8 +6,11 @@ import time
 import itertools
 import threading
 
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_cli.utils.shell_colors import text
 
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import bint
 
 __all__ = (
     'create_progress_bar', 'Spinner',
@@ -74,12 +77,11 @@ def create_progress_bar(num_tasks: int):
         _clear_line()
 
         # 1. timestamp, 2. x/total | 3. | [##########] 4. 100% | 5. | description
-        bar  = '\r'
-        bar += text.lightgrey(f'{time.strftime("%H:%M:%S")}| ')
+        bar  = text.lightgrey(f'{time.strftime("%H:%M:%S")}| ')
         bar += text.yellow(f'{current_progress}'.rjust(2), style=None) + text.lightgrey(f'/{num_tasks} |')
         bar += text.lightgrey(f'| [', style=None) + progress_fill + text.lightgrey(f'] ', style=None)
         bar += percentage + text.lightgrey('% |', style=None)
-        bar += text.yellow(f'| {desc}')
+        bar += text.yellow(f'| {desc}\r')
 
         sys.stdout.write(bar)
 
