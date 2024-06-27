@@ -398,7 +398,6 @@ class NFQueue:
             try:
                 nfqueue.nf_run()
             except (KeyboardInterrupt, TerminateSignal):
-                nfqueue.nf_break()
                 self._log.notice('Netfilter binding stopped via signal.')
                 raise
 
