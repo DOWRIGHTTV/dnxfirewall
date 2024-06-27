@@ -66,10 +66,10 @@ def shell_run(s: str, /) -> None:
     '''
     try:
         if (args.verbose_set):
-            dnx_run(s)
+            dnx_run_v(s)
 
         else:
-            dnx_run_v(s)
+            dnx_run(s)
 
     except CalledProcessError as cpe:
         err_print(f'{cpe}')
