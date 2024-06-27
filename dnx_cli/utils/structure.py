@@ -18,6 +18,9 @@ __all__ = (
 
     'check_command', 'check_module'
 )
+if (TYPE_CHECKING):
+    __all__.append('Module')
+
 
 # =========================
 # MODULES + HELPERS
