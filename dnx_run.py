@@ -8,13 +8,13 @@ import os
 import sys
 # import time
 import importlib
-import traceback
 
 from functools import partial
 from subprocess import run, CalledProcessError
 
-from dnx_gentools.def_exceptions import TerminateSignal
-from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, console_log, hardout, hardout_errno
+from dnx_gentools.def_exceptions import ModuleReload, TerminateSignal, hardout
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, console_log
+from dnx_gentools.def_typing import cast, ModuleProtocol
 
 from dnx_control.system.systemd import sysd_notify_stopping
 
@@ -24,6 +24,8 @@ from dnx_cli.utils.io import dnx_run_v, sprint
 from dnx_cli.utils.sysctl import sysctl_command, sysctl_status, journalctl_brief
 
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Optional
+
     from dnx_cli.utils.structure import Module
 
 
@@ -94,24 +96,29 @@ def run_cli(mod: str, mod_loc: str) -> None:
     # idea:: make a custom exception for HOT RELOADING.
     #  if the downstream module raises, then we can reload / re import via importlib and re run it as normal.
     #  - putting this code block in a while loop should allow this to be done pretty easily.
+    dnx_mod: Optional[ModuleProtocol] = None
     try:
-        dnx_mod = importlib.import_module(mod_loc)
+        dnx_mod = cast(ModuleProtocol, importlib.import_module(mod_loc))
+    except ImportError as ie:
+        sprint(text.lightgrey(f'{mod} ') + text.red(f'import error -> {ie}'))
+
     except KeyboardInterrupt:
         sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
 
     except SystemExit:
         sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('exited!'))
 
-    # note: uncaught exception handler is not set up at this point.
-    except Exception as E:
-        sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
-        traceback.print_exc()
+    except TerminateSignal:
+        console_log(f'Process is finalizing SIGTERM request.')
+        sysd_notify_stopping()
 
-        hardout_errno(1, f'module import failure -> {mod_loc}')
-
-    else:
+    while dnx_mod:
         try:
             dnx_mod.run()
+        except ModuleReload:
+            importlib.reload(dnx_mod)
+            continue
+
         except KeyboardInterrupt:
             sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
 
@@ -121,6 +128,8 @@ def run_cli(mod: str, mod_loc: str) -> None:
         except TerminateSignal:
             console_log(f'Process is finalizing SIGTERM request.')
             sysd_notify_stopping()
+
+        break
 
     # this will make sure there are no dangling processes or threads on exit.
     hardout()

@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import INITIALIZE_MODULE, hardout
+# from dnx_gentools.def_exceptions import hardout
+from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 from dnx_control.system.systemd import sysd_notify_ready
+
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import bint
 
 LOG_NAME = 'cfirewall'
 
@@ -35,16 +40,16 @@ if INITIALIZE_MODULE(LOG_NAME):
 
     @dataclass
     class Args:
-        h:  int = 0
-        v:  int = 0
-        vv: int = 0
+        h:  bint = 0
+        v:  bint = 0
+        vv: bint = 0
 
-        help:     int = 0
-        verbose:  int = 0
-        verbose2: int = 0
+        help:     bint = 0
+        verbose:  bint = 0
+        verbose2: bint = 0
 
-        fw:  int = 0
-        nat: int = 0
+        fw:  bint = 0
+        nat: bint = 0
 
         @property
         def help_set(self):

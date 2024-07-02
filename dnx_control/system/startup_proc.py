@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-
 from secrets import token_urlsafe
 
 import dnx_iptools.interface_ops as interface
@@ -52,9 +50,6 @@ def run():
     create_database_tables()
 
     Log.debug('[startup] database table maintenance.')
-
-    # exiting service manually due to LogHandler threads
-    os._exit(0)
 
 def reset_flask_key():
     with ConfigurationManager('system', cfg_type='global') as dnx:

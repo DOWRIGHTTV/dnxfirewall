@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 # runtime imports
-from typing import TYPE_CHECKING, NewType, cast
+from typing import TYPE_CHECKING as _TYPE_CHECKING
+
+from typing import cast, NewType, Protocol
 
 # =======================================
 # Custom Types
@@ -26,6 +28,12 @@ UDP_PORT = NewType('UDP_PORT', NET_PORT)
 ConfigLock = NewType('ConfigLock', type('FileLock'))  # verbose type str
 IPTablesLock = NewType('IPTablesLock', type('FileLock'))  # verbose type str
 FirewallDBLock = NewType('FirewallDBLock', type('FileLock'))  # verbose type str
+ErrorReportsLock = NewType('ErrorReportsLock', type('FileLock'))  # verbose type str
+
+class ModuleProtocol(Protocol):
+    def run() -> None:  # no self is fine
+        ...
+
 
 class bint(int):
     def __init__(self, arg):
@@ -33,7 +41,7 @@ class bint(int):
             raise ValueError(f'{arg} out of bounds. must be in 0/1.')
 
 
-if (TYPE_CHECKING):
+if (_TYPE_CHECKING):
     # standard lib imports
     from typing import TypeAlias
     from typing import Type, Annotated, Protocol, Callable, Generator, Iterator, Iterable
@@ -65,7 +73,7 @@ if (TYPE_CHECKING):
 
     StructUnpack: TypeAlias = tuple[int, ...]
 
-    FileLock: TypeAlias = Union[ConfigLock, IPTablesLock, FirewallDBLock]
+    FileLock: TypeAlias = Union[ConfigLock, IPTablesLock, FirewallDBLock, ErrorReportsLock]
 
     # =======================================
     # dnx class imports for use as Types

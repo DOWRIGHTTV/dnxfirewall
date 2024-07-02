@@ -7,7 +7,7 @@ import time
 from functools import partial
 from subprocess import run, DEVNULL
 
-from dnx_gentools.def_constants import hardout
+from dnx_gentools.def_exceptions import hardout
 
 from dnx_cli.utils.shell_colors import text
 

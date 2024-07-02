@@ -74,9 +74,10 @@ MODULES = {
     'iptables': Module(path='dnx_iptools.iptables', priv_required=True, is_service=False),
 
     # SYSTEM
-    'startup': Module(path='dnx_control.system.startup_proc', priv_required=True, is_service=True),
+    # note: 'startup' is a special module that is not a running service. it is a oneshot type service.
+    'startup': Module(path='dnx_control.system.startup_proc', priv_required=True, is_service=False),
     'interface': Module(path='dnx_control.system.interface_services', priv_required=False, is_service=True),
-    'syscontrol': Module(path='dnx_control', priv_required=True, is_service=True),
+    'syscontrol': Module(path='dnx_control.control.ctl_control', priv_required=True, is_service=True),
 
     # COMPILE ONLY
     'dnx-nfqueue': Module(path='1', priv_required=True, is_service=False),

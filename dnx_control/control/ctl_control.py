@@ -3,56 +3,72 @@
 from __future__ import annotations
 
 import os
-import shutil
 
 from json import loads
-from functools import partial
 from socket import socket, AF_UNIX, AF_INET, SOCK_DGRAM, SOCK_CLOEXEC, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
 
-from dnx_gentools.def_constants import TYPE_CHECKING, CONTROL_SOCKET, NO_DELAY, shell
-from dnx_gentools.standard_tools import looper
-
-from dnx_iptools.def_structs import scm_creds_pack
-from dnx_iptools.protocol_tools import change_socket_owner, authenticate_sender
-
-from dnx_routines.logging.log_client import Log
-
-from dnx_control.system.systemd import sysd_notify_ready
+from dnx_gentools.def_exceptions import TerminateSignal
+from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Socket_T
 
 
-MODULE_PERMISSIONS = {
-    'webui': {
-        'systemctl start': None,
-        'systemctl stop': None,
-        'systemctl restart': None,
-        'netplan apply': None,
-        'reboot': None,
-        'shutdown': None,
+if INITIALIZE_MODULE('syscontrol'):
+    __all__ = ('run',)
 
-        # python functions - must be allowed here and a reference provided
-        'os.replace': os.replace
+    from dnx_routines.logging.log_client import Log
+
+    Log.run(name='system')
+
+    from dnx_gentools.def_constants import CONTROL_SOCKET, NO_DELAY, shell
+    from dnx_gentools.standard_tools import looper
+
+    from dnx_iptools.def_structs import scm_creds_pack
+    from dnx_iptools.protocol_tools import change_socket_owner, authenticate_sender
+
+    from dnx_control.system.systemd import sysd_notify_ready
+
+
+    # ====================
+    # CONTROL MSG HANDLER
+    # ====================
+    # if os.path.exists(CONTROL_SOCKET):
+    #     os.remove(CONTROL_SOCKET)
+    #
+    # _control_service = socket(AF_UNIX, SOCK_DGRAM)
+    _control_sock: Socket_T = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC)
+    # _control_sock.setsockopt(SOL_SOCKET, SO_PASSCRED, 1)
+    _control_sock.bind(CONTROL_SOCKET)
+
+    # change_socket_owner(CONTROL_SOCKET)
+
+    _control_service_recv = _control_sock.recv
+    _control_service_sendmsg = _control_sock.send
+
+    MODULE_PERMISSIONS = {
+        'webui': {
+            'systemctl start':   None,
+            'systemctl stop':    None,
+            'systemctl restart': None,
+            'netplan apply':     None,
+            'reboot':            None,
+            'shutdown':          None,
+
+            # python functions - must be allowed here and a reference provided
+            'os.replace':        os.replace
+        }
     }
-}
 
-# ====================
-# CONTROL MSG HANDLER
-# ====================
-# if os.path.exists(CONTROL_SOCKET):
-#     os.remove(CONTROL_SOCKET)
-#
-# _control_service = socket(AF_UNIX, SOCK_DGRAM)
-_control_sock: Socket_T = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC)
-# _control_sock.setsockopt(SOL_SOCKET, SO_PASSCRED, 1)
-_control_sock.bind(CONTROL_SOCKET)
+def run():
+    try:
+        SystemControl.run()
+    except (KeyboardInterrupt, TerminateSignal):
+        raise
 
-# change_socket_owner(CONTROL_SOCKET)
-
-_control_service_recv = _control_sock.recv
-_control_service_sendmsg = _control_sock.send
-
+    except Exception as e:
+        Log.error(f'Error in SystemControl.run: {e}')
+        raise
 
 class SystemControl:
     '''
