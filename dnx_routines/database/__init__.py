@@ -5,7 +5,6 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import INITIALIZE_MODULE, DATABASE_SOCKET
 
 if INITIALIZE_MODULE('database'):
@@ -18,6 +17,7 @@ if INITIALIZE_MODULE('database'):
 
     Log.run(name='system')
 
+    from dnx_gentools.def_exceptions import TerminateSignal
     from dnx_gentools.def_enums import DB_MODE_ALL
 
     from ddb_connector_sqlite import DBConnector

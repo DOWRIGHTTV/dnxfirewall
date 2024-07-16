@@ -5,17 +5,17 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('ids-ips'):
     __all__ = ('run',)
 
-    from dnx_gentools.def_enums import Queue
-
     from ids_ips_log import Log
 
     Log.run(name='ips')
+
+    from dnx_gentools.def_exceptions import TerminateSignal
+    from dnx_gentools.def_enums import Queue
 
     import ids_ips
 

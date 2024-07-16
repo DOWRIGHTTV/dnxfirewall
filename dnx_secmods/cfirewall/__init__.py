@@ -5,9 +5,6 @@ from __future__ import annotations
 # from dnx_gentools.def_exceptions import hardout
 from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
-from dnx_control.system.systemd import sysd_notify_ready
-
-
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import bint
 
@@ -28,27 +25,17 @@ if INITIALIZE_MODULE(LOG_NAME):
     from threading import Thread
     from dataclasses import dataclass
 
-    from dnx_gentools.def_constants import MSB, LSB
-    from dnx_gentools.def_enums import Queue, QueueType
-    from dnx_gentools.signature_operations import generate_geolocation
-
-    from dnx_routines.logging.log_client import Log
-
-    from fw_main import CFirewall, initialize_geolocation
-    from fw_automate import FirewallAutomate
-
-
     @dataclass
     class Args:
-        h:  bint = 0
-        v:  bint = 0
+        h: bint = 0
+        v: bint = 0
         vv: bint = 0
 
-        help:     bint = 0
-        verbose:  bint = 0
+        help: bint = 0
+        verbose: bint = 0
         verbose2: bint = 0
 
-        fw:  bint = 0
+        fw: bint = 0
         nat: bint = 0
 
         @property
@@ -82,7 +69,20 @@ if INITIALIZE_MODULE(LOG_NAME):
 
             raise SystemExit
 
+    from dnx_routines.logging.log_client import Log
+
     Log.run(name=LOG_NAME)
+
+    from dnx_gentools.def_exceptions import TerminateSignal
+    from dnx_gentools.def_constants import MSB, LSB
+    from dnx_gentools.def_enums import Queue, QueueType
+    from dnx_gentools.signature_operations import generate_geolocation
+
+    from dnx_control.system.systemd import sysd_notify_ready
+
+    from fw_main import CFirewall, initialize_geolocation
+    from fw_automate import FirewallAutomate
+
 
 def run():
     # ===============
@@ -144,7 +144,7 @@ def run():
     try:
         for t in dnx_threads:
             t.join()
-    except (KeyboardInterrupt, SystemExit):
+    except (KeyboardInterrupt, SystemExit, TerminateSignal):
         raise
 
     except Exception as E:

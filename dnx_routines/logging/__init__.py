@@ -5,7 +5,6 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 def run():
     try:
@@ -23,6 +22,8 @@ if INITIALIZE_MODULE('logging'):
         'direct_log', 'message', 'db_message', 'convert_level',
         # 'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',
     )
+
+    from dnx_gentools.def_exceptions import TerminateSignal
 
     from dnx_routines.logging.log_main import LogService
     from dnx_routines.logging.log_client import *

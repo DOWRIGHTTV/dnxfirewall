@@ -5,20 +5,20 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_exceptions import TerminateSignal
 from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('ip-proxy'):
     __all__ = ('run',)
 
+    from ip_proxy_log import Log
+
+    Log.run(name='ip_proxy')
+
+    from dnx_gentools.def_exceptions import TerminateSignal
     from dnx_gentools.def_enums import Queue
     from dnx_gentools.signature_operations import generate_reputation
 
     from dnx_iptools.hash_trie import HashTrie_Value
-
-    from ip_proxy_log import Log
-
-    Log.run(name='ip_proxy')
 
     reputation_signatures = generate_reputation(Log)
 
