@@ -17,10 +17,10 @@ from dnx_gentools.def_constants import module_import_callout
 
 module_import_callout(__file__)
 
+from dnx_gentools.def_exceptions import DNXError, dnx_assert
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
-from dnx_gentools.def_exceptions import DNXError, dnx_assert
 
 # ================
 # TYPING IMPORTS
