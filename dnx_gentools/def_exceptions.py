@@ -10,11 +10,11 @@ from dnx_gentools.def_constants import module_import_callout
 module_import_callout(__file__)
 
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, console_log, fast_time
-# from dnx_gentools.def_enums import LOG as _LOG
-# from dnx_gentools.system_info import System as _System
-# from dnx_gentools.file_operations import acquire_lock as _acquire_lock, release_lock as _release_lock
-#
-# from dnx_routines.logging.log_client import Log
+from dnx_gentools.def_enums import LOG as _LOG
+from dnx_gentools.system_info import System as _System
+from dnx_gentools.file_operations import acquire_lock as _acquire_lock, release_lock as _release_lock
+
+from dnx_routines.logging.log_client import Log
 
 # ================
 # TYPING IMPORTS
@@ -79,6 +79,14 @@ class ProtocolError(DNXError):
 
 class ParseError(DNXError):
     '''Failure to convert string to python object.'''
+
+# FILE OPERATIONS
+class ConfigurationError(DNXError):
+    '''System configuration context manager processing failure while in context.'''
+
+# WEBUI VALIDATION
+class ValidationError(DNXError):
+    '''Webui processing failure or invalid user input.'''
 
 def err_as_value(exc_type):
     '''converts try/catch semantic of the specified exception class to a return error by value.
@@ -222,13 +230,3 @@ def _format_threads() -> str:
     str_builder.append('-' * 36)
 
     return '\n'.join(str_builder)
-
-
-# ========================
-# note: DEFERRED IMPORTS
-# ========================
-from dnx_gentools.def_enums import LOG as _LOG
-from dnx_gentools.system_info import System as _System
-from dnx_gentools.file_operations import acquire_lock as _acquire_lock, release_lock as _release_lock
-
-from dnx_routines.logging.log_client import Log

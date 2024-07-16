@@ -14,9 +14,9 @@ from source.web_typing import web_module_import_callout
 
 web_module_import_callout(__file__)
 
+from dnx_gentools.def_exceptions import ValidationError as ValidationError
 from dnx_gentools.def_constants import TYPE_CHECKING, WEBUI_DEVELOPMENT
 from dnx_gentools.def_enums import CFG, DATA, PROTO
-from dnx_gentools.def_exceptions import DNXError
 from dnx_gentools.file_operations import config
 
 if (TYPE_CHECKING):
@@ -57,9 +57,6 @@ __all__ = (
 )
 
 SKIP_VALIDATION = object()  # form field level sentinel
-
-class ValidationError(DNXError):
-    '''Webui processing failure or invalid user input.'''
 
 class ValidationPageContext(NamedTuple):
     '''Used for global on_enter and on_exit sections in ValidationConfigForm.parse_form.
