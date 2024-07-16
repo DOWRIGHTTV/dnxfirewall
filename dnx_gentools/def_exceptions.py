@@ -12,7 +12,6 @@ module_import_callout(__file__)
 from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, console_log, fast_time
 from dnx_gentools.def_enums import LOG as _LOG
 from dnx_gentools.system_info import System as _System
-from dnx_gentools.file_operations import acquire_lock as _acquire_lock, release_lock as _release_lock
 
 from dnx_routines.logging.log_client import Log
 
@@ -141,12 +140,14 @@ _err_report_lock_file: ErrorReportsLock = f'{_err_report_path}/_err_reports.lock
 log_opener = partial(_os.open, mode=0o640)
 
 def _dump_to_file(path: str, msg: str) -> None:
-    _err_report_lock = _acquire_lock(_err_report_lock_file)
+    from dnx_gentools.file_operations import acquire_lock, release_lock
+
+    _err_report_lock = acquire_lock(_err_report_lock_file)
 
     with open(path, 'a+', opener=log_opener) as log_file:
         log_file.write(msg)
 
-    _release_lock(_err_report_lock)
+    release_lock(_err_report_lock)
 
 # Process hook -> called if an unhandled exception occurs in the Main thread or within the Thread exception hook.
 def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
