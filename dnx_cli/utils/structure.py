@@ -150,7 +150,7 @@ COMMANDS: dict[str, Command] = {
     'update': Command(module_required=True, priv_required=True, module_list=['system', 'signatures']),
     'compile': Command(module_required=False, priv_required=True, module_list=['dnx-nfqueue', 'cprotocol-tools', 'hash-trie']),
 
-    'dev': Command(module_required=False, priv_required=False, module_list=['trie-test', 'webui-dev']),
+    'dev': Command(module_required=True, priv_required=False, module_list=['trie-test', 'webui-dev']),
 
     # deprecated
     'modstat': Command(module_required=False, priv_required=True, description='Deprecated. Use "dnx status all" instead.')

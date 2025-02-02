@@ -9,11 +9,10 @@ from dnx_gentools.def_constants import module_import_callout
 
 module_import_callout(__file__)
 
-from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, console_log, fast_time
-from dnx_gentools.def_enums import LOG as _LOG
-from dnx_gentools.system_info import System as _System
+# note: deferred imports
 
-from dnx_routines.logging.log_client import Log
+from dnx_gentools.def_enums import LOG as _LOG
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, console_log, fast_time, str_join
 
 # ================
 # TYPING IMPORTS
@@ -131,6 +130,7 @@ def dnx_assert(condition: bool, message: str, *, logger: LogHandler_T = None) ->
 # EXCEPTION HOOKS
 # ========================
 import sys as _sys
+from datetime import datetime as _dt
 import traceback as _tb
 import threading as _threading
 
@@ -138,6 +138,14 @@ _err_report_path = f'{HOME_DIR}/dnx_profile/log/_err_reports'
 _err_report_lock_file: ErrorReportsLock = f'{_err_report_path}/_err_reports.lock'  # type issue is fine
 
 log_opener = partial(_os.open, mode=0o640)
+
+# note: functionsto remove external module dependency
+def _date() -> str:
+    dt = _dt.now()
+
+    dt_list = (f'{dt.year}', f'{dt.month:02}', f'{dt.day:02}')
+
+    return str_join(dt_list)
 
 def _dump_to_file(path: str, msg: str) -> None:
     from dnx_gentools.file_operations import acquire_lock, release_lock
@@ -158,9 +166,12 @@ def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
         console_log(f'SIGTERM on unhandled exception handler. Process [{__file__.split("/", 3)[3]}] terminated.')
 
     err_report = _format_output(exc_type, exc_value, exc_traceback)
-    err_file = f'{_err_report_path}/{_System.date(string=True)}_err.log'
+    err_file = f'{_err_report_path}/{_date()}_err.log'
 
     _dump_to_file(err_file, err_report)
+
+    # note: this needs to be deferred to prevent circular imports
+    from dnx_routines.logging.log_client import Log
 
     # checking for Log handler initialization to prevent additional errors on early runtime exceptions
     if (Log.is_running):
@@ -179,9 +190,12 @@ def _handle_unhandled_thread_exception(args, /):
     ''' args = exc_type, exc_value, exc_traceback, thread
     '''
     err_report = _format_output(args.exc_type, args.exc_value, args.exc_traceback)
-    err_file = f'{_err_report_path}/{_System.date(string=True)}_err.log'
+    err_file = f'{_err_report_path}/{_date()}_err.log'
 
     _dump_to_file(err_file, err_report)
+
+    # note: this needs to be deferred to prevent circular imports
+    from dnx_routines.logging.log_client import Log
 
     # checking for Log handler initialization to prevent additional errors on early runtime thread exceptions
     if (Log.is_running):

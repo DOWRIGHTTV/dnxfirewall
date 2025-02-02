@@ -328,7 +328,7 @@ class ConfigChain:
 
         '_strict',
 
-        '__config', '__flat_config', '__mutable_config'
+        '__config', '__flat_config', '__reference_config', '__mutable_config'
     )
 
     def __init__(self, system: dict, user: dict, strict: bool):
@@ -340,6 +340,7 @@ class ConfigChain:
         self.__config = (user, system)
         self.__flat_config = (user_flat, system_flat)
 
+        self.__reference_config = copy(self.__flat_config[0])  # used for strict mode validation/lookups
         # self.__mutable_config = copy(self.__flat_config[0])
         self.__mutable_config = user_flat
 
@@ -365,7 +366,7 @@ class ConfigChain:
 
     def __setitem__(self, key: str, value: Union[bool, int, float, str, list, None]):
         dnx_assert(
-            not self._strict or (self._strict and key in self.__mutable_config), f'unknown key "{key}" cannot be applied in strict mode.')
+            not self._strict or (self._strict and key in self.__reference_config), f'unknown key "{key}" cannot be applied in strict mode.')
 
         self.__mutable_config[key] = value
 

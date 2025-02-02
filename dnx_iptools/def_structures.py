@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import TYPE_CHECKING
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.standard_tools import structure
 
 # ===============

@@ -207,7 +207,7 @@ class System:
         return f'{ctime(epoch).split()[3]}'
 
     @staticmethod
-    def date(timestamp: Optional[Timestamp] = None, string: bool = False) -> Union[str, list[str, str, str]]:
+    def date(timestamp: Optional[Timestamp] = None, string: bool = False) -> Union[str, tuple[str, str, str]]:
         '''return list of year, month, day of current system time as a list of strings.
 
             ['2019', '06', '24']
@@ -216,21 +216,19 @@ class System:
 
         setting string=True will return a joined list.
         '''
-        dt = datetime.now()
-        if (timestamp):
-            dt = datetime.fromtimestamp(timestamp)
+        dt = datetime.now() if not timestamp else datetime.fromtimestamp(timestamp)
 
-        dt_list = [f'{dt.year}', f'{dt.month:02}', f'{dt.day:02}']
+        dt_list = (f'{dt.year}', f'{dt.month:02}', f'{dt.day:02}')
         if (string):
             return str_join(dt_list)
 
         return dt_list
 
     @staticmethod
-    def time() -> list[int, int]:
+    def time() -> tuple[int, int]:
         time = datetime.now()
 
-        return [time.hour, time.minute]
+        return (time.hour, time.minute)
 
     @staticmethod
     def dns_status() -> dict:
