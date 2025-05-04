@@ -139,7 +139,7 @@ _err_report_lock_file: ErrorReportsLock = f'{_err_report_path}/_err_reports.lock
 
 log_opener = partial(_os.open, mode=0o640)
 
-# note: functionsto remove external module dependency
+# note: functions to remove external module dependency
 def _date() -> str:
     dt = _dt.now()
 

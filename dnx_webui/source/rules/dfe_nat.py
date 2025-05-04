@@ -63,7 +63,7 @@ def _dnat_rules(form: Form, action: str) -> str:
     fields = config(**form)
     if (action == 'add'):
         # checking all required fields are present and some other basic rules are followed
-        # before validating values of standard fields.
+        # before validating the values of standard fields.
         if error := validate_dnat_rule(fields, action=CFG.ADD):
             return error.message + ' code=1'
 
@@ -83,19 +83,24 @@ def _dnat_rules(form: Form, action: str) -> str:
         with IPTablesManager() as iptables:
             iptables.add_nat(fields)
 
-            configure_open_wan_protocol(fields, action=CFG.ADD)
+            # note: only wan interface rules should impact the open ports tracker.
+            if (fields.src_zone == 'wan'):
+                configure_open_wan_protocol(fields, action=CFG.ADD)
 
     elif (action == 'remove'):
         fields.position = convert_int(fields.position)
 
         # NOTE: validation needs to know the zone, so it can ensure the position is valid
+        #  - todo: we arent even looking at the exact position just that its in range. is this comment old?
         if error := validate_dnat_rule(fields, action=CFG.DEL):
             return error.message + ' code=3'
 
         with IPTablesManager() as iptables:
             iptables.delete_nat(fields)
 
-            configure_open_wan_protocol(fields, action=CFG.DEL)
+            # note: only wan interface rules should impact the open ports tracker.
+            if (fields.src_zone == 'wan'):
+                configure_open_wan_protocol(fields, action=CFG.DEL)
 
     else:
         return INVALID_FORM + ' code=98'
@@ -137,6 +142,7 @@ def _snat_rules(form: Form, action: str) -> str:
 # ===========
 # VALIDATION
 # ===========
+# !bug: currently port 80,443 dnat rules will be accepted if specifying a dst ip of of lan interface.
 def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError]:
 
     if (action is CFG.ADD):
@@ -151,8 +157,8 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
         if (rule.protocol not in ['tcp', 'udp', 'icmp']):
             return ValidationError(INVALID_FORM)
 
-        if (not rule.dst_ip and rule.dst_port in ['443', '80']):
-            return ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
+        if (not rule.dst_ip and (rule.src_zone != 'wan' and rule.dst_port in ['443', '80'])):
+            return ValidationError('Interface dnat on ports 80,443 are only available on the wan interface.')
 
         if (rule.protocol == 'icmp'):
 
