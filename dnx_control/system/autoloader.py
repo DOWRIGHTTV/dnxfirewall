@@ -10,7 +10,8 @@ import readline
 from dataclasses import dataclass
 from subprocess import CalledProcessError
 
-from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, INITIALIZE_MODULE, hardout, str_join
+from dnx_gentools.def_exceptions import hardout
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, INITIALIZE_MODULE, str_join
 from dnx_gentools.file_operations import ConfigurationManager, json_to_yaml
 from dnx_gentools.file_operations import write_file, load_data, write_data, change_file_owner
 
@@ -23,6 +24,7 @@ from dnx_cli.utils.io import dnx_run, dnx_run_v, flash_input_error, title_print,
 from dnx_cli.utils.ux import create_progress_bar
 
 # todo: rework this module to hot reload if the file was changed/updated within the current update session.
+#  - this includes not using hardout() directly and raises a SystemExit exception instead.
 
 # ===============
 # TYPING IMPORTS
