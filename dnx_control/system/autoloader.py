@@ -515,7 +515,7 @@ def set_signature_permissions() -> None:
 # ============================
 # SERVICE FILE SETUP
 # ============================
-# todo: add check to to diff the installed vs local file to reduce unnecessary copies.
+# todo: add check to diff the installed vs local file to reduce unnecessary copies.
 #  - if all are the same, we can skip the daemon-reload.
 def set_services(update: bint = 0) -> None:
     ignore_list = ['dnx-syslog.service']
