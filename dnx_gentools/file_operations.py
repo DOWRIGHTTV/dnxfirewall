@@ -13,16 +13,23 @@ from copy import copy
 from functools import wraps, partial
 from secrets import token_urlsafe
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
+from dnx_gentools.def_exceptions import dnx_assert, ConfigurationError as ConfigurationError  # re export
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
-from dnx_gentools.def_exceptions import DNXError, ControlError
 
 # ================
 # TYPING IMPORTS
 # ================
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Any, Optional, ClassVar, Union, NoReturn, Callable, TextIO, Generator
+    from dnx_gentools.def_typing import Callable_ReturnNone, Wrapped_ReturnNone, DNSListHandler, Callable_T
+    from dnx_gentools. def_typing import FileLock, IPTablesLock
+
     from dnx_routines.logging import LogHandler_T
 
 
@@ -47,9 +54,6 @@ file_opener: Callable[[str, int], int | None] = partial(os.open, mode=0o640)
 
 sha256 = hashlib.sha256
 
-class ConfigurationError(DNXError):
-    '''System configuration context manager processing failure while in context.'''
-
 # =====================
 # FILE LOCKING (FLOCK)
 # =====================
@@ -57,7 +61,7 @@ class ConfigurationError(DNXError):
 ACQUIRE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_EX)
 RELEASE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_UN)
 
-def acquire_lock(file: str) -> TextIO:
+def acquire_lock(file: FileLock) -> TextIO:
     '''opens passed in filepath and acquires a file lock.
 
     the file object is returned.
@@ -229,8 +233,8 @@ def calculate_file_hash(
 
     return file_hash
 
-def cfg_read_poller(
-        watch_file: str, *, ext: str = 'cfg', cfg_type: str = '', filepath: str = 'dnx_profile/data', class_method: bool = False):
+def cfg_read_poller(watch_file: str, *, profiles: tuple[int, int] = None, ext: str = 'cfg',
+    cfg_type: str = '', filepath: str = 'dnx_profile/data', class_method: bool = False):
     '''Automate Class configuration file poll decorator.
 
     apply this decorator to all functions that will update configurations loaded in memory from json files.
@@ -242,19 +246,37 @@ def cfg_read_poller(
     if not isinstance(watch_file, str):
         raise TypeError('watch file must be a string.')
 
-    def decorator(function_to_wrap):
+    if (profiles is not None):
+        if (watch_file != 'profiles/profile_x'):
+            raise ValueError('profile watch is only compatible with the profiles/profile_x file.')
+
+        if not isinstance(profiles, tuple):
+            raise TypeError('profiles must be a tuple of two integers.')
+
+        if (profiles[0] >= profiles[1]):
+            raise ValueError('the profile start value must be less than the end value.')
+
+        if (profiles[0] not in range(1, 15)):
+            raise ValueError('profile start value must be between 1 and 14.')
+
+        if (profiles[1] not in range(2, 16)):
+            raise ValueError('profile end value must be between 2 and 15.')
+
+    def decorator(function_to_wrap: Callable_ReturnNone) -> Wrapped_ReturnNone:
         @wraps(function_to_wrap)
         def wrapper(*args):
             watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
-            watcher.watch(*args)
 
-        if (class_method):
-            wrapper = classmethod(wrapper)
+            if (profiles):
+                watcher.profile_watch(*args, profiles_range=profiles)
 
-        return wrapper
+            else:
+                watcher.watch(*args)
+
+        return classmethod(wrapper) if class_method else wrapper
     return decorator
 
-def cfg_write_poller(list_function: DNSListHandler) -> Wrapper:
+def cfg_write_poller(list_function: DNSListHandler) -> Wrapped_ReturnNone:
     '''Automate module configuration class file polling for read and writes.
 
     only compatible with the dns proxy module whitelist/blacklist read/write operations.
@@ -282,25 +304,31 @@ class config(dict):
     def __getattr__(self, item: str) -> str | int | bool:
         '''calls __getitem__ and returns the returned value.
 
-        raises AttributeError on error.
+        raises AttributeError if not found.
         '''
         try:
             return self[item]
         except KeyError:
-            raise AttributeError
+            pass
+
+        raise AttributeError(f'"{item}" not found in config data.')
 
     def __setattr__(self, key: str, value: str | int | bool) -> None:
         self[key] = value
 
 
-# TODO: shouldnt __mutable_config be an alias to __flatten_config[0] (user config) so any changes to the data will be
+# !test: __mutable_config is now an alias to __flatten_config[0] (user config) so any changes to the data should be
 #  reflected in the _merge_expand operation and subsequently all the get methods.
 class ConfigChain:
 
     _sep: ClassVar[str] = '->'
 
     __slots__ = (
-        '__config', '__flat_config', '__mutable_config'
+        'user_modified',
+
+        '_strict',
+
+        '__config', '__flat_config', '__reference_config', '__mutable_config'
     )
 
     def __init__(self, system: dict, user: dict, strict: bool):
@@ -308,13 +336,23 @@ class ConfigChain:
         system_flat = self._flatten(system)
         user_flat = {k: v for k, v in self._flatten(user).items() if k in system_flat} if strict else self._flatten(user)
 
+        self._strict = strict
         self.__config = (user, system)
         self.__flat_config = (user_flat, system_flat)
 
-        self.__mutable_config = copy(self.__flat_config[0])
+        self.__reference_config = copy(self.__flat_config[0])  # used for strict mode validation/lookups
+        # self.__mutable_config = copy(self.__flat_config[0])
+        self.__mutable_config = user_flat
+
+        # will be set to True on any set or del operation.
+        # this won't be reset if the data is set back to the original value.
+        self.user_modified = False
 
     def __str__(self):
         return json.dumps(self._merge_expand(), indent=2)
+
+    def __getattr__(self, item) -> NoReturn:
+        raise RuntimeError('ConfigChain does not support attribute access.')
 
     def __getitem__(self, key: str) -> Union[bool, int, str, list]:
 
@@ -327,16 +365,21 @@ class ConfigChain:
         raise KeyError(f'{key} not found in configuration chain.')
 
     def __setitem__(self, key: str, value: Union[bool, int, float, str, list, None]):
-
-        # print('setting ->', value)
+        dnx_assert(
+            not self._strict or (self._strict and key in self.__reference_config), f'unknown key "{key}" cannot be applied in strict mode.')
 
         self.__mutable_config[key] = value
+
+        self.user_modified = True
 
     def __delitem__(self, key: str) -> None:
 
         key_matches = [k for k in self.__mutable_config if k.startswith(key)]
         for k in key_matches:
             del self.__mutable_config[k]
+
+        if (key_matches):
+            self.user_modified = True
 
     def get(self, key: str, ret_val: Any = None) -> Any:
 
@@ -366,8 +409,8 @@ class ConfigChain:
 
         return search_data
 
-    def get_list(self, key: str = None) -> list[Union[str, int]]:
-        '''return list of child keys 1 level lower than the passed in key.
+    def get_list(self, key: str = None) -> list[str]:
+        '''return list of child keys 1 level lower than the specified key.
 
         returns an empty list if not found.
 
@@ -422,7 +465,7 @@ class ConfigChain:
 
     @property
     def user_data(self) -> dict:
-        '''returns mutable flattened user config dictionary.
+        '''returns a reference to the mutable flattened user config dictionary.
         '''
         return self.__mutable_config
 
@@ -430,7 +473,11 @@ class ConfigChain:
     def expanded_user_data(self) -> dict:
         '''returns snapshot of expanded user config dictionary.
 
+        changes made to the returned dictionary will not be reflected in the ConfigChain object.
         additional calls are required to reflect changes to user data outside the returned object.
+
+        idea:: have this return a mapping proxy to the primary expanded dict and make changes to the flat config flow
+          back through the initially loaded expanded configuration.
         '''
         return self._expand(self.__mutable_config)
 
@@ -482,19 +529,25 @@ class ConfigChain:
 class ConfigurationManager:
     '''Class to ensure process safe operations on configuration files.
 
-    This class is written as a context manager and must be used as such. upon calling the context, a file lock will be
-    obtained or block until it can acquire the lock and return the class object to the caller.
+    This class is written as a context manager and must be used as such.
+    A configuration-global file lock will be acquired upon entering the context and released upon exiting.
+     - If the lock is held by another thread/process, it will block until it can be acquired.
+
+     *old: load/write_configuration methods should be replaced with the automatic api, but are still available for use.
+     *new: automatic api is enabled by settings err_as_value=True. config_data will be loaded on entry.
     '''
     log: LogHandler_T = None
-    config_lock_file: ConfigLock = f'{HOME_DIR}/dnx_profile/data/config.lock'
+    config_lock_file: IPTablesLock = f'{HOME_DIR}/dnx_profile/data/config.lock'
 
     __slots__ = (
-        '_name', '_ext', '_cfg_type', '_filename',
+        'config_data', 'error',
 
-        '_err_as_value', 'error',
+        '_config_data', '_err_as_value',
+
+        '_name', '_ext', '_cfg_type', '_filename', '_strict',
 
         '_config_lock', '_data_written',
-        '_file_path', '_usr_path_file',  # '_system_path_file',
+        '_dir', '_usr_file_path',  # '_system_path_file',
         '_temp_file', '_temp_file_path',
     )
 
@@ -504,49 +557,47 @@ class ConfigurationManager:
         '''
         cls.log: LogHandler_T = ref
 
-    def __init__(self, name: str = '', ext: str = 'cfg', cfg_type: str = '', file_path: str = None, *,
-            err_as_value: bool = False) -> None:
-        '''config_file can be omitted to allow for configuration lock to be used with
-        external operations.
+    def __init__(self, name: str = '', ext: str = 'cfg', cfg_type: str = '', dir: str = 'dnx_profile/data', *,
+            err_as_value: bool = False, strict: bool = True) -> None:
+        ''' if err_as_value=True, ConfigurationErrors will not be raised and will be stored in the error attribute.
+                - the automatic api is also tied to this argument and will load the configuration data on entry.
         '''
         self._name = name
         self._ext  = ext
         self._cfg_type = cfg_type
+        self._strict   = strict
+
+        self.config_data:  Optional[ConfigChain] = None
+        self._config_data: Optional[dict] = None
 
         # error as value semantics
+        self.error: Optional[ConfigurationError] = None
         self._err_as_value = err_as_value
-        self.error = None
 
         # initialization isn't required if config file is not specified.
         if (not name):
-            # make debug log complete if in lock only mode
+            # make debug log complete if in lock-only mode
             self._filename = self.__class__.__name__
 
         else:
             self._data_written = False
 
-            if (not file_path):
-                file_path = 'dnx_profile/data'
-
-            self._file_path = file_path
+            self._dir = dir
             self._filename = f'{cfg_type}/{name}.{ext}' if cfg_type else f'{name}.{ext}'
 
             # self._system_path_file = f'{HOME_DIR}/{file_path}/system/{self._filename}'
-            self._usr_path_file = f'{HOME_DIR}/{file_path}/usr/{self._filename}'
+            self._usr_file_path = f'{HOME_DIR}/{dir}/usr/{self._filename}'
 
     # attempt to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
     def __enter__(self) -> ConfigurationManager:
         self._config_lock = acquire_lock(self.config_lock_file)
 
-        # setup required only if the config file is specified.
-        if (self._name):
-            # TEMP prefix is to wildcard match any orphaned files for deletion
-            self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}'
-            self._temp_file = open(self._temp_file_path, 'w+', opener=file_opener)
-
-            # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
-            shutil.chown(self._temp_file_path, user=USER, group=GROUP)
+        # replacing the need for load_configuration method to be called every time the context is created.
+        # note: this is for forward compatibility and the original method is still available for use.
+        #  - locking behind err_as_value because it will be used on new code and will prevent double loading for now.
+        if (self._err_as_value and self._name):
+            self.config_data: Optional[ConfigChain] = self.load_configuration(strict=self._strict)
 
         self.log.debug(f'Config file lock acquired for {self._filename}.')
 
@@ -556,31 +607,24 @@ class ConfigurationManager:
     # configuration file. if an exception is raised, the temporary file will be deleted. the file lock will be released
     # upon exiting
     def __exit__(self, exc_type, exc_val, traceback) -> bool:
-        # lock only mode
-        if (not self._name):
-            pass
 
-        elif (exc_type is None and self._data_written):
-            os.replace(self._temp_file_path, self._usr_path_file)
+        # !test: this was changed to allow forward compatibility with the new automatic api.
+        #  make sure the original and new api are working correctly.
+        if (exc_type is None and self._name):
+            # old method for writing, requires calling load/write_configuration methods
+            if (self._data_written):
+                self.__write_to_disk(json.dumps(self._config_data, indent=2))
 
-        else:
-            self._temp_file.close()
-            os.unlink(self._temp_file_path)
+            # new method for writing, done automatically
+            elif (self.config_data and self.config_data.user_modified):
+                self.__write_to_disk(json.dumps(self.config_data.expanded_user_data, indent=2))
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
         release_lock(self._config_lock)
 
         self.log.debug(f'file lock released for {self._filename}')
 
-        # fast out if no error occurred
-        if (exc_type is None):
-            return True
-
-        # raise it regardless of in err_as_value mode
-        if (exc_type is ControlError):
-            raise
-
-        else:
+        if (exc_type is ConfigurationError):
             self.log.error(f'ConfigurationManager: {exc_val}')
 
             self.error = ConfigurationError(f'Configuration manager failed while updating file. error->{exc_val}')
@@ -588,28 +632,49 @@ class ConfigurationManager:
             if (not self._err_as_value):
                 raise self.error
 
+        # raise all non configuration errors regardless of err_as_value mode
+        elif (exc_type is not None):
+            raise
+
+        return True
+
+    def __write_to_disk(self, updated_config: str) -> Optional[ConfigurationError]:
+        # TEMP prefix is to wildcard match any orphaned files for deletion
+        temp_file_path = f'{HOME_DIR}/dnx_profile/interfaces/TEMP_{token_urlsafe(10)}'
+
+        if write_file(temp_file_path, updated_config):
+            # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
+            shutil.chown(temp_file_path, user=USER, group=GROUP)
+            os.replace(temp_file_path, self._usr_file_path)
+
+        else:
+            return ConfigurationError('ConfigurationManager failed to write configuration to temp file.')
+
     # will load json data from file, convert it to a ConfigChain
     def load_configuration(self, *, strict: bool = True) -> ConfigChain:
         '''returns python dictionary of configuration file contents.
+
+        *old: this should be replaced with the new automatic load/write api.
         '''
         if (not self._name):
-            raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
+            raise RuntimeError('ConfigurationManager methods are disabled in lock only mode.')
 
         return load_configuration(
-            self._name, self._ext, cfg_type=self._cfg_type, filepath=self._file_path, strict=strict)
+            self._name, self._ext, cfg_type=self._cfg_type, filepath=self._dir, strict=strict)
 
     # accepts python dictionary for serialization to json. writes data to specified file opened.
     def write_configuration(self, data_to_write: dict):
         '''writes configuration data as json to generated temporary file.
+
+        *old: this should be replaced with the new automatic load/write api.
         '''
         if (not self._name):
-            raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
+            raise RuntimeError('ConfigurationManager methods are disabled in lock only mode.')
 
         if (self._data_written):
             raise RuntimeWarning('configuration file has already been written to.')
 
-        json.dump(data_to_write, self._temp_file, indent=2)
-        self._temp_file.flush()
+        self._config_data = data_to_write
 
         # this is to inform context to copy temp file to dnx configuration folder
         self._data_written = True
@@ -626,6 +691,7 @@ class Watcher:
     )
 
     def __init__(self, watch_file: str, ext: str, cfg_type: str, filepath: str, *, callback: Callable_T):
+
         self._watch_file = watch_file
 
         self._ext      = ext
@@ -681,6 +747,43 @@ class Watcher:
             return True
 
         return False
+
+    def profile_watch(self, *args, profiles_range: tuple[int, int]) -> None:
+
+        # expanding the range to include the end value
+        file_tracker = {k: 0.0 for k in range(profiles_range[0], profiles_range[1]+1)}
+
+        for _ in RUN_FOREVER:
+
+            for profile_num, last_modified in file_tracker.items():
+
+                profile_name = f'profile_{profile_num}'
+
+                if modified_time := self._profile_is_modified(profile_name, last_modified):
+
+                    profile_path = f'profiles/{profile_name}'
+                    file_tracker[profile_num] = modified_time
+
+                    config_chain: ConfigChain = load_configuration(
+                        profile_path, self._ext, cfg_type=self._cfg_type, filepath=self._filepath, strict=False)
+
+                    self._callback(*args, profile_num, config_chain)
+
+            else:
+                fast_sleep(FILE_POLL_TIMER)
+
+    def _profile_is_modified(self, profile_name, last_modified) -> Union[float | int]:
+        profile_full_path = self._full_path.replace('profile_x', profile_name)
+
+        if not file_exists(profile_full_path):
+
+            return 1 if not last_modified else 0
+
+        modified_time = os.stat(profile_full_path).st_mtime
+        if (modified_time != last_modified):
+            return modified_time
+
+        return 0
 
 # ====================================== #
 # CONFIGURATION CONVERSION FUNCTIONS
@@ -850,7 +953,7 @@ def json_to_yaml(data: Union[str, dict], /, *, from_dict: bool = True) -> str:
     output_str = []
     for _, line in s_parsed_indents:
 
-        # no nested lists. we don't need them, and i don't want the complexity.
+        # no nested lists. we don't need them, and I don't want the complexity.
         if (not ongoing_list and line.endswith('[')):
 
             ongoing_list = True

@@ -8,24 +8,27 @@ import string
 from typing import NamedTuple as _NamedTuple
 from collections import defaultdict
 
-from source.web_typing import *
+from source.web_typing import web_module_import_callout
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
-from source.web_validate import *
-from source.object_manager import FWObjectManager, USER_RANGE
-
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_configuration, config
 
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 
+from source.web_validate import *
 from source.web_interfaces import RulesWebPage
+
+from source.object_manager import FWObjectManager, USER_RANGE
 
 # ===============
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from source.web_typing import *
+
     from dnx_gentools.def_namedtuples import FW_OBJECT
 
 __all__ = ('WebPage',)
@@ -201,18 +204,18 @@ class WebPage(RulesWebPage):
         return '', section
 
     @staticmethod
-    def handle_ajax(json_data: dict[str, str]) -> return_data:
+    def handle_ajax(aform: JSON) -> WebAjaxResponse:
 
-        section: str = json_data.get('section', '')
+        section: str = aform.get('section', '')
         if (not section or section not in valid_sections):
             return False, {'error': 1, 'message': 'missing section data'}
 
-        if not json_data.get('rules', None):
+        if not aform.get('rules', None):
             return False, {'error': 2, 'message': 'missing rule data'}
 
         # NOTE: all rules must be validated for changes to be applied. validation will raise exception on first error.
         try:
-            validated_rules = validate_firewall_commit(json_data['rules'])
+            validated_rules = validate_firewall_commit(aform['rules'])
         except ValidationError as ve:
             return False, {'error': 3, 'message': str(ve)}
 
@@ -349,9 +352,9 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
         'ips_profile': convert_int(fw_rule.sec3_prof)
     }
 
-    # SECURITY PROFILE VALIDATIONS - currently restricted to 0/1
-    if any([rule[profile] not in [0, 1] for profile in ['ipp_profile', 'dns_profile', 'ips_profile']]):
-        raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
+    # SECURITY PROFILE VALIDATIONS
+    if error := [prof for prof in ['ipp_profile', 'dns_profile', 'ips_profile'] if rule[prof] not in range(16)]:
+        raise ValidationError(f'Invalid security profile for rule #{rule_num} -> {error}.')
 
     # OBJECT VALIDATIONS
     for obj in ['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service']:

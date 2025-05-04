@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import hardout, INITIALIZE_MODULE
+# from dnx_gentools.def_exceptions import hardout
+from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import bint
 
 LOG_NAME = 'cfirewall'
 
@@ -21,28 +25,18 @@ if INITIALIZE_MODULE(LOG_NAME):
     from threading import Thread
     from dataclasses import dataclass
 
-    from dnx_gentools.def_constants import MSB, LSB
-    from dnx_gentools.def_enums import Queue, QueueType
-    from dnx_gentools.signature_operations import generate_geolocation
-
-    from dnx_routines.logging.log_client import Log
-
-    from fw_main import CFirewall, initialize_geolocation
-    from fw_automate import FirewallAutomate
-
-
     @dataclass
     class Args:
-        h:  int = 0
-        v:  int = 0
-        vv: int = 0
+        h: bint = 0
+        v: bint = 0
+        vv: bint = 0
 
-        help:     int = 0
-        verbose:  int = 0
-        verbose2: int = 0
+        help: bint = 0
+        verbose: bint = 0
+        verbose2: bint = 0
 
-        fw:  int = 0
-        nat: int = 0
+        fw: bint = 0
+        nat: bint = 0
 
         @property
         def help_set(self):
@@ -67,15 +61,28 @@ if INITIALIZE_MODULE(LOG_NAME):
     try:
         args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
     except Exception as E:
-        hardout(f'DNXFIREWALL arg parse failure => {E}')
+        raise ValueError(f'Cfirewall failed to parse cli args => {E}')
 
     else:
         if (args.help_set):
             print_help()
 
-            hardout()
+            raise SystemExit
+
+    from dnx_routines.logging.log_client import Log
 
     Log.run(name=LOG_NAME)
+
+    from dnx_gentools.def_exceptions import TerminateSignal
+    from dnx_gentools.def_constants import MSB, LSB
+    from dnx_gentools.def_enums import Queue, QueueType
+    from dnx_gentools.signature_operations import generate_geolocation
+
+    from dnx_control.system.systemd import sysd_notify_ready
+
+    from fw_main import CFirewall, initialize_geolocation
+    from fw_automate import FirewallAutomate
+
 
 def run():
     # ===============
@@ -95,10 +102,10 @@ def run():
     # NOTE: bypass tells the process to invoke rule action (DROP or ACCEPT) without forwarding to security modules.
     dnxfirewall.set_options(args.verbose_set, args.verbose2_set, args.fw_set, args.nat_set)
 
-    error = dnxfirewall.nf_set(QueueType.FIREWALL, Queue.CFIREWALL)
-    if (error):
+    if error := dnxfirewall.nf_set(QueueType.FIREWALL, Queue.CFIREWALL):
         Log.error(f'failed to set nl socket options for queue {Queue.CFIREWALL}')
-        hardout()
+
+        raise OSError(f'failed to set nl socket options for queue {Queue.CFIREWALL}')
 
     dnx_threads.append(Thread(target=dnxfirewall.nf_run))
 
@@ -117,15 +124,12 @@ def run():
     # dnx_threads.append(Thread(target=dnxnat.nf_run))
 
     # initializing python processes for detecting configuration changes to zone or firewall rule sets and also handles
-    # necessary calls into Cython via cfirewall reference for making the actual config change.
+    # the necessary calls into Cython via cfirewall reference for making the actual config change.
     # these will run in Python threads with a potential calling into Cython.
     # these functions should be explicitly identified since they will require the gil to be acquired on the Cython side
     # or else the Python interpreter will crash.
     fw_rule_monitor = FirewallAutomate(Log, cfirewall=dnxfirewall)
-    try:
-        fw_rule_monitor.run()
-    except Exception as E:
-        hardout(f'DNXFIREWALL control run failure => {E}')
+    fw_rule_monitor.run()
 
     if (args.verbose2_set):
         fw_rule_monitor.print_active_rules()
@@ -135,9 +139,15 @@ def run():
     for t in dnx_threads:
         t.start()
 
+    sysd_notify_ready()
+
     try:
         for t in dnx_threads:
             t.join()
+    except (KeyboardInterrupt, SystemExit, TerminateSignal):
+        raise
+
     except Exception as E:
         # dnxfirewall.nf_break() TODO: why did we remove the teardown? was it unnecessary?
-        hardout(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')
+        Log.error(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')
+        raise

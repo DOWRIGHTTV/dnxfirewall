@@ -3,12 +3,12 @@
     <img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall-dev/dnx_webui/static/assets/images/dads_logo_black.png" alt="dad's next-gen firewall">
 </span>
 <p>
-DNXFIREWALL™ is an optimized/high performance collection of applications and services to convert a standard 
+DNXFIREWALL® is an optimized/high performance collection of applications and services to convert a standard 
 linux system into a zone based next generation firewall. The primary security modules have DIRECT/INLINE control over 
 all connections, streams, and messages that goes through the system.
 
 DAD'S NEXT-GEN FIREWALL™ provides a simplified interface for home and small business configuration and maintenanance and includes unique modules fitting for this use case (listed below).
-  - DNXMESSANGER™ is a secure, locally hosted messaging service for private/encrypted communication between members of a household or small business.
+  - DNXMESSENGER™ is a secure, locally hosted messaging service for private/encrypted communication between members of a household or small business.
 
 note: The codebases are currently unified to make back end development/tuning application easier.
 </p>
@@ -75,7 +75,13 @@ independently updated without running the full system update utility.
    - log handling
    - database management
    - syslog client (UDP, TCP, TLS) IMPORTANT: currently unusable state due to many internal breaking api changes. this service will not be enabled by default.
-    
+
+- Secure Messaging
+   - DNXMESSENGER™ (secure, locally hosted messaging service)
+     - encrypted messages
+     - group chat
+     - user management
+
 - Additional Features
    - IPv6 disabled
    - DNS proxy bypass prevention
@@ -92,13 +98,13 @@ independently updated without running the full system update utility.
 
 2. install linux on physical hardware or a VM
 	
-	2a. (3) interfaces are required (WAN, LAN, DMZ) (note: work in progress to reduce minimum to 2)
+	2a. (1) interfaces: local mode, (2) interfaces: no-dmz mode, (3) interfaces: full mode (WAN, LAN, DMZ) 
 	
 	2b. create "dnx" user during os install or once complete
 	
-	2c. if not Python version >= 3.8, install Python3.8+ and set to system default 
+	2c. if not Python version = 3.10, install Python3.10 and set to system default 
 
-    - note: Python3.10+ provides substantial performance improvements
+    - note: Python3.11+ includes breaking changes to Enums that may cause fatal errors.
 
 3. update and upgrade system -> ```sudo apt update && sudo apt upgrade```
 
@@ -131,7 +137,7 @@ notified if a system update is needed.
 <p>
 - Debian based distros
   - Linux kernel >= 2.6.31
-  - Python 3.8+
+  - Python 3.10
   - netplan	(ubuntu interface/network manager)
 </p>
 

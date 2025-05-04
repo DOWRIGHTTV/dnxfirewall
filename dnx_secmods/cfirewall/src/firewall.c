@@ -2,6 +2,8 @@
 #include "cfirewall.h"
 #include "firewall.h"
 
+// idea:: add const and static to any variable or function that it makes sense on. perf and safety.
+
 FILENUM(4);
 
 #define FW_SYSTEM_MAX_RULE_COUNT  50
@@ -39,7 +41,7 @@ pthread_mutex_t    *FWlock_ptr = &FWtableslock;
 // ==================================
 // FIREWALL TABLES
 // ==================================
-// contains pointers to arrays of pointers to FWrule and its length
+// array of structures that contain a pointer to the array of FWrule[s] and the active rule count configured.
 struct FWtable firewall_tables[FW_TABLE_COUNT];
 
 // ==================================

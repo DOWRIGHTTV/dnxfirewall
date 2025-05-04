@@ -5,15 +5,24 @@ from __future__ import annotations
 import os
 import threading
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
-from dnx_gentools.standard_tools import looper, Initialize
-from dnx_gentools.file_operations import load_configuration, cfg_read_poller
+from dnx_gentools.def_constants import module_import_callout
 
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+module_import_callout(__file__)
+
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, ONE_MIN, ONE_DAY, THREE_MIN, str_join
+from dnx_gentools.standard_tools import looper, Initialize
+from dnx_gentools.file_operations import cfg_read_poller
 from dnx_gentools.system_info import System
 
 from dnx_routines.logging.log_client import Log
+from dnx_routines.database import DBConnector
+
+from dnx_control.system.systemd import sysd_notify_ready
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import ClassVar
+
+    from dnx_gentools.def_typing import ConfigChain
 
 __all__ = (
     'LogService',
@@ -32,6 +41,9 @@ class LogService:
             x for x in os.listdir(f'{HOME_DIR}/dnx_profile/log') if x not in EXCLUDED_MODULES
         ]
 
+    log_length: int
+    log_level:  int
+
     __slots__ = (
         'log_length', 'log_level', '_initialize'
     )
@@ -40,13 +52,15 @@ class LogService:
     def run(cls):
         self = cls()
 
+        sysd_notify_ready()
+
         self.organize()
 
     def __init__(self) -> None:
         self._initialize = Initialize(Log, 'LogService')
 
-        self.log_length: int = 999
-        self.log_level:  int = -1
+        self.log_length = 999
+        self.log_level  = -1
 
         threading.Thread(target=self.get_settings).start()
 
@@ -94,7 +108,7 @@ class LogService:
     @looper(THREE_MIN)
     def clean_blocked_table(self) -> None:
         with DBConnector(Log) as FirewallDB:
-            FirewallDB.blocked_cleaner(table='blocked')
+            FirewallDB.blocked_cleaner()
 
         # NOTE: consider moving this into the DBConnector, so it can report if no exc are raised.
         Log.debug('completed blocked database cleaning')

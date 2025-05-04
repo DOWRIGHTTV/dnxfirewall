@@ -1,0 +1,16 @@
+[Unit]
+Description=DNXFIREWALL Intrusion Detection/Prevention Service
+After=dnx-database.service
+StartLimitBurst=2
+StartLimitIntervalSec=3
+
+[Service]
+Type=notify
+Restart=always
+RestartSec=69ms
+User=root
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli ids-ips
+Environment=HOME_DIR=/home/dnx/dnxfirewall
+
+[Install]
+WantedBy=multi-user.target

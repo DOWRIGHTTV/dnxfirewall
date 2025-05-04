@@ -5,19 +5,20 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_constants import INITIALIZE_MODULE
+from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('ip-proxy'):
     __all__ = ('run',)
 
+    from ip_proxy_log import Log
+
+    Log.run(name='ip_proxy')
+
+    from dnx_gentools.def_exceptions import TerminateSignal
     from dnx_gentools.def_enums import Queue
     from dnx_gentools.signature_operations import generate_reputation
 
     from dnx_iptools.hash_trie import HashTrie_Value
-
-    from ip_proxy_log import Log
-
-    Log.run(name='ip_proxy')
 
     reputation_signatures = generate_reputation(Log)
 
@@ -41,23 +42,27 @@ if INITIALIZE_MODULE('ip-proxy'):
 
 
 def run():
-    ip_proxy.IPProxy.run(Log, q_num=Queue.IP_PROXY)
+    try:
+        ip_proxy.IPProxy.run(Log, q_num=Queue.IP_PROXY)
+    except (KeyboardInterrupt, TerminateSignal):
+        raise
 
+    except Exception as e:
+        Log.error(f'Error in IPProxy.run: {e}')
+        raise
 
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type
-
 if (TYPE_CHECKING):
-    from typing import TypeAlias
-
     __all__ = (
         'IPProxy', 'IPPPacket',
 
         # TYPES
         'IPProxy_T', 'IPPPacket_T'
     )
+
+    from dnx_gentools.def_typing import TypeAlias, Type
 
     from ip_proxy import IPProxy
     from ip_proxy_packets import IPPPacket

@@ -207,11 +207,14 @@ table.striped > tbody > tr {
     .multi-switch > li > button {
       all: unset;
       display: inline-block;
+      width: 100%;
+      height: 100%;
       color: #bdbdbd;
+      text-align: center;
       transition: all 1.5s; }
       .multi-switch > li > button > i {
         font-size: 30px;
-        margin-top: 6px; }
+        vertical-align: middle; }
     .multi-switch > li > button:hover {
       color: orange;
       transition: all 1s; }

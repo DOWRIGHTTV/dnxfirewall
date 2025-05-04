@@ -10,13 +10,18 @@ from typing import NamedTuple
 from ipaddress import IPv4Network, IPv4Address
 
 # TODO: consider moving this module, web_typing, and web_interfaces to dnx_webui folder instead of source
-from dnx_webui.source.web_typing import *
+from source.web_typing import web_module_import_callout
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
+from dnx_gentools.def_exceptions import ValidationError as ValidationError
+from dnx_gentools.def_constants import TYPE_CHECKING, WEBUI_DEVELOPMENT
 from dnx_gentools.def_enums import CFG, DATA, PROTO
-from dnx_gentools.def_exceptions import DNXError
 from dnx_gentools.file_operations import config
+
+if (TYPE_CHECKING):
+    from source.web_typing import TypeAlias, Optional, Any, Union, Callable
+    from source.web_typing import Form, JSON, Args
 
 
 BINT = (0, 1)
@@ -26,16 +31,21 @@ MAX_PORT = 65535
 MAX_PORT_RANGE = MAX_PORT + 1
 
 __all__ = (
-    'ValidationError', 'ValidationConfigForm', 'ValidationFieldContext', 'ValidationFieldInfo',
+    'SKIP_VALIDATION',
+    'ValidationError', 'ValidationPageContext',
+    'ValidationConfigForm', 'ValidationFieldContext', 'ValidationFieldInfo',
 
     'INVALID_FORM', 'NO_STANDARD_ERROR',
     'VALID_MAC', 'VALID_DOMAIN',
 
-    'check_digit', 'check_bint',
+    'check_digit', 'check_bint', 'check_in_range',
 
     'convert_int', 'get_convert_int',
     'convert_bint', 'get_convert_bint',
-    'get_convert_in_range',
+    'convert_in_range', 'get_convert_in_range',
+    'check_in_options_int',
+
+    'alpha_maxlen', 'alphanum_maxlen',
     'standard', 'full_field',
 
     'mac_address',
@@ -46,23 +56,34 @@ __all__ = (
     'add_ip_whitelist',
 )
 
-class ValidationError(DNXError):
-    '''Webui processing failure or invalid user input.'''
+SKIP_VALIDATION = object()  # form field level sentinel
+
+class ValidationPageContext(NamedTuple):
+    '''Used for global on_enter and on_exit sections in ValidationConfigForm.parse_form.
+
+    can be used to run validation that will apply to all forms/submissions or append a key/value into cfg data.
+
+    call:   func(type[Form|config]) -> Optional[ValidationError] -- function hook
+    append: func(type[Form, config]) -> Optional[ValidationError] -- add/remove from config data [defaults is a no-op]
+    '''
+    call: Callable[[Form|config], Optional[ValidationError]]
+    append: Callable[[Form, config], Optional[ValidationError]] = lambda x, y: None
+
 
 class ValidationFieldContext(NamedTuple):
-    '''used for on_enter and on_exit sections in ValidationConfigForm.parse_form
+    '''Used for on_enter and on_exit sections in ValidationConfigForm.parse_form
 
-    call: func(type[config]) -- function hook
+    call: func(type[Form|config]) -- function hook
     '''
     call: Callable[[Form|config], Optional[ValidationError]]
 
 class ValidationFieldInfo(NamedTuple):
     '''
     cfg_key: str -- name used when adding the form value to a config object
+    error_msg: str -- message returned to client (if not provided, language default will be used)
     format: func(str)|None -- basic function to check string conformity (ex: str.isdigit)
     validation: func(str) -- function to check system/config rule conformity
-    error_msg: str -- message returned to client (if not provided, language default will be used)
-    convert: func(str) -- convert form value from str to config type (if not provided, default is a no-op)
+    convert: func(str) -- convert form value from str to config type [default is a no-op]
     '''
     cfg_key: str
     error_msg: Optional[str] = None
@@ -70,10 +91,13 @@ class ValidationFieldInfo(NamedTuple):
     validation: Callable[[str], Optional[ValidationError]] = None
     convert: Callable[[str], Any] = lambda x: x
 
-FormButtonName = str
-FormFieldName = str
-ValidationPageForms_T: TypeAlias = dict[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
-ValidationPageForms_P: TypeAlias = MappingProxyType[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
+
+if (TYPE_CHECKING):
+    ValidationPageContexts: TypeAlias = dict[str, ValidationPageContext]
+    FormButtonName = str
+    FormFieldName = str
+    ValidationPageForms_T: TypeAlias = dict[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
+    ValidationPageForms_P: TypeAlias = MappingProxyType[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
 
 class ValidationConfigForm:
     '''Configuration class for storing configuration key/value pairs.
@@ -99,22 +123,47 @@ class ValidationConfigForm:
         if (btn_name is DATA.MISSING):
             return ValidationError('Missing form action.'), None
 
-        form_profile = self.page_forms.get(btn_name, DATA.MISSING)
+        # -security: stripping "_" to prevent injected form data from matching on_enter and on_exit global contexts.
+        form_profile = self.page_forms.get(btn_name.strip('_'), DATA.MISSING)
         if (form_profile is DATA.MISSING):
             return ValidationError('Unspecified form submitted.'), None
 
-        cfg = config(btn=btn_name)
+        cfg = config()
 
+        # ==================================================
+        # PAGE ON ENTER - applies to all forms
+        # ==================================================
+        page_on_enter: Optional[ValidationPageContexts]
+        if page_on_enter := self.page_forms.get('__on_enter', None):
+            for context_name, context_profile in page_on_enter.items():
+                conxtext_friedly_name = context_name.replace('_', ' ')
+
+                if error := context_profile.call(form):
+                    return ValidationError(f'{conxtext_friedly_name}: {error.message}'), None
+
+                if error := context_profile.append(form, cfg):
+                    return ValidationError(f'{conxtext_friedly_name}: {error.message}'), None  # lambda typing issue
+
+        # needed to register form submissions that are validated at page level __on_enter
+        if (form_profile is SKIP_VALIDATION):
+            cfg.btn = btn_name
+            return None, cfg
+
+        # ==================================================
+        # FORM SUBMISSION PROCESSING
+        # ==================================================
         for field_name, field_profile in form_profile.items():
 
+            field_friedly_name = field_name.replace('_', ' ')
+
             # context fields/ function calls
-            if (field_name == 'on_enter'):
+            if (field_name == '_on_enter'):
                 if error := field_profile.call(form):
                     return error, None
 
                 continue
 
-            elif (field_name == 'on_exit'):
+            elif (field_name == '_on_exit'):
                 if error := field_profile.call(cfg):
                     return error, None
 
@@ -126,24 +175,39 @@ class ValidationConfigForm:
 
             # field format check will generally raise an exception, but added support for returning instead
             if (field_profile.format):
-
                 try:
-                    if error := field_profile.format(field_value):
-                        return ValidationError(field_profile.error_msg or error.args[0]), None
-                except Exception as e:
-                    return ValidationError(field_profile.error_msg or e.args[0]), None
+                    if err := field_profile.format(field_value):
+                        return ValidationError(f'{field_friedly_name}: {field_profile.error_msg or err.args[0]}'), None
+                except Exception as err:
+                    return ValidationError(f'{field_friedly_name}: {field_profile.error_msg or err.args[0]}'), None
 
             # field validation returns exception as value only
             if (field_profile.validation):
-
                 if error := field_profile.validation(field_value):
-                    return error, None
+                    return ValidationError(f'{field_friedly_name}: {error.message}'), None
 
             cfg[field_profile.cfg_key] = field_profile.convert(field_value)
+
+        # ==================================================
+        # PAGE ON EXIT - applies to all forms
+        # ==================================================
+        page_on_exit: Optional[ValidationPageContext]
+        if page_on_exit := form.get('__on_exit', None):
+            if error := page_on_exit.call(cfg):
+                return error, None
+
+            if error := page_on_exit.append(form, cfg):
+                return error, None
 
         # unhandled form data. should only happen if the form is tampered with client side.
         # if (form):
         #     return ValidationError('Non-conforming form data present.'), None
+
+        # appending button name to select correct configuration function
+        cfg.btn = btn_name
+
+        if (WEBUI_DEVELOPMENT):
+            print(f'{"=" * 16}\nconfig data\n{"="*16}\n{cfg}')
 
         return None, cfg
 
@@ -153,6 +217,7 @@ _proto_map = {'any': 0, 'icmp': 1, 'tcp': 6, 'udp': 17}
 NO_STANDARD_ERROR: tuple[int, str] = (0, '')
 NO_LOG_ERROR: tuple[str, str, []] = ('', '', [])
 INVALID_FORM: str = 'Invalid form data.'
+INVALID_TYPE = ValidationError('Invalid field type.')
 
 # TODO: mac regex allows trailing characters. it should hard cut after the exact char length.
 VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
@@ -161,17 +226,37 @@ VALID_DOMAIN = re.compile('(//|\\s+|^)(\\w\\.|\\w[A-Za-z0-9-]{0,61}\\w\\.){1,3}[
 # to be used with the new form validation system
 def check_digit(s: str) -> Optional[ValidationError]:
     if not s.isdigit():
-        return ValidationError('Invalid field type.')
+        return INVALID_TYPE
 
 def check_bint(s: str) -> Optional[ValidationError]:
     if s not in ['0', '1']:
-        return ValidationError('Invalid field type.')
+        return INVALID_TYPE
+
+def check_in_range(s: str, r: tuple[int, int]) -> Optional[ValidationError]:
+    '''note: both ends of the bounds are inclusive.
+    '''
+    try:
+        i_s = int(s)
+    except ValueError:
+        return INVALID_TYPE
+
+    if i_s not in range(r[0], r[1] + 1):
+        return ValidationError(f'Selection must be within range [{r[0]}, {r[1]}].')
+
+def check_in_options_int(s: str, o: tuple) -> Optional[ValidationError]:
+    try:
+        i_s = int(s)
+    except ValueError:
+        return INVALID_TYPE
+
+    if i_s not in o:
+        return ValidationError(f'Selection must be within options {list(o)}.')
 
 def get_convert_int(form: Union[Form, Args], key: str) -> Union[int, DATA]:
     '''gets string value from submitted form then converts into an integer and returns.
 
-    If key is not present or string cannot be converted, an IntEnum representing the error will be returned.'''
-
+    If the key is not present or string cannot be converted, an IntEnum representing the error will be returned.
+    '''
     value = form.get(key, DATA.MISSING)
     try:
         return value if value == DATA.MISSING else int(value)
@@ -181,20 +266,19 @@ def get_convert_int(form: Union[Form, Args], key: str) -> Union[int, DATA]:
 def get_convert_bint(form: Form, key: str) -> Union[int, DATA]:
     '''convenience wrapper around convert_bint().
 
-    calls val = form.get(key) and returns the result of convert_bint(val).
+    calls val = form.get(key) then returns the result of convert_bint(val).
     '''
     value = form.get(key, None)
 
     return convert_bint(value)
 
-def get_convert_in_range(form: Form, key: str, bounds: tuple[int, int] = (0, 1)) -> Union[int, DATA]:
-    '''gets value for specified key, converts to an int, then returns if the resulting int is withing specified range.
+def get_convert_in_range(form: Form | JSON, key: str, *, bounds: tuple[int, int] = (0, 1)) -> int | DATA:
+    '''gets value for specified key, converts to an int, then returns if the resulting int is within specified range.
 
         note: both ends of the bounds are inclusive.
     '''
     value = form.get(key, DATA.MISSING)
-
-    if value is DATA.MISSING:
+    if (value is DATA.MISSING):
         return value
 
     try:
@@ -225,12 +309,58 @@ def convert_float(num: str) -> Union[float, DATA]:
 def convert_int(num: Union[str, bool]) -> Union[int, DATA]:
     '''converts argument into an integer, then returns.
 
-    if optional default arg is provided, it will be returned on error, otherwise DATA.INVALID (-1) will be returned.
+    DATA.INVALID (-1) is returned on error.
     '''
     try:
         return int(num)
     except:
         return DATA.INVALID
+
+def convert_in_range(num: str, bounds: tuple[int, int] = (0, 1)) -> int | DATA:
+    '''converts argument into an integer, then returns if it falls within the specified range.
+
+    DATA.INVALID (-1) is returned on error.
+
+        note: both ends of the bounds are inclusive.
+    '''
+    try:
+        return int(num) if int(num) in range(bounds[0], bounds[1] + 1) else DATA.INVALID
+    except:
+        return DATA.INVALID
+
+def alpha_maxlen(s: str, *, maxlen: int, override: Optional[list] = None) -> Optional[ValidationError]:
+    '''checks if a string contains only alpha characters and is within the specified length.
+
+    override can be used to allow additional characters in the string.
+    '''
+    if (len(s) > maxlen):
+        return ValidationError(f'Field length must be less than {maxlen} characters.')
+
+    override = [] if override is None else override
+
+    err_msg  = 'Field can only contain contain characters in the alphabet'
+    err_msg += f'or the following {override}.' if override else '.'
+
+    for char in s:
+        if (not char.isalpha() and char not in override):
+            return ValidationError(err_msg)
+
+def alphanum_maxlen(s: str, *, maxlen: int, override: Optional[list] = None) -> Optional[ValidationError]:
+    '''checks if a string contains only alpha and numeric characters and is within the specified length.
+
+    override can be used to allow additional characters in the string.
+    '''
+    if (len(s) > maxlen):
+        return ValidationError(f'Field length must be less than {maxlen} characters.')
+
+    overrides = [*string.digits] if override is None else [override, string.digits]
+
+    err_msg  = 'Field can only contain contain characters in the alphabet or digits 0-9'
+    err_msg += f'or the following {override}.' if override else '.'
+
+    for char in s:
+        if (not char.isalnum() and char not in overrides):
+            return ValidationError(err_msg)
 
 def standard(user_input: str, *, override: Optional[list] = None) -> str:
     override = [] if override is None else override

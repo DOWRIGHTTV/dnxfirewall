@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
-from source.web_typing import *
+from source.web_typing import web_module_import_callout
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
-from source.web_validate import *
-
-from dnx_gentools.def_constants import ONE_SEC, fast_sleep
+from dnx_gentools.def_constants import TYPE_CHECKING, ONE_SEC, fast_sleep
 from dnx_gentools.def_exceptions import err_as_value
 from dnx_gentools.file_operations import ConfigurationError, config
+
 from dnx_iptools.interface_ops import InterfaceManager, get_unified_routes, route_lookup
 from dnx_iptools.protocol_tools import Route, masktocidr
 
+from source.web_validate import *
 from source.web_interfaces import StandardWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage',)
 
@@ -104,12 +107,12 @@ form_validator = ValidationConfigForm({
         'nmk': ValidationFieldInfo(cfg_key='net_mask', format=ip_address),
         'nxh': ValidationFieldInfo(cfg_key='gateway', format=ip_address),
         'nad': ValidationFieldInfo(cfg_key='adm_distance', format=check_digit, validation=validate_adm_distance),
-        'on_exit': ValidationFieldContext(call=lambda cfg: ip_network(f'{cfg.net_id}/{cfg.net_mask}'))
+        '_on_exit': ValidationFieldContext(call=lambda cfg: ip_network(f'{cfg.net_id}/{cfg.net_mask}'))
     },
     'route_del': {
         # 'on_enter': ValidationFieldContext(call=lambda form: ValidationError('Unable to remove routes at this time.')),
         'route_del': ValidationFieldInfo(cfg_key='route_str', validation=validate_route_del),
-        'on_exit': ValidationFieldContext(call=lambda cfg: cfg.update({'route_obj': Route(*cfg.route_str.split(', '))}))
+        '_on_exit': ValidationFieldContext(call=lambda cfg: cfg.update({'route_obj': Route(*cfg.route_str.split(', '))}))
     }
 })
 # ==============
@@ -131,12 +134,6 @@ def configure_route_add(route: config) -> Optional[ConfigurationError]:
     return interface_manager.error
 
 def configure_route_del(route: config) -> Optional[ConfigurationError]:
-    # new_route = Route(
-    #     next_hop_route.intf, route.net_id, str(masktocidr(route.net_mask)), route.gateway, route.adm_distance
-    # )
-
-    print(route.route_obj)
-
     interface_manager = InterfaceManager()
     with interface_manager:
         interface_manager.del_route(route.route_obj)

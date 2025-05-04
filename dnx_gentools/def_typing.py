@@ -2,40 +2,86 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast, Type, NewType, Literal, Protocol, Callable, Generator, Iterator, Iterable
-from typing import ClassVar, Union, Optional, Any, NoReturn, ByteString, TextIO
+# runtime imports
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 
-_DISABLED = False
+from typing import cast, NewType, Protocol
 
-# NOTE: splitting if statements as import organization
-# standard lib imports
-if (TYPE_CHECKING and not _DISABLED):
-    from typing import TypeAlias, cast
+# =======================================
+# Custom Types
+# =======================================
+# note: may be used during runtime, so they need to be available.
+DNS_CAT_LABEL = NewType('DNS_CAT_LABEL', str)
+SEC_PROFILE = NewType('SEC_PROFILE', int)
+
+MAC_ADDRESS = NewType('MAC_ADDRESS', str)
+
+IP_ADDRESS = NewType('IP_ADDRESS', str)
+IP_ADDRINT = NewType('IP_ADDRINT', int)
+
+NET_PROTO = NewType('NET_PROTO', int)  # note: this should not be used anymore. use NETWORK_PROTOCOL instead.
+
+NET_PORT = NewType('NET_PORT', int)
+TCP_PORT = NewType('TCP_PORT', NET_PORT)
+UDP_PORT = NewType('UDP_PORT', NET_PORT)
+
+ConfigLock = NewType('ConfigLock', type('FileLock'))  # verbose type str
+IPTablesLock = NewType('IPTablesLock', type('FileLock'))  # verbose type str
+FirewallDBLock = NewType('FirewallDBLock', type('FileLock'))  # verbose type str
+ErrorReportsLock = NewType('ErrorReportsLock', type('FileLock'))  # verbose type str
+
+class ModuleProtocol(Protocol):
+    def run() -> None:  # no self is fine
+        ...
+
+
+class bint(int):
+    def __init__(self, arg):
+        if arg not in (0, 1):
+            raise ValueError(f'{arg} out of bounds. must be in 0/1.')
+
+
+if (_TYPE_CHECKING):
+    # standard lib imports
+    from typing import TypeAlias
+    from typing import Type, Annotated, Protocol, Callable, Generator, Iterator, Iterable
+    from typing import ClassVar, Union, Optional, Any, NoReturn, TextIO
 
     from threading import Lock as _Lock, Event as _Event
     from socket import socket as _socket
     from select import epoll as _epoll
     from ssl import SSLContext
 
-    Lock_T: TypeAlias = _Lock
+    Lock_T: TypeAlias = _Lock  # todo: _T should only be used on Type[...] objects. figure out alternative.
     Event_T: TypeAlias = _Event
     Socket_T: TypeAlias = _socket
     Epoll_T: TypeAlias = _epoll
 
-    Address:    TypeAlias = tuple[str, int]
-    IntAddress: TypeAlias = tuple[int, int]
+    Bytes: TypeAlias = Union[bytes, bytearray, memoryview]
 
-    Wrapper: TypeAlias = Callable[[Any], None]
-    Callable_T: TypeAlias = Callable[[Any, ...], Any]
+    # =======================================
+    # custom types
 
-    ConfigLock = NewType('ConfigLock', type('FileLock'))
-    IPTableLock = NewType('IPTableLock', type('FileLock'))
+    NET_ADDRESS: TypeAlias = tuple[IP_ADDRESS, NET_PORT]
+    NET_ADDRINT: TypeAlias = tuple[IP_ADDRINT, NET_PORT]
 
+    Wrapped_ReturnNone: TypeAlias = Callable[..., None]
+    Callable_ReturnNone: TypeAlias = Callable[..., None]
+    Wrapper: TypeAlias = Callable[..., None]
+
+    Callable_T: TypeAlias = Callable[..., Any]
+
+    StructUnpack: TypeAlias = tuple[int, ...]
+
+    FileLock: TypeAlias = Union[ConfigLock, IPTablesLock, FirewallDBLock, ErrorReportsLock]
+
+    # =======================================
     # dnx class imports for use as Types
 
     # module packs
     from dnx_gentools.file_operations import ConfigChain, config
     from dnx_gentools.def_namedtuples import L_SOCK as _L_SOCK
+    from dnx_gentools.def_enums import NETWORK_PROTOCOL as _NETWORK_PROTOCOL, LOG as _LOG
     # from dnx_iptools import *
     # from dnx_routines import *
 
@@ -49,11 +95,11 @@ if (TYPE_CHECKING and not _DISABLED):
 
     from dnx_iptools.packet_classes import NFPacket as _NFPacket
 
-    ModuleClasses: TypeAlias = Union[IPProxy_T, IDS_IPS_T, DNSProxy_T, DHCPServer_T]
+    ModuleClasses: TypeAlias = Union[DNSProxy_T, IPProxy_T, IDS_IPS_T, DHCPServer_T]
 
     ListenerCallback: TypeAlias = Callable[..., None]
     ListenerPackets:  TypeAlias = Union[_ClientRequest, _ClientQuery]
-    ListenerParser:   TypeAlias = Callable[[Address, _L_SOCK], ListenerPackets]
+    ListenerParser:   TypeAlias = Callable[[NET_ADDRESS, _L_SOCK], ListenerPackets]
 
     ProxyCallback: TypeAlias = Callable[..., None]
     ProxyPackets:  TypeAlias = Union[_IPPPacket, _IPSPacket, _DNSPacket, _NFPacket]
@@ -61,13 +107,18 @@ if (TYPE_CHECKING and not _DISABLED):
 
     DNSListHandler: TypeAlias = Callable[[Any, str, int], int]
 
-    StructUnpack: TypeAlias = tuple[int, ...]
+    OPEN_WAN_PORTS: TypeAlias = dict[_NETWORK_PROTOCOL, dict[int, int]]
 
-    from dnx_gentools.def_namedtuples import INF_EVENT_LOG as _INF_EVENT_LOG
+    from dnx_gentools.def_namedtuples import GEOLOCATION_LOG as _GEOLOCATION_LOG
+    from dnx_gentools.def_namedtuples import DNS_EVENT_LOG as _DNS_EVENT_LOG
     from dnx_gentools.def_namedtuples import IPP_EVENT_LOG as _IPP_EVENT_LOG
     from dnx_gentools.def_namedtuples import IPS_EVENT_LOG as _IPS_EVENT_LOG
+    from dnx_gentools.def_namedtuples import INF_EVENT_LOG as _INF_EVENT_LOG
     from dnx_gentools.def_namedtuples import SigFile as _SigFile
 
-    EVENT_LOGS: TypeAlias = Union[_IPP_EVENT_LOG, _IPS_EVENT_LOG, _INF_EVENT_LOG]
+    EVENT_LOGS:  TypeAlias = Union[_DNS_EVENT_LOG, _IPP_EVENT_LOG, _IPS_EVENT_LOG, _INF_EVENT_LOG]
+    LOGLVL:      TypeAlias = _LOG
+    LOG_ENTRY:   TypeAlias = tuple[EVENT_LOGS, LOGLVL, bytes]
+    LOG_ENTRIES: TypeAlias = list[tuple[EVENT_LOGS, LOGLVL, bytes]]
 
     SIGNATURE_MANIFEST: TypeAlias = list[_SigFile]

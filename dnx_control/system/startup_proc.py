@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-
 from secrets import token_urlsafe
 
 import dnx_iptools.interface_ops as interface
@@ -11,9 +9,10 @@ import dnx_iptools.interface_ops as interface
 from dnx_gentools.def_constants import INITIALIZE_MODULE
 from dnx_gentools.file_operations import ConfigurationManager
 
-from dnx_routines.logging.log_client import Log
 from dnx_iptools.iptables import IPTablesManager as IPTables
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+
+from dnx_routines.logging.log_client import Log
+from dnx_routines.database import DBConnector
 
 LOG_NAME = 'system'
 
@@ -26,7 +25,7 @@ def run():
 
     Log.notice('[startup] network forwarding set.')
 
-    # changing default action for IPv6 to block everything on all chains in the main table
+    # changing the default action for IPv6 to block everything on all chains in the main table
     IPTables.block_ipv6()
 
     Log.notice('[startup] IPv6 disabled.')
@@ -40,9 +39,10 @@ def run():
 
     Log.notice('[startup] Webui/Flask key regenerated.')
 
-    # ensuring the default mac address of the wan interface is set. this should only change first time the system
-    # initializes setting the mac from None > interface mac. Once the flag has been set, it will no longer change
-    # modify default mac value
+    # ensuring the default mac address of the wan interface is set.
+    # this should only apply to the first startup after installation.
+    # will set value from None to the actual mac address of the wan interface.
+    # note: this will be reworked once the extended interface patch is complete.
     set_default_mac_flag()
 
     Log.debug('[startup] default mac flag check.')
@@ -50,9 +50,6 @@ def run():
     create_database_tables()
 
     Log.debug('[startup] database table maintenance.')
-
-    # exiting service manually due to LogHandler threads
-    os._exit(0)
 
 def reset_flask_key():
     with ConfigurationManager('system', cfg_type='global') as dnx:

@@ -2,20 +2,25 @@
 
 from __future__ import annotations
 
-from source.web_typing import *
+from functools import partial
 
-web_module_load_callout(__file__)
+from source.web_typing import web_module_import_callout
 
-from source.web_validate import *
+web_module_import_callout(__file__)
 
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import CFG, DATA
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
+from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration, config
 from dnx_gentools.system_info import System
 
 from dnx_iptools.cprotocol_tools import iptoi, itoip
 from dnx_iptools.iptables import IPTablesManager
 
+from source.web_validate import *
 from source.web_interfaces import StandardWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage',)
 
@@ -24,8 +29,12 @@ class WebPage(StandardWebPage):
     available methods: load, update
     '''
     @staticmethod
-    def load(_: Form) -> dict[str, Any]:
-        ips_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ids_ips')
+    def load(form: Form) -> WebLoadResponse:
+        # this was previously validated by the update method if it is present
+        # on a direct page load, the profile will be set to the default (1).
+        sec_profile = int(form.get('security_profile', 1))
+
+        ips_profile: ConfigChain = load_configuration(f'profiles/profile_{sec_profile}', cfg_type='security/ids_ips')
         ips_global: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')
 
         passive_block_ttl = ips_profile['passive_block_ttl']
@@ -51,12 +60,12 @@ class WebPage(StandardWebPage):
 
         # converting standard timestamp to a frontend-readable string format
         passively_blocked_hosts = []
-        pbh = System.ips_passively_blocked()
-        for host, timestamp in pbh:
-            passively_blocked_hosts.append((itoip(host), timestamp, System.offset_and_format(timestamp)))
+        for blocked_host in System.ips_passively_blocked():
+
+            passively_blocked_hosts.append((*blocked_host, System.offset_and_format(blocked_host[2])))
 
         return {
-            'security_profile': 1,
+            'security_profile': sec_profile,
             'profile_name': ips_profile['name'],
             'profile_desc': ips_profile['description'],
             'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
@@ -68,241 +77,226 @@ class WebPage(StandardWebPage):
         }
 
     @staticmethod
-    def update(form: Form) -> tuple[int, str]:
-        # prevents errors while in dev mode.
-        if ('security_profile' in form):
-            return -1, 'temporarily limited to profile 1.'
+    def update(form: Form) -> WebUpdateError:
 
-        if ('ddos_enabled' in form):
+        error, ids_ips_info = form_validator.parse_form(form)
+        if (error):
+            return 1, error.message
 
-            ddos = config(**{
-                'enabled': get_convert_bint(form, 'ddos_enabled')
-            })
-            if (DATA.INVALID in ddos.values()):
-                return 1, INVALID_FORM
+        if (ids_ips_info.btn == 'security_profile_ident'):
+            if error := configure_security_profile_ident(ids_ips_info):
+                return 11, error.message
 
-            configure_ddos(ddos)
+        elif (ids_ips_info.btn == 'ddos_enabled'):
+            if error := configure_ddos(ids_ips_info):
+                return 12, error.message
 
-        elif ('ddos_limits' in form):
-            ddos_limits = config(**{
-                'tcp': get_convert_int(form, 'tcp_limit'),
-                'udp': get_convert_int(form, 'udp_limit'),
-                'icmp': get_convert_int(form, 'icmp_limit')
-            })
+        elif (ids_ips_info.btn == 'ddos_limits'):
+            if error := configure_ddos_limits(ids_ips_info):
+                return 13, error.message
 
-            if (DATA.INVALID in ddos_limits.values()):
-                return 2, INVALID_FORM
+        elif (ids_ips_info.btn == 'ps_enabled'):
+            if error := configure_portscan(ids_ips_info, field='enabled'):
+                return 14, error.message
 
-            if not all([limit in range(5, 100) for limit in ddos_limits.values()]):
-                return 3, 'protocol limits must be in within range 5-100.'
+        elif (ids_ips_info.btn == 'ps_reject'):
+            if error := configure_portscan(ids_ips_info, field='reject'):
+                return 15, error.message
 
-            configure_ddos_limits(ddos_limits)
+        elif (ids_ips_info.btn == 'passive_block_length'):
+            if error := configure_general_settings(ids_ips_info, field='pb_length'):
+                return 16, error.message
 
-        elif ('ps_enabled' in form):
-            settings = config(**{
-                'enabled': get_convert_bint(form, 'ps_enabled')
-            })
+        elif (ids_ips_info.btn == 'ids_mode'):
+            if error := configure_general_settings(ids_ips_info, field='ids_mode'):
+                return 17, error.message
 
-            if (DATA.INVALID in settings.values()):
-                return 4, INVALID_FORM
+        elif (ids_ips_info.btn == 'ips_wl_add'):
+            if error := configure_ip_whitelist(ids_ips_info, action=CFG.ADD):
+                return 18, error.message
 
-            configure_portscan(settings, field='enabled')
+        elif (ids_ips_info.btn == 'ips_wl_remove'):
+            if error := configure_ip_whitelist(ids_ips_info, action=CFG.DEL):
+                return 19, error.message
 
-        elif ('ps_reject' in form):
-            settings = config(**{
-                'reject': get_convert_bint(form, 'ps_reject')
-            })
+        elif (ids_ips_info.btn == 'dns_svr_wl'):
+            if error := configure_dns_whitelist(ids_ips_info):
+                return 20, error.message
 
-            if (DATA.INVALID in settings.values()):
-                return 5, INVALID_FORM
-
-            if error := validate_portscan_reject(settings):
-                return 6, error.message
-
-            configure_portscan(settings, field='reject')
-
-        elif ('passive_block_length' in form):
-            settings = config(**{
-                'pb_length': get_convert_int(form, 'passive_block_length')
-            })
-
-            if any([x in [DATA.MISSING, DATA.INVALID] for x in settings.values()]):
-                return 7, INVALID_FORM
-
-            if error := validate_passive_block_length(settings):
-                return 8, error.message
-
-            configure_general_settings(settings, 'pb_length')
-
-        elif ('ids_mode' in form):
-            settings = config(**{
-                'ids_mode': get_convert_bint(form, 'ids_mode')
-            })
-
-            if (DATA.INVALID in settings.values()):
-                return 9, INVALID_FORM
-
-            configure_general_settings(settings, 'ids_mode')
-
-        elif ('ips_wl_add' in form):
-            whitelist = config(**{
-                'ip': form.get('ips_wl_ip', DATA.MISSING),
-                'name': form.get('ips_wl_name', DATA.MISSING)
-            })
-
-            if (DATA.MISSING in whitelist.values()):
-                return 10, INVALID_FORM
-
-            try:
-                ip_address(whitelist.ip)
-                standard(whitelist.name)
-            except ValidationError as ve:
-                return 11, ve.message
-            else:
-                configure_ip_whitelist(whitelist, action=CFG.ADD)
-
-        elif ('ips_wl_remove' in form):
-            whitelist = config(**{
-                'ip': form.get('ips_wl_ip', DATA.MISSING)
-            })
-            if (DATA.MISSING in whitelist.values()):
-                return 12, INVALID_FORM
-
-            try:
-                ip_address(whitelist.ip)
-            except ValidationError as ve:
-                return 13, ve.message
-            else:
-                configure_ip_whitelist(whitelist, action=CFG.DEL)
-
-        elif ('dns_svr_wl' in form):
-            settings = config(**{
-                'action': get_convert_bint(form, 'dns_svr_wl')
-            })
-
-            if (DATA.INVALID in settings.values()):
-                return 14, INVALID_FORM
-
-            configure_dns_whitelist(settings)
-
-        elif ('ips_pbl_remove' in form):
-            host_info = form.get('ips_pbl_remove', DATA.INVALID)
-            if (host_info is DATA.INVALID):
-                return 15, INVALID_FORM
-
-            try:
-                host_ip, timestamp = host_info.split('/')
-
-                ip_address(host_ip)
-            except:
-                return 16, INVALID_FORM
-
-            if (convert_int(timestamp) is DATA.INVALID):
-                return 17, INVALID_FORM
-
-            pbl_remove_notify(iptoi(host_ip), int(timestamp))
-
-        else:
-            return 99, INVALID_FORM
+        elif (ids_ips_info.btn == 'ips_pbl_remove'):
+            if error := pbl_remove_notify(ids_ips_info):
+                return 21, error.message
 
         return NO_STANDARD_ERROR
+
 
 # ==============
 # VALIDATION
 # ==============
-def validate_portscan_reject(settings: config, /) -> Optional[ValidationError]:
-    ips: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ids_ips')
-
-    current_prevention = ips['port_scan->enabled']
-    if (settings.reject and not current_prevention):
-        return ValidationError('Prevention must be enabled to configure portscan reject.')
-
-def validate_passive_block_length(settings: config, /) -> Optional[ValidationError]:
-    if (settings.pb_length not in [0, 24, 48, 72]):
+def validate_pbl_remove(host: str, /) -> Optional[ValidationError]:
+    try:
+        host_ip, profile, timestamp = host.split('/')
+    except ValueError:
         return ValidationError(INVALID_FORM)
+
+    try:
+        ip_address(host_ip)
+    except ValidationError:
+        return ValidationError('Unknown IP address specified.')
+
+    if error := check_in_range(profile, (1, 15)):
+        return error
+
+    if error := check_digit(timestamp):
+        return ValidationError('Invalid timestamp format.')
+
+# =========================
+# FORM VALIDATION TEMPLATE
+# =========================
+form_validator = ValidationConfigForm({
+    # security profile should always be present so defaulting to -1 if missing to trigger error
+    '__on_enter': {
+        'security_profile': ValidationPageContext(
+            call=lambda form: check_in_range(form.get('security_profile', -1), (1, 15)),
+            append=lambda form, cfg: cfg.update({'security_profile': form['security_profile']})
+        )
+    },
+    'security_profile': SKIP_VALIDATION,
+    'security_profile_ident': {
+        'security_profile_name': ValidationFieldInfo(cfg_key='name', format=partial(alpha_maxlen, maxlen=12)),
+        'security_profile_desc': ValidationFieldInfo(
+            cfg_key='desc', format=partial(alpha_maxlen, maxlen=32, override=[' '])),
+    },
+    'ddos_enabled': {
+        'ddos_enabled': ValidationFieldInfo(cfg_key='enabled', format=check_bint, convert=int)
+    },
+    'ddos_limits': {
+        'tcp_limit': ValidationFieldInfo(
+            cfg_key='tcp', format=partial(check_in_range, r=(5, 100)), convert=int),
+        'udp_limit': ValidationFieldInfo(
+            cfg_key='udp', format=partial(check_in_range, r=(5, 100)), convert=int),
+        'icmp_limit': ValidationFieldInfo(
+            cfg_key='icmp', format=partial(check_in_range, r=(5, 100)), convert=int)
+    },
+    'ps_enabled': {
+        'ps_enabled': ValidationFieldInfo(cfg_key='enabled', format=check_bint, convert=int)
+    },
+    'ps_reject': {
+        'ps_reject': ValidationFieldInfo(cfg_key='reject', format=check_bint, convert=int)
+    },
+    'passive_block_length': {
+        'passive_block_length': ValidationFieldInfo(
+            cfg_key='pb_length', format=partial(check_in_options_int, o=(0, 24, 48, 72)), convert=int)
+    },
+    'ids_mode': {
+        'ids_mode': ValidationFieldInfo(cfg_key='ids_mode', format=check_bint, convert=int)
+    },
+    'ips_wl_add': {
+        'ips_wl_ip': ValidationFieldInfo(cfg_key='ip', format=ip_address),  # idea:: convert to iptoi here?
+        'ips_wl_name': ValidationFieldInfo(cfg_key='name', format=partial(alphanum_maxlen, maxlen=16))
+    },
+    'ips_wl_remove': {
+        'ips_wl_remove': ValidationFieldInfo(cfg_key='ip', format=ip_address, convert=iptoi)
+    },
+    'dns_svr_wl': {
+        'dns_svr_wl': ValidationFieldInfo(cfg_key='action', format=check_bint, convert=int)
+    },
+    'ips_pbl_remove': {
+        'ips_pbl_remove': ValidationFieldInfo(cfg_key='host_info', validation=validate_pbl_remove),
+        # idea:: see if there is a better "lazy" way to do this without needed to make a function.
+        # note: converting post validation to separate the fields compressed into a single int.
+        '_on_exit': ValidationFieldContext(
+            call=lambda cfg: exec("h = cfg.host_info.split('/'), cfg.update({'host': iptoi(h[0]), 'profile_idx': int(h[1]), 'timestamp': int(h[2])})"))
+    }
+})
 
 # ==============
 # CONFIGURATION
 # ==============
-def configure_ddos(ddos: CFG) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
+def configure_security_profile_ident(sp_ident: config) -> Optional[ConfigurationError]:
+    ids_ips = ConfigurationManager(
+        f'profiles/profile_{sp_ident.security_profile}', cfg_type='security/ids_ips', err_as_value=True)
+    with ids_ips:
+        ids_ips.config_data['name'] = sp_ident.name
+        ids_ips.config_data['description'] = sp_ident.desc
 
-        ips_settings['ddos->enabled'] = ddos.enabled
+    return ids_ips.error
 
-        dnx.write_configuration(ips_settings.expanded_user_data)
+def configure_ddos(ddos: CFG) -> Optional[ConfigurationError]:
+    ids_ips = ConfigurationManager(
+        f'profiles/profile_{ddos.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+    with ids_ips:
+        ids_ips.config_data['ddos->enabled'] = ddos.enabled
 
-def configure_ddos_limits(ddos_limits: config) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
+    return ids_ips.error
 
+def configure_ddos_limits(ddos_limits: config) -> Optional[ConfigurationError]:
+    ids_ips = ConfigurationManager(
+        f'profiles/profile_{ddos_limits.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+    with ids_ips:
         for protocol, limit in ddos_limits.items():
-            ips_settings[f'ddos->limits->source->{protocol}'] = limit
+            ids_ips.config_data[f'ddos->limits->source->{protocol}'] = limit
 
-        dnx.write_configuration(ips_settings.expanded_user_data)
+    return ids_ips.error
 
-def configure_portscan(portscan: config, *, field: str) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
-
+def configure_portscan(portscan: config, *, field: str) -> Optional[ConfigurationError]:
+    ids_ips = ConfigurationManager(
+        f'profiles/profile_{portscan.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+    with ids_ips:
         if (field == 'enabled'):
-            ips_settings['port_scan->enabled'] = portscan.enabled
+            ids_ips.config_data['port_scan->enabled'] = portscan.enabled
 
             if (not portscan.enabled):
-                ips_settings['port_scan->reject'] = 0
+                ids_ips.config_data['port_scan->reject'] = 0
 
         elif (field == 'reject'):
-            ips_settings['port_scan->reject'] = portscan.reject
+            ids_ips.config_data['port_scan->reject'] = portscan.reject
 
-        dnx.write_configuration(ips_settings.expanded_user_data)
+    return ids_ips.error
 
-def configure_general_settings(settings: config, /, field) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
-
+def configure_general_settings(settings: config, *, field: str) -> Optional[ConfigurationError]:
+    ids_ips = ConfigurationManager(
+        f'profiles/profile_{settings.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+    with ids_ips:
         if (field == 'pb_length'):
-            ips_settings['passive_block_ttl'] = settings.pb_length
+            ids_ips.config_data['passive_block_ttl'] = settings.pb_length
 
         elif (field == 'ids_mode'):
-            ips_settings['ids_mode'] = settings.ids_mode
+            ids_ips.config_data['ids_mode'] = settings.ids_mode
 
-        dnx.write_configuration(ips_settings.expanded_user_data)
+    return ids_ips.error
 
-def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
-
+def configure_ip_whitelist(whitelist: config, *, action: CFG) -> Optional[ConfigurationError]:
+    ids_ips = ConfigurationManager(
+        f'profiles/profile_{whitelist.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+    with ids_ips:
         if (action is CFG.ADD):
-            ips_settings[f'whitelist->ip_whitelist->{whitelist.ip}'] = whitelist.name
+            ids_ips.config_data[f'whitelist->ip_whitelist->{whitelist.ip}'] = whitelist.name
 
         elif (action is CFG.DEL):
-            del ips_settings[f'whitelist->ip_whitelist->{whitelist.ip}']
+            del ids_ips.config_data[f'whitelist->ip_whitelist->{whitelist.ip}']
 
-        dnx.write_configuration(ips_settings.expanded_user_data)
+    return ids_ips.error
 
-def configure_dns_whitelist(settings: config, /) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
+def configure_dns_whitelist(settings: config, /) -> Optional[ConfigurationError]:
+    ids_ips = ConfigurationManager(
+        f'profiles/profile_{settings.security_profile}', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+    with ids_ips:
+        ids_ips.config_data['whitelist->dns_servers'] = settings.action
 
-        ips_settings['whitelist->dns_servers'] = settings.action
-
-        dnx.write_configuration(ips_settings.expanded_user_data)
+    return ids_ips.error
 
 # error condition should never be met, but just for initial implementation and piece of mind
-def pbl_remove_notify(host: int, timestamp: int) -> None:
-    error = True
-    with IPTablesManager() as iptables:
-        iptables.remove_passive_block(host, timestamp)
+def pbl_remove_notify(pbl: config) -> Optional[ConfigurationError]:
+    iptables = IPTablesManager(err_as_value=True)
+    with iptables:
+        iptables.remove_passive_block(pbl.host, pbl.profile_idx, pbl.timestamp)
 
-        error = False
+    if (iptables.error):
+        return iptables.error
 
-    if error: return
+    ids_ips = ConfigurationManager('global', cfg_type='security/ids_ips', err_as_value=True, strict=False)
+    with ids_ips:
+        ids_ips.config_data[f'pbl_remove->{pbl.host}'] = [pbl.profile_idx, pbl.timestamp]
 
-    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
-        ips_global_settings: ConfigChain = dnx.load_configuration(strict=False)
-
-        ips_global_settings[f'pbl_remove->{host}'] = timestamp
-
-        dnx.write_configuration(ips_global_settings.expanded_user_data)
-
-
+    return ids_ips.error

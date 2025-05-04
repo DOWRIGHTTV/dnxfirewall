@@ -8,7 +8,9 @@ import os.path
 
 from enum import Enum as _Enum, IntEnum as _IntEnum, IntFlag as _IntFlag
 
-from dnx_gentools.def_constants import HOME_DIR as _HOME_DIR, SIG_DIR as _SIG_DIR
+from dnx_gentools.def_constants import module_import_callout, SIG_DIR as _SIG_DIR
+
+module_import_callout(__file__)
 
 # ===============
 # RUNTIME TYPES
@@ -36,21 +38,6 @@ class SOCK(_IntEnum):
     RAW = 1
     TCP = 6
     UDP = 17
-
-class PROTO(_IntEnum):
-    NOT_SET = 0
-
-    # IP
-    ANY     = 0  # alias
-    ICMP    = 1
-    TCP     = 6
-    UDP     = 17
-
-    # TCP/UDP
-    DNS      = 53
-    DHCP_SVR = 67
-    HTTPS    = 443
-    DNS_TLS  = 853
 
 # syslog/logging
 class LOG(_IntEnum):
@@ -201,6 +188,8 @@ class DNS_CAT(_IntEnum):
     weaponry        = 500
 
 
+DNS_MALWARE_CATEGORIES = (DNS_CAT.crypto_miner, DNS_CAT.malicious)
+
 _TLD_LIST = [
     'NONE', 'ru', 'cn', 'xxx', 'porn', 'adult', 'ads', 'click', 'download',
     'top', 'loan', 'work', 'men', 'cf', 'gq', 'ml', 'ga'
@@ -221,8 +210,9 @@ except FileNotFoundError:
     _GEO_LIST = ['NONE', 'RFC1918']
 
 GEO = _IntEnum('GEO', _GEO_LIST, start=0)
+GEOID = _NewType('GEOID', int)
 GEOLOCATION = _NewType('GEOLOCATION', str)
-GEO_ID_TO_STRING: dict[int, GEOLOCATION] = {i: GEOLOCATION(x) for i, x in enumerate(_GEO_LIST)}
+GEO_ID_TO_STRING: dict[GEOID, GEOLOCATION] = {i: GEOLOCATION(x) for i, x in enumerate(_GEO_LIST)}  # note: typing is fine as is
 
 # ----------------------
 # REPUTATION
@@ -250,6 +240,7 @@ class REP(_IntEnum):
 REPUTATION = _NewType('REPUTATION', str)
 REP_ID_TO_STRING: dict[int, REPUTATION] = {rep.value: REPUTATION(rep.name) for rep in REP}
 
+IP_MALWARE_CATEGORIES = (REP.COMMAND_CONTROL.name,)
 
 # ======================
 # CUSTOM ENUM TYPES
@@ -259,6 +250,10 @@ REP_ID_TO_STRING: dict[int, REPUTATION] = {rep.value: REPUTATION(rep.name) for r
 # ----------------------
 # ENUM BASE
 # ----------------------
+# note: with __init__ check: 4x slower than leaving as int
+#       without __init__ check: 2x slower than leaving as int
+#       subclass of int: 1.5x slower than calling int() on the value
+# idea:: make the __init__ method a dev only function, then have the name property pull from the index.
 class DNXEnum(int):
 
     _members: dict[int, str] = {}
@@ -270,11 +265,77 @@ class DNXEnum(int):
         except KeyError:
             raise TypeError(f'[{val}] is not a valid {self.__class__.__name__} member.')
 
-        super().__init__()
-
     @property
     def name(self) -> str:
         return self._name
+
+
+class _DB_Mode(_IntEnum):
+    NONE  = 0
+    READ  = 1
+    WRITE = 2
+    CLEAR = 4
+    WR_CL = 6
+    ALL   = 7
+
+class DB_MODE(DNXEnum):
+
+    _members = {x.value: x.name for x in _DB_Mode}
+
+DB_MODE_NONE  = DB_MODE(_DB_Mode.NONE)
+DB_MODE_READ  = DB_MODE(_DB_Mode.READ)
+DB_MODE_WRITE = DB_MODE(_DB_Mode.WRITE)
+DB_MODE_CLEAR = DB_MODE(_DB_Mode.CLEAR)
+DB_MODE_WR_CL = DB_MODE(_DB_Mode.WR_CL)
+DB_MODE_ALL   = DB_MODE(_DB_Mode.ALL)
+
+
+class _Switch(_IntEnum):
+    OFF = 0
+    ON  = 1
+
+class SWITCH(DNXEnum):
+
+    _members = {x.value: x.name for x in _Switch}
+
+SWITCH_OFF = SWITCH(_Switch.OFF)
+SWITCH_ON  = SWITCH(_Switch.ON)
+
+# ----------------------
+# NETWORK PROTOCOLS
+# ----------------------
+class PROTO(_IntEnum):
+    NOT_SET  = 0
+
+    # IP
+    ANY      = 0  # alias
+    ICMP     = 1
+    TCP      = 6
+    UDP      = 17
+
+    # TCP/UDP
+    DNS      = 53
+    DHCP_SVR = 67
+    HTTPS    = 443
+    DNS_TLS  = 853
+
+
+class NETWORK_PROTOCOL(DNXEnum):
+
+    _members = {x.value: x.name for x in PROTO}
+
+
+PROTO_NOT_SET  = NETWORK_PROTOCOL(PROTO.NOT_SET)
+# IP PROTOCOLS
+PROTO_ANY      = NETWORK_PROTOCOL(PROTO.ANY)  # alias
+PROTO_ICMP     = NETWORK_PROTOCOL(PROTO.ICMP)
+PROTO_TCP      = NETWORK_PROTOCOL(PROTO.TCP)
+PROTO_UDP      = NETWORK_PROTOCOL(PROTO.UDP)
+# TCP/UDP PROTOCOLS
+PROTO_DNS      = NETWORK_PROTOCOL(PROTO.DNS)
+PROTO_DHCP_SVR = NETWORK_PROTOCOL(PROTO.DHCP_SVR)
+PROTO_HTTPS    = NETWORK_PROTOCOL(PROTO.HTTPS)
+PROTO_DNS_TLS  = NETWORK_PROTOCOL(PROTO.DNS_TLS)
 
 # ----------------------
 # PACKET DECISIONS
@@ -285,6 +346,7 @@ class CONN(_IntEnum):
     INSPECT = -1  # drop with full inspection
     DROP    = 0
     ACCEPT  = 1
+
 
 class DECISION(DNXEnum):
 
@@ -307,6 +369,7 @@ class DIR(_IntFlag):
     BOTH     = 3
     ON       = 4
     ALL      = 5
+
 
 class DIRECTION(DNXEnum):
 

@@ -1,7 +1,7 @@
 {% extends('layout.html') %}
-{% block body %}
 {# aliasing for now so we can reuse template #}
 {% set page_settings = domain_settings %}
+{% block body %}
 <section id="tabs-bar">
   <div class="container">
     <div class="row">
@@ -19,12 +19,12 @@
 </section>
 <section id="categories" class="section">
   <div class="container">
-  {% if domain_settings['user_defined'] %}
+  {% if domain_settings.user_defined %}
     <div class="row">
       <div class="col s12 m10 offset-m1">
         <div class="card-panel hoverable {{ theme.card }}">
           {{ create_title('user defined')|safe }}
-          {% for category, settings in domain_settings['user_defined'] %}
+          {% for category, settings in domain_settings.user_defined %}
             {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
             {{ create_decora_switch('user_defined', category, settings['enabled'])|safe }}
             {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
@@ -40,7 +40,7 @@
           {{ create_title(label)|safe }}
           {% for category, settings in categories.items() %}
           {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
-            {{ create_tandem_decora_switch(('built-in', 'keyword'), (label, category)|join(','),
+            {{ create_decora_switch_tandem(('built-in', 'keyword'), (label, category)|join(','),
                 (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
           {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
           {% endfor %}
@@ -56,11 +56,11 @@
     <div class="row">
       <div class="col s8 offset-s2">
         <div class="card-panel hoverable {{ theme.card }}">
-        {% for label, categories in domain_settings['tld'] %}
+        {% for label, categories in domain_settings.tld %}
           {{ create_title(label)|safe }}
           {% for tld, status in categories.items() %}
             {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
-            {{ create_decora_switch('tld', tld, status)|safe }}
+            {{ create_decora_switch('tld', (label, tld)|join(','), status)|safe }}
             {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
           {% endfor %}
           <br>
@@ -71,69 +71,75 @@
   </div>
 </section>
 <script>
-async function updateCategory(btn_idx, btn, enabled, tethered) {
+async function updateCategory(btn, enabled, btn_idx = 0, tethered = 0) {
 
-    console.log(btn.name, btn.value);
+  {# console.log(btn.name, btn.value); #}
 
-    let response = await ajaxClient.post('/post', {'type': btn.name, 'category': btn.value, 'enabled': enabled});
+  let response = await ajaxClient.post('/post', {
+    'security_profile': {{ domain_settings.security_profile }},
+    'type': btn.name, 'category': btn.value, 'enabled': enabled
+  });
 
-    // if an error is returned, immediately return. pop-up is handled by the ajax client
-    if (ajaxClient.handleResponse(response, btn)) { return; }
+  // if an error is returned, immediately return. pop-up is handled by the ajax client
+  if (ajaxClient.handleResponse(response, btn)) {
+    return;
+  }
 
-    let btn_value = btn.value;
-    // normalizing value for built-in categories since they also have group identifiers
-    if (btn.value.includes(',')) {
-        btn_value = btn.value.split(',')[1];
+  // TLD buttons are handled differently
+  if (btn.name === 'tld') {
+    updateBtn(btn.parentElement.parentElement, enabled);
+    return;
+  }
+
+  let btn_value = btn.value;
+  // normalizing value for built-in categories since they also have group identifiers
+  if (btn.value.includes(',')) {
+    btn_value = btn.value.split(',')[1];
+  }
+
+  // manually changing the active button instead of using an event listener to prevent a switch on server errors.
+  let btn_standard = document.querySelector('#' + btn_value + '-1')
+  let btn_keyword = document.querySelector('#' + btn_value + '-2')
+
+  {# console.log(btn_idx, btn, enabled, tethered); #}
+
+  // update standard button
+  if (btn_idx === 0) {
+    updateBtn(btn_standard, enabled);
+    // changing keyword if tethered or disabling if standard is disabled
+    if (enabled === 0 || tethered === 1) {
+      updateBtn(btn_keyword, enabled);
     }
-
-    // manually changing the active button instead of using an event listener to prevent a switch on server errors.
-    {#const buttons = [document.querySelector("#" + category.value + "-1"), document.querySelector("#" + category.value + "-2")];#}
-    let btn_standard = document.querySelector('#' + btn_value + '-1')
-    let btn_keyword = document.querySelector('#' + btn_value + '-2')
-
-    console.log(btn_idx, btn, enabled, tethered);
-
-    // update standard button
-    if (btn_idx === 0) {
-        updateBtn(btn_standard, enabled);
-        // changing keyword if tethered or disabling if standard is disabled
-        if (enabled === 0 || tethered === 1) {
-            updateBtn(btn_keyword, enabled);
-        }
     // update keyword button
-    } else {
-        updateBtn(btn_keyword, enabled);
-        // if the buttons are tethered, update the standard button to same as keyword button
-        if (tethered) {
-            updateBtn(btn_standard, enabled);
-        }
+  } else {
+    updateBtn(btn_keyword, enabled);
+    // if the buttons are tethered, update the standard button to same as keyword button
+    if (tethered) {
+      updateBtn(btn_standard, enabled);
     }
-
-    {#let current_button = ;#}
-    {#updateBtn(buttons[button_idx]);#}
-    {#updateBtn(buttons[(button_idx + 1) % 2]);#}
+  }
 }
 function updateBtn(btn, enabled) {
-    console.log(btn);
+  console.log(btn);
 
-    let btn_array = btn.querySelectorAll('li');
+  let btn_array = btn.querySelectorAll('li');
 
-    console.log(btn_array);
+  console.log(btn_array);
 
-    let btn_off_classlist = btn_array[0].classList;
-    let btn_on_classlist = btn_array[1].classList;
-    if (enabled === 0) {
-        if (!btn_off_classlist.contains("active")) {
-            btn_off_classlist.add("active");
-        }
-        btn_on_classlist.remove("active");
-
-    } else {
-        if (!btn_on_classlist.contains("active")) {
-            btn_on_classlist.add("active");
-        }
-        btn_off_classlist.remove("active");
+  let btn_off_classlist = btn_array[0].classList;
+  let btn_on_classlist = btn_array[1].classList;
+  if (enabled === 0) {
+    if (!btn_off_classlist.contains("active")) {
+      btn_off_classlist.add("active");
     }
+    btn_on_classlist.remove("active");
+
+  } else {
+    if (!btn_on_classlist.contains("active")) {
+      btn_on_classlist.add("active");
+    }
+    btn_off_classlist.remove("active");
+  }
 }
 </script>
 {% endblock %}

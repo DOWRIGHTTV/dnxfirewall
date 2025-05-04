@@ -2,20 +2,27 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import PROTO, DNS, DNS_MASK
-from dnx_gentools.def_namedtuples import QNAME_RECORD, QNAME_RECORD_UPDATE, RESOURCE_RECORD
 from dnx_gentools.def_exceptions import ProtocolError
+from dnx_gentools.def_constants import TYPE_CHECKING, DEFAULT_TTL, MAX_A_RECORD_COUNT, UINT32_MAX, NULL_ADDR
+from dnx_gentools.def_constants import THIRTY_MIN, dot_join, byte_join, fast_time
+from dnx_gentools.def_enums import DNS, DNS_MASK
+from dnx_gentools.def_enums import PROTO_UDP, PROTO_DNS_TLS
+from dnx_gentools.def_namedtuples import QNAME_RECORD, QNAME_RECORD_UPDATE, RESOURCE_RECORD
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
-from dnx_iptools.protocol_tools import *
-from dnx_iptools.cprotocol_tools import itoip, iptoi, calc_checksum
+from dnx_iptools.protocol_tools import parse_query_name, domain_stob, btoia
+from dnx_iptools.cprotocol_tools import iptoi, calc_checksum
 from dnx_iptools.interface_ops import load_interfaces
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 
 from dns_proxy_cache import NO_QNAME_RECORD
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Union
+    from dnx_gentools.def_typing import NET_ADDRESS, StructUnpack, ProxyPackets
+
+    from dnx_gentools.def_enums import NETWORK_PROTOCOL
 
 
 __all__ = (
@@ -52,7 +59,7 @@ class ClientQuery:
         'question_record', 'additional_records'
     )
 
-    def __init__(self, address: Address, sock_info):
+    def __init__(self, address: NET_ADDRESS, sock_info):
 
         self.client_ip:   int = iptoi(address[0])
         self.client_port: int = address[1]
@@ -145,7 +152,7 @@ class ClientQuery:
 
         return send_data
 
-    def generate_dns_query(self, dns_id: int, protocol: PROTO) -> bytearray:
+    def generate_dns_query(self, dns_id: int, protocol: NETWORK_PROTOCOL) -> bytearray:
         # setting additional data flag in dns header if detected
         arc = 1 if self.additional_records else 0
 
@@ -158,7 +165,7 @@ class ClientQuery:
         send_data += self.additional_records
 
         # ternary looked gross so using standard if statement
-        if (protocol is PROTO.DNS_TLS):
+        if (protocol is PROTO_DNS_TLS):
             send_data[:2] = short_pack(len(send_data)-2)
         else:
             send_data = send_data[2:]
@@ -169,7 +176,7 @@ class ClientQuery:
     def init_local_query(cls, qname: str, keepalive: bool = False) -> Union[bytearray, ClientQuery]:
         '''alternate constructor for creating locally generated queries (top domain or keepalive requests).
 
-        if keepalive is set, a bytearray of send data is returned.
+        if keepalive is set, a bytearray of send_data is returned.
         If not keepalive, an instance of ClientQuery will be returned, which requires subsequent call to a send_data
         generation method.
         '''
@@ -184,7 +191,7 @@ class ClientQuery:
 
         # keepalive are TLS only so we can hardcode the protocol.
         if (keepalive):
-            return self.generate_dns_query(DNS.KEEPALIVE, PROTO.DNS_TLS)
+            return self.generate_dns_query(DNS.KEEPALIVE, PROTO_DNS_TLS)
 
         return self
 
@@ -193,7 +200,7 @@ class ClientQuery:
 # PROXY - FULL INSPECTION, DIRECT SOCKET
 # ======================================
 ip_hdr_template: Structure_T = PR_IP_HDR(
-    (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('protocol', PROTO.UDP))
+    (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('protocol', PROTO_UDP))
 )
 udp_hdr_template: Structure_T = PR_UDP_HDR(
     (('checksum', 0),)
@@ -207,6 +214,7 @@ class DNSPacket(NFPacket):
     qtype:  int
     qclass: int
     qname:  str
+    local_domain: bool
 
     __slots__ = (
         'action',
@@ -228,12 +236,12 @@ class DNSPacket(NFPacket):
         # ============================
         dns_header: StructUnpack = dns_header_unpack(self.udp_payload[:12])
 
-        # filtering out non query flags (malformed payload)
+        # filtering out non-query flags (malformed payload)
         self.qr = dns_header[1] & DNS_MASK.QR
         if (self.qr != DNS.QUERY):
             raise ProtocolError
 
-        # finishing parse of dns header post filter
+        # finishing parse of dns header post-filter
         self.dns_id = dns_header[0]
         self.rd = dns_header[1] & DNS_MASK.RD
         self.ad = dns_header[1] & DNS_MASK.AD
@@ -246,7 +254,6 @@ class DNSPacket(NFPacket):
 
         # parsing dns name queried and byte offset due to variable length | ex www.micro.com or micro.com
         offset: int
-        query_info: tuple[str, bool]
         offset, self.qname, self.local_domain = parse_query_name(dns_query)
 
         # defining question record

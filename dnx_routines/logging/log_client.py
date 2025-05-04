@@ -7,28 +7,35 @@ import threading
 
 from json import dumps
 from functools import partial
-from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
+from socket import socket, AF_UNIX, SOCK_DGRAM, SOCK_CLOEXEC, SOL_SOCKET, SCM_CREDENTIALS
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
+from dnx_gentools.def_constants import TYPE_CHECKING, ROOT, HOME_DIR, DATABASE_SOCKET, DNX_AUTHENTICATION
+from dnx_gentools.def_constants import fast_time, console_log
 from dnx_gentools.def_enums import LOG
 from dnx_gentools.standard_tools import classproperty, dnx_queue, Initialize
-from dnx_gentools.file_operations import change_file_owner, load_data, cfg_read_poller
-
+from dnx_gentools.file_operations import change_file_owner, cfg_read_poller
 from dnx_gentools.system_info import System
 
 # ===============
 # TYPING IMPORTS
 # ===============
-#
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Optional, ClassVar, Union, TextIO
+    from dnx_gentools.def_typing import Lock_T, Socket_T, EVENT_LOGS
+
+    from dnx_gentools.file_operations import ConfigChain
 
 
 __all__ = (
-    'LogHandler', 'Log', 'LogHandler_T',
+    'LogHandler', 'Log',
 
     'direct_log', 'message', 'db_message', 'convert_level',
 
-    'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',
+    # 'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',
 )
 
 _system_date = System.date
@@ -69,7 +76,7 @@ def direct_log(m_name: str, message_level: LOG, msg: str, *, cli: bool = False) 
     log_path = f'{HOME_DIR}/dnx_profile/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
     log_msg  = f'{fast_time()}|{m_name}|{message_level.name.lower()}|{msg}\n'
 
-    # if the log file doesn't already exist and the process is uid is root, we will change the owner to dnx.
+    # if the log file doesn't already exist and the process uid is root, we will change the owner to dnx.
     change_owner = ROOT and not log_exists(log_path)
 
     _dump_to_file(log_path, log_msg, lock=direct_log_lock)
@@ -106,7 +113,7 @@ def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]
 
     valid input: 0-7.
 
-    if level is None the entire dict will be returned.
+    if the log level is None, the entire dict will be returned.
     '''
     levels = {
         0: ['emergency', 'system is unusable'],
@@ -136,7 +143,7 @@ def _log_handler():
 
     log_path: str = f'{HOME_DIR}/dnx_profile/log/'
 
-    initializer: list[int] = []
+    # initializer: list[int] = []
     syslog: bool = False
 
     # keeping file open for performance.
@@ -154,7 +161,7 @@ def _log_handler():
     # ------------------
     # DB SERVICE SOCKET
     # ------------------
-    db_client: Socket_T = socket(AF_UNIX, SOCK_DGRAM)
+    db_client: Socket_T = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC)
 
     db_sendmsg = db_client.sendmsg
 
@@ -165,7 +172,7 @@ def _log_handler():
         suppress_output: ClassVar[bool] = False
 
         @classmethod
-        def run(cls, *, name: str, console_output: bool = False, suppress_output: bool = False):
+        def run(cls, *, name: str, console_output: bool = False, suppress_output: bool = False) -> None:
             '''
             initialize log handler settings and monitor system configs for changes with log/syslog settings.
 
@@ -173,9 +180,7 @@ def _log_handler():
             '''
             nonlocal initialized, handler_name, cli_output, log_path, db_client
 
-            # TODO: wtf is this? initializer doesnt seem to be used anywhere or even set so None.
-            #  - i think this is left over from a previous implementation.
-            if (initializer is None):
+            if (initialized):
                 raise RuntimeError('the log handler has already been started.')
 
             handler_name = name
@@ -271,7 +276,7 @@ def _log_handler():
 
         @staticmethod
         def cli(log_msg: str):
-            '''print a message to console. this is for all important console only events.
+            '''print a message to console. this is for all important console events.
             '''
             if (cli_output):
                 console_log(log_msg)
@@ -279,7 +284,7 @@ def _log_handler():
         @staticmethod
         # TODO: figure out a nice way to alert on excessive amounts of dropped events. maybe store dropped events
         #  to a backlog file that can be loaded into db when available.
-        def event_log(timestamp: int, log: tuple, method: str):
+        def event_log(log: EVENT_LOGS, method: bytes):
             '''log security events to database.
 
             sends over local socket controlled by database service to aggregate events from all modules.
@@ -287,7 +292,7 @@ def _log_handler():
             '''
             try:
                 db_sendmsg(
-                    [db_message(timestamp, log, method)],
+                    [b'|'.join([log.encode(), method])],
                     [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)],
                     0, DATABASE_SOCKET
                 )
@@ -327,7 +332,7 @@ def _log_handler():
 
         current_date = _system_date(string=True)
         # if the dates are different, then the day has changed.
-        # we close the previous days log file, then open a new file with current date.
+        # we close the previous days log file, then open a new file with the current date.
         # for processes running as root, we will modify the file's owner to dnx so webui can read them.
         if (current_date != _log_buf_date):
             _log_buf.close()
@@ -343,7 +348,7 @@ def _log_handler():
         # WRITING LOG ENTRY TO FILE BUFFER
         _log_buf.write(job)
 
-        # increments counter then checks currently configured limit. resets counter if limit reached.
+        # increments counter then checks currently configured limit. resets counter if the limit is reached.
         _log_write_ct += 1
         if (_log_write_ct == line_buf_limit):
             _log_buf.flush()
@@ -414,102 +419,20 @@ def _log_handler():
 
 
 Log = LogHandler = _log_handler()
-LogHandler_T: TypeAlias = Type[LogHandler]
 
 # ========================
 # DIRECT ACCESS FUNCTIONS
 # ========================
 # TODO: test direct access functions after a log level is changed and methods are reset.
 #  - im pretty sure this reference will change so it will not work unless we setattr on the globals
-LogLevel: TypeAlias = Callable[[str], None]
-
-emergency: LogLevel = LogHandler.emergency
-alert: LogLevel = LogHandler.alert
-critical: LogLevel = LogHandler.critical
-error: LogLevel = LogHandler.error
-warning: LogLevel = LogHandler.warning
-notice: LogLevel = LogHandler.notice
-informational: LogLevel = LogHandler.informational
-debug: LogLevel = LogHandler.debug
-cli: LogLevel = LogHandler.cli
-
-# ========================
-# EXCEPTION HOOKS
-# ========================
-# TODO: consider moving this to a separate module.
-# we will put this here for now since the log client is already imported by all modules that would be using it.
-# the associated log file writing will also be handled by the log client, so it might make sense to keep it here.
-import os as _os
-import sys as _sys
-import traceback as _tb
-
-_err_report_write_lock = threading.Lock()
-_err_report_path = f'{HOME_DIR}/dnx_profile/log/_err_reports/{_system_date(string=True)}_err.log'
-
-# Process hook -> called if an unhandled exception occurs in the Main thread or within a Thread exception hook.
-def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, KeyboardInterrupt):
-        print(f'\nProcess [{__file__.split("/", 3)[3]}] terminated by Keyboard Interrupt.')
-        _os._exit(1)
-
-    err_report = _format_output(exc_type, exc_value, exc_traceback)
-
-    _dump_to_file(_err_report_path, err_report, lock=_err_report_write_lock)
-
-    # checking for Log handler initialization to prevent additional errors on early runtime thread exceptions
-    if (Log.is_running):
-        Log.alert(f'{str(exc_type).split()[1][:-1]} -> {exc_value} :: see {_err_report_path}')
-
-_sys.excepthook = _handle_unhandled_exception
-
-
-# Threads hook
-def _handle_unhandled_thread_exception(args, /):
-    ''' args = exc_type, exc_value, exc_traceback, thread
-    '''
-    err_report = _format_output(args.exc_type, args.exc_value, args.exc_traceback)
-
-    _dump_to_file(_err_report_path, err_report, lock=_err_report_write_lock)
-
-
-threading.excepthook = _handle_unhandled_thread_exception
-
-
-# UTILITY FUNCTIONS
-def _format_output(exc_type, exc_value, exc_traceback) -> str:
-    str_builder = [
-        _format_threads(),
-        f'{str(exc_type).split()[1][:-1]} -> {exc_value}\n',
-        '-' * 36,
-        ''.join(_tb.format_tb(exc_traceback)),
-        '-' * 36,
-        ''
-    ]
-
-    return '\n'.join(str_builder)
-
-def _format_threads() -> str:
-    active_threads = threading.enumerate()
-
-    str_builder = [
-        '=' * 36,
-        f'active: {len(active_threads)} time={fast_time()}',
-        '=' * 36
-    ]
-
-    for i, t in enumerate(threading.enumerate(), 1):
-
-        if t is threading.main_thread():
-            status = 'M'
-
-        elif t is threading.current_thread():
-            status = '!'
-
-        else:
-            status = 'R'
-
-        str_builder.append(f'[{status}] {t}')
-
-    str_builder.append('-' * 36)
-
-    return '\n'.join(str_builder)
+# LogLevel: TypeAlias = Callable[[str], None]
+#
+# emergency: LogLevel = LogHandler.emergency
+# alert: LogLevel = LogHandler.alert
+# critical: LogLevel = LogHandler.critical
+# error: LogLevel = LogHandler.error
+# warning: LogLevel = LogHandler.warning
+# notice: LogLevel = LogHandler.notice
+# informational: LogLevel = LogHandler.informational
+# debug: LogLevel = LogHandler.debug
+# cli: LogLevel = LogHandler.cli

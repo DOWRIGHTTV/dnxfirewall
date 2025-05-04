@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-# TODO: move this module to cfirewall. this should be able to be implemented in the form of quotas.
+# deprecated:: move this module to cfirewall.
+#  this should be able to be implemented in the form of quotas.
 #  either have it directly on the rule or use a "rule id" key pair with a quota time as value for rule to check against.
+raise DeprecationWarning('This module is deprecated and will be moved to cfirewall via quotas.')
 
-# TODO: this can and should be moved to cfirewall
-# if local ip is not in the ip whitelist, the packet will be dropped while time restriction is active.
-# if (LanRestrict.is_active and packet.in_zone == LAN_IN
-#         and packet.src_ip not in self.ip_whitelist):
-#     packet.nfqueue.drop()
-#
-#     return False
 
 import threading
 

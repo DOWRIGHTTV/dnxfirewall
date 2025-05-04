@@ -2,26 +2,25 @@
 
 from __future__ import annotations
 
-import fcntl
+from dnx_gentools.def_constants import module_import_callout
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import Queue, CFG
-from dnx_gentools.file_operations import load_configuration
+module_import_callout(__file__)
+
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, console_log, shell, str_join, INITIALIZE_MODULE
+from dnx_gentools.def_enums import Queue
+from dnx_gentools.file_operations import ConfigurationError, acquire_lock, release_lock, load_configuration
 
 try:
     from dnx_iptools.cprotocol_tools import itoip
 except ImportError:
     pass
 
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import *
+
 __all__ = (
     'IPTablesManager'
 )
-
-# aliases for readability
-FILE_LOCK = fcntl.flock
-EXCLUSIVE_LOCK = fcntl.LOCK_EX
-UNLOCK_LOCK = fcntl.LOCK_UN
 
 def ipt_shell(command: str, table: str = 'filter', action: str = '-A') -> None:
     '''iptables wrapper of the dnx shell function.
@@ -118,25 +117,28 @@ class _Defaults:
         ipt_shell(f'POSTROUTING -o {self._wan_int} -j MASQUERADE', table='nat')
 
 
+# todo: implement err_as_value semantic in line with ConfigurationManager.
 class IPTablesManager:
     '''This is the IP Tables rule manager.
 
-    if class is called in as a context manager, all method calls must be run in the context where the class instance
-    itself is returned as the object.
-
-    Changes as part of a context will be automatically saved upon exit of the context, otherwise they will have to be
-    saved manually.
+    Changes as part of a context will be automatically saved upon exit.
     '''
+    iptables_lock_file: ConfigLock = f'{HOME_DIR}/dnx_profile/iptables/iptables.lock'
+
     __slots__ = (
+        '_err_as_value', 'error',
+
         '_intf_to_zone', '_zone_to_intf',
 
         '_iptables_lock'
     )
 
-    def __init__(self) -> None:
-        interfaces: ConfigChain = load_configuration('system', cfg_type='global')
+    def __init__(self, err_as_value: bool = False) -> None:
+        # error as value semantics
+        self._err_as_value = err_as_value
+        self.error: Optional[ConfigurationError] = None
 
-        builtins = interfaces.get_items('interfaces->builtin')
+        builtins = load_configuration('system', cfg_type='global').get_items('interfaces->builtin')
 
         self._intf_to_zone: dict[str, int] = {
             info['ident']: zone for zone, info in builtins
@@ -146,10 +148,8 @@ class IPTablesManager:
             zone: info['ident'] for zone, info in builtins
         }
 
-        self._iptables_lock = open(f'{HOME_DIR}/dnx_profile/iptables/iptables.lock', 'r+')
-
     def __enter__(self) -> IPTablesManager:
-        FILE_LOCK(self._iptables_lock, EXCLUSIVE_LOCK)
+        self._iptables_lock = acquire_lock(self.iptables_lock_file)
 
         return self
 
@@ -157,11 +157,17 @@ class IPTablesManager:
         if (exc_type is None):
             self.commit()
 
-        FILE_LOCK(self._iptables_lock, UNLOCK_LOCK)
-        self._iptables_lock.close()
+        release_lock(self._iptables_lock)
+
+        if (exc_type):
+            self.error = ConfigurationError(f'IPTables manager failed while modifying the rules. error->{exc_val}')
+
+            if (not self._err_as_value):
+                raise self.error
 
         return True
 
+    # idea:: this should probably be a static method so it can be called after other static methods make changes.
     def commit(self) -> None:
         '''explicit, process safe, call to save iptables to back-up file.
 
@@ -174,7 +180,6 @@ class IPTablesManager:
         '''
         shell(f'sudo iptables-restore < {HOME_DIR}/dnx_profile/iptables/iptables_backup.cnf', check=True)
 
-    # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self, *, suppress: bool = False) -> None:
         '''convenience function wrapper around the iptables Default class.
 
@@ -233,14 +238,18 @@ class IPTablesManager:
 
         shell(nat_rule, check=True)
 
-    def delete_nat(self, rule: config) -> None:
+    def delete_nat(self, rule: config) -> Optional[str]:
         shell(f'sudo iptables -t nat -D {rule.nat_type} {rule.position}', check=True)
 
-    def remove_passive_block(self, host: int, timestamp: int) -> None:
-        shell(f'sudo iptables -t raw -D IPS -s {itoip(host)} -j DROP -m comment --comment {timestamp}', check=True)
+        return self._intf_to_zone.get(f'{rule.src_intf}', None)
+
+    def remove_passive_block(self, host: int, profile_idx: int, timestamp: int) -> None:
+        comment = f'-m comment --comment {profile_idx}-{timestamp}'
+
+        shell(f'sudo iptables -t raw -D IPS -s {itoip(host)} -j DROP {comment}', check=True)
 
     @staticmethod
-    # this allows forwarding through system, required for SNAT/MASQUERADE to work.
+    # this allows forwarding through the system, required for SNAT/MASQUERADE to work.
     def network_forwarding() -> None:
         shell('echo 1 > /proc/sys/net/ipv4/ip_forward')
 
@@ -254,25 +263,25 @@ class IPTablesManager:
     def purge_proxy_rules(*, table: str, chain: str) -> None:
         '''removing all rules from the passed in table and chain.
 
-        this should be used only be called during proxy initialization.
+        this should only be used/called during proxy initialization.
         '''
         shell(f'sudo iptables -t {table} -F {chain}')
 
     @staticmethod
-    def proxy_add_rule(ip_address: int, timestamp: int, *, table: str, chain: str) -> None:
-        '''inject an iptable rule into the passed in table and chain.
+    def proxy_add_rule(ip_address: int, profile_idx: int, timestamp: int, *, table: str, chain: str) -> None:
+        '''inject an iptables rule into the passed in table and chain.
 
         the ip_address argument will be blocked as a source and timestamp will be set as a comment.
         '''
-        comment = f'-m comment --comment {timestamp}'
+        comment = f'-m comment --comment {profile_idx}-{timestamp}'
 
         shell(f'sudo iptables -t {table} -A {chain} -s {itoip(ip_address)} -j DROP {comment}')
 
     @staticmethod
-    def proxy_del_rule(ip_address: str, timestamp: int, *, table: str, chain: str) -> None:
-        '''remove an iptable rule from the passed in table and chain.
+    def proxy_del_rule(ip_address: str, profile_idx: int, timestamp: int, *, table: str, chain: str) -> None:
+        '''remove an iptables rule from the passed in table and chain.
         '''
-        comment = f'-m comment --comment {timestamp}'
+        comment = f'-m comment --comment {profile_idx}-{timestamp}'
 
         shell(f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP {comment}')
 

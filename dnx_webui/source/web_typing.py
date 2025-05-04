@@ -3,20 +3,30 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from collections import defaultdict as _dd
 
-def web_module_load_callout(filename: str) -> None:
+def web_module_import_callout(filename: str) -> None:
     '''print passed in filename to stdout.
 
-    only active when FLASK_ENV=development
+    only active when WEBUI_DEVELOPMENT is present in the environment.
     '''
     import os
 
-    if os.environ.get('FLASK_ENV') == 'development':
-        print(f'<| file import >> {filename} |>')
+    if os.environ.get('WEBUI_DEVELOPMENT') == '1':
+        print(f'<| webui import >> {filename} |>')
+
+def web_module_import_checkpoint(filename: str, message: str) -> None:
+    '''print passed in filename to stdout.
+
+    only active when WEBUI_DEVELOPMENT is present in the environment.
+    '''
+    import os
+
+    if os.environ.get('WEBUI_DEVELOPMENT') == '1':
+        print(f'<| {filename} | webui checkpoint >> {message} |>')
+
 
 if (TYPE_CHECKING):
-    from typing import TypeAlias, Type, Any, Callable, ByteString, Optional, Union
+    from typing import TypeAlias, Type, Any, Callable, Optional, Union
 
     from threading import Lock as _Lock, Event as _Event
 
@@ -27,7 +37,7 @@ if (TYPE_CHECKING):
 
     Callable_T: TypeAlias = Callable[[Any, ...], Any]
 
-    JSON: TypeAlias = dict[str, Any]
+    JSON: TypeAlias = dict[str, str]
     Form: TypeAlias = ImmutableMultiDict[str, str]
     Args: TypeAlias = MultiDict[str, str]
 
@@ -37,9 +47,10 @@ if (TYPE_CHECKING):
     ERROR_CODE: TypeAlias = int
     ERROR_MESSAGE: TypeAlias = str
     WebUpdateError: TypeAlias = tuple[ERROR_CODE, ERROR_MESSAGE]
-    WebAjaxError: TypeAlias = dict[str, Union[int, str]]
 
-    WebAjaxResponse: TypeAlias = [STATUS, WebAjaxError]
+    from source.web_interfaces import WebAjaxContent as _WebAjaxContent
+
+    WebAjaxResponse: TypeAlias = tuple[STATUS, _WebAjaxContent]
 
     from source.web_interfaces import StandardWebPage as _StandardWebPage
     from source.web_interfaces import LogWebPage as _LogWebPage
@@ -49,4 +60,7 @@ if (TYPE_CHECKING):
     LogWebPage: TypeAlias = Type[_LogWebPage]
     RulesWebPage: TypeAlias = Type[_RulesWebPage]
 
+    from dnx_gentools.def_typing import FirewallDBLock
+
+    # todo: should this be here?
     from dnx_gentools.file_operations import ConfigChain

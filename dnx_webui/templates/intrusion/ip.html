@@ -1,7 +1,7 @@
 {% extends('layout.html') %}
+{# aliasing for now so we can reuse template #}
+{% set page_settings = ip_settings %}
 {% block body %}
-  {# aliasing for now so we can reuse template #}
-  {% set page_settings = ip_settings %}
   <section id="tabs-bar">
     <div class="container">
       <div class="row">
@@ -61,7 +61,7 @@
           <div class="row">
             <form method="POST">
               <input type="hidden" name="tab" value="2">
-              <input type="hidden" name="change_geo_view">
+              <input type="hidden" name="vbtn" value="change_geo_view">
               <div class="input-field col s5 m3 offset-m1 {{ input_color }}">
                 <select name="region" id="region" onchange="this.form.submit()">
                   {% for region in ip_settings.regions %}
@@ -182,8 +182,9 @@
       let cat_value = cat_info[0];
       let cat_opt   = cat_info[1];
 
-      // region is not needed for reputation and will be ignored on server side input validation.
+      // region is not needed for reputation categories and will be ignored on server side input validation.
       let response = await ajaxClient.post('/post', {
+        'security_profile': {{ ip_settings.security_profile }},
         'type': category.name, 'category': cat_value, 'direction': cat_opt, 'region': region
       });
 

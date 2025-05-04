@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import TYPE_CHECKING, INADDR_ANY, fast_time
 from dnx_gentools.def_enums import DHCP, DHCP_MASK
 from dnx_gentools.def_namedtuples import DHCP_INTERFACE, L_SOCK, DHCP_OPTION, DHCP_RECORD
 
@@ -12,12 +11,14 @@ from dnx_iptools.protocol_tools import icmp_reachable, btoia
 
 from dnx_routines.logging.log_client import Log
 
-NULL_OPT = DHCP_OPTION(0, 0, 0)
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import *
 
 __all__ = (
     'ClientRequest', 'ServerResponse'
 )
 
+NULL_OPT = DHCP_OPTION(0, 0, 0)
 from_hex = bytes.fromhex
 
 
@@ -26,10 +27,25 @@ class ClientRequest:
     _server: Optional[DHCPServer_T] = None
     _default_options: ClassVar[tuple[int]] = (54, 51, 58, 59)
 
+    recvd_intf: str
+    server_ip: int
+    # sendto:
+
+    init_time: int
+    mtype: DHCP
+    hostname: str
+
+    svr_ident: IP_ADDRINT
+    req_ip: IP_ADDRINT
+    handout_ip: IP_ADDRINT
+
+    request_options: list[int]
+    interface: DHCP_INTERFACE
+
     xID:    int
     bcast:  int
-    ciaddr: int
-    mac:    str
+    ciaddr: IP_ADDRINT
+    mac:    MAC_ADDRESS
 
     __slots__ = (
         'recvd_intf', 'server_ip', 'sendto',
@@ -39,7 +55,7 @@ class ClientRequest:
 
         'request_options', 'interface',
 
-        'bcast', 'xID', 'ciaddr', 'chaddr', 'mac',
+        'bcast', 'xID', 'ciaddr', 'mac',  # 'chaddr',
     )
 
     @classmethod
@@ -49,22 +65,23 @@ class ClientRequest:
 
     def __init__(self, _, sock_info: L_SOCK) -> None:
 
-        self.recvd_intf: str = sock_info.name
-        self.server_ip:  int = sock_info.ip
-        self.sendto          = sock_info.sendto
+        self.recvd_intf = sock_info.name
+        self.server_ip  = sock_info.ip
+        self.sendto     = sock_info.sendto
 
-        self.init_time:  int = fast_time()
-        self.mtype:     DHCP = DHCP.NOT_SET
-        self.hostname:   str = ''
+        self.init_time = fast_time()
+        self.mtype     = DHCP.NOT_SET
+        self.hostname  = ''
 
-        self.svr_ident:  int = 0
-        self.req_ip:     int = 0
-        self.handout_ip: int = 0
+        self.svr_ident  = 0
+        self.req_ip     = 0
+        self.handout_ip = 0
 
-        self.request_options: list[int] = [*self._default_options]
+        self.request_options = [*self._default_options]
 
-        # making a copy of the interface specific options, so we don't have to worry about a lock when referencing them.
-        self.interface: DHCP_INTERFACE = self._server.interfaces[sock_info.name]
+        # making a copy of the interface-specific options, so we don't have to worry about a lock when referencing them.
+        # todo: this is not making a copy... investigate.
+        self.interface = self._server.interfaces[sock_info.name]
 
     def parse(self, data: memoryview) -> None:
 
@@ -159,6 +176,15 @@ class ServerResponse:
 
     _server: Optional[DHCPServer_T] = None
 
+    has_discover: bool
+    netid:   IP_ADDRINT
+    netmask: IP_ADDRINT
+
+    _check_ip: int
+    _handout_range: range
+
+    _request: Optional[ClientRequest]
+
     __slots__ = (
         '_request', 'netid', 'netmask',
         '_check_ip',
@@ -170,17 +196,16 @@ class ServerResponse:
 
     def __init__(self, intf: str):
 
+        self.has_discover: bool = False
+
         # offer/ ack require these values, but release does not.
         intf = self._server.interfaces[intf]
 
         self.netid:   int = intf.netid
         self.netmask: int = intf.netmask
 
-        self._handout_range = range(intf.h_range[0], intf.h_range[1])
-
         self._check_ip:    int = intf.en_check[1]
-        self.has_discover: bool = False
-
+        self._handout_range = range(intf.h_range[0], intf.h_range[1])
         self._request: Optional[ClientRequest] = None
 
     @classmethod

@@ -1,4 +1,7 @@
-from typing import ByteString
+from dnx_gentools.def_constants import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import IP_ADDRESS, IP_ADDRINT, Bytes
 
 def default_route() -> int:
     '''return default route of the system.
@@ -6,25 +9,25 @@ def default_route() -> int:
     return 0 if a default route is not configured.
     '''
     ...
-def btoia(cb: ByteString) -> int:
+def btoia(cb: Bytes) -> int:
     '''convert a bytestring with a length of 1-4 to a 32-bit unsigned integer.
 
         b'\xff\xff\xff\xff' > 4294967295
     '''
     ...
-def iptoi(ipa: str) -> int:
+def iptoi(ipa: IP_ADDRESS) -> IP_ADDRINT:
     '''convert an ip address in dot notation to a 32-bit unsigned integer.
 
         '127.0.0.1' > 2130706433
     '''
     ...
-def itoip(ipa: int) -> str:
+def itoip(ipa: IP_ADDRINT) -> IP_ADDRESS:
     '''convert 32-bit unsigned integer to ip address in dot notation.
 
         2130706433 > '127.0.0.1'
     '''
     ...
-def hextoip(hipa: str) -> str:
+def hextoip(hipa: str) -> IP_ADDRESS:
     '''convert 8-byte/ (4) 2-byte char hex string to ip address in dot notation.
 
         "00454545" > '69.69.69.0'
@@ -32,7 +35,7 @@ def hextoip(hipa: str) -> str:
     note: expecting big endian (network order) hex string.
     '''
     ...
-def calc_checksum(data: ByteString) -> bytes:
+def calc_checksum(data: Bytes) -> bytes:
     '''calculate the tcp/ip checksum of a bytestring.
 
     valid lengths are between 1-65535 (max length of a tcp/ip packet).

@@ -10,89 +10,76 @@ app = Flask.app
 # FLASK API - TEMPLATE FUNCTIONS
 # ====================================
 @app.template_global()
-def create_title(title: str, classes: str = '') -> str:
-    classes = 'card-title ' + classes
-
-    return (
-        f'<div class="row"><h5 class="{context_global.theme["title"]} {classes}">{title.title()}</h5></div>'
-        f'<div class="title-divider"></div><br>'
-    )
-
-@app.template_global()
-def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enabled: int = 1) -> str:
-    if (not enabled): status = 'disabled'
-    elif (checked): status = 'checked'
-    else: status = ''
-
-    return ''.join([
-        f'<form method="post"><input type="hidden" name="tab" value="{tab}">',
-        f'<div class="input-field col s6 center">{label}<div class="switch"><label>Off',
-        f'<input type="checkbox" class="iswitch" name="{name}" {status}>',
-        '<span class="lever"></span>On</label></div></div></form>'
-    ])
-
-@app.template_global()
 def create_tab(active_tab: int, cur_tab: int, href: str) -> str:
-    tab = (
-        f'<li class="{context_global.theme["tab_classes"]}">'
-        f'<a href="#{href}" onclick="activeTab({cur_tab})" class="{context_global.theme["tab_text"]}'
-    )
+    '''generates and returns HTML for adding a tab to the page list.
+    '''
+    active = ' active' if cur_tab == active_tab else ''
 
-    if (cur_tab == active_tab):
-        tab += ' active'
-
-    tab += f'">{href.replace("-", " ").title()}</a></li>'
+    tab = f'''
+    <li class="{context_global.theme['tab_classes']}">
+        <a href="#{href}" onclick="activeTab({cur_tab})" class="{context_global.theme['tab_text']}{active}">
+        {href.replace("-", " ").title()}</a>
+    </li>
+    '''
 
     return tab
 
 @app.template_global()
-def create_button_with_modal(
-        classes: str, icon: str, index: int, num: int, tab: int, btn_name: str, btn_value: str, message: str) -> str:
+def create_title(title: str, classes: str = '') -> str:
+    classes = 'card-title ' + classes
 
-    btn_classes = f'{classes} waves-effect waves-light modal-trigger'
-
-    # hidden input for button value is to add forward compatibility with the new form validation system
-
-    button = (
-        f'<a class="{btn_classes}" href="#modal{index}-{num}"><i class="material-icons">{icon}</i></a>'
-        f'<div id="modal{index}-{num}" class="modal">'
-          f'<div class="modal-content"><h5 class="{context_global.theme["modal_text"]}">{message}</h5></div>'
-          f'<form method="POST">'
-            f'<input type="hidden" name="tab" value="{tab}">'
-            f'<input type="hidden" name="{btn_name}" value="{btn_value}">'
-            '<div class="modal-footer">'
-              f'<button name="vbtn" value="{btn_name}" class="btn waves-effect waves-light">YES</button>'
-              '<a class="modal-close waves-effect waves-green btn-flat">Cancel</a>'
-            '</div>'
-          '</form>'
-        '</div>'
-    )
-
-    return button
+    return f'''
+    <div class="row">
+        <h5 class="{context_global.theme['title']} {classes}">{title.title()}</h5>
+    </div>
+    <div class="title-divider"></div><br>
+    '''
 
 @app.template_global()
-def create_decora_switch(name: str, value: str, checked: int, *, enabled: int = 1, onclick: str = 'updateCategory'):
+def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enabled: int = 1) -> str:
+    '''generates and returns HTML containing a single basic switch.
+    '''
+    if (not enabled): status = 'disabled'
+    elif (checked): status = 'checked'
+    else: status = ''
+
+    return f'''
+    <form method="post"><input type="hidden" name="tab" value="{tab}">
+        <input type="hidden" name="vbtn" value="{name}">
+        <div class="input-field col s6 center">{label}
+        <div class="switch"><label>Off
+        <input type="checkbox" class="iswitch" name="{name}" {status}><span class="lever"></span>
+        On</label></div></div>
+    </form>
+    '''
+
+@app.template_global()
+def create_decora_switch(
+        name: str, value: str, checked: int, *, enabled: int = 1, onclick: str = 'updateCategory') -> str:
     '''generates and returns HTML containing a title and a single decora switches.
     '''
     disabled = ' disabled' if not enabled else ''
     off = ' active' if (not checked or disabled) else ''
     on  = ' active' if (checked and not disabled) else ''
 
-    switch = (
-        f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value.replace("_", " ")}</p></div>'
-        '<div class="row row-thin"><div class="multi-switch-wrapper decora-switch">'
-        f'<ul class="multi-switch"{disabled}>'
-            f'<li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="{onclick}(this, 0)">'
-                '<i class="material-icons small">radio_button_unchecked</i></button></li>'
-            f'<li class="multi-switch-on{on}"><button name="{name}" value="{value}" onclick="{onclick}(this, 1)">'
-                '<i class="material-icons small">block</i></button></li>'
-        '</ul></div></div></div>'
-    )
+    value_name = value.split(',')[1]
+
+    switch = f'''
+    <div class="col s3">
+    <div class="row row-thin"><p class="multi-switch-label center">{value_name.replace("_", " ")}</p></div>
+    <div class="row row-thin"><div class="multi-switch-wrapper decora-switch">
+    <ul class="multi-switch"{disabled}>
+        <li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="{onclick}(this,0)">
+            <i class="material-icons small">radio_button_unchecked</i></button></li>
+        <li class="multi-switch-on{on}"><button name="{name}" value="{value}" onclick="{onclick}(this,1)">
+            <i class="material-icons small">block</i></button></li>
+    </ul></div></div></div>
+    '''
 
     return switch
 
 @app.template_global()
-def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tuple[int, int, int],
+def create_decora_switch_tandem(name: tuple[str, str], value: str, checked: tuple[int, int, int],
         *, enabled: int = 1, onclick: str = 'updateCategory'):
     '''generates and returns HTML containing a title and (2) decora switches.
 
@@ -117,35 +104,108 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
 
     value_name = value.split(',')[1]
 
-    switch = (
-        '<div class="col s3 multi-switch-container">'
-            f'<div class="row row-thin"><p class=" multi-switch-label center">{value_name.replace("_", " ")}</p></div>'
-            '<div class="row">'
-                '<h6 class="center">STANDARD</h6>'
-                f'<div id="{value_name}-1" class="multi-switch-wrapper decora-switch">'
-                    '<ul class="multi-switch">'
-                        f'<li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(0,this,0,{th})"{disabled}>'
-                            '<i class="material-icons small">radio_button_unchecked</i></button></li>'
-                        f'<li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(0,this,1,{th})"{disabled}>'
-                            '<i class="material-icons small">block</i></button></li>'
-                    '</ul>'
-                '</div>'
-            '</div>'
-            '<div class="row row-thin">'
-                '<h6 class="center">KEYWORD</h6>'
-                f'<div id="{value_name}-2" class="multi-switch-wrapper decora-switch">'
-                    '<ul class="multi-switch">'
-                        f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(1,this,0,{th})"{disabled_two}>'
-                            '<i class="material-icons small">radio_button_unchecked</i></button></li>'
-                        f'<li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(1,this,1,{th})"{disabled_two}>'
-                            '<i class="material-icons small">block</i></button></li>'
-                    '</ul>'
-                '</div>'
-            '</div>'
-        '</div>'
-    )
+    switch = f'''
+    <div class="col s3 multi-switch-container">
+        <div class="row row-thin"><p class=" multi-switch-label center">{value_name.replace("_", " ")}</p></div>
+        <div class="row">
+        <h6 class="center">STANDARD</h6>
+        <div id="{value_name}-1" class="multi-switch-wrapper decora-switch">
+        <ul class="multi-switch">
+            <li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,0,{th})"{disabled}>
+                <i class="material-icons small">radio_button_unchecked</i></button></li>
+            <li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,1,0,{th})"{disabled}>
+                <i class="material-icons small">block</i></button></li>
+        </ul></div></div>
+        <div class="row row-thin">
+        <h6 class="center">KEYWORD</h6>
+        <div id="{value_name}-2" class="multi-switch-wrapper decora-switch">
+        <ul class="multi-switch">
+            <li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,0,1,{th})"{disabled_two}>
+                <i class="material-icons small">radio_button_unchecked</i></button></li>
+            <li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,1,{th})"{disabled_two}>
+                <i class="material-icons small">block</i></button></li>
+        </ul></div></div>
+    </div>
+    '''
 
     return switch
+
+@app.template_global()
+def create_dropdown(
+        label: str, name: str, selected: int, *, options: list[tuple[str, int]]) -> str:
+    '''generates and returns HTML containing a dropdown menu.
+    '''
+    selections = '\n'.join([
+        f'<option value="{val}"{" selected" if val == selected else ""}>{desc}</option>' for desc, val in options
+    ])
+
+    dropdown = f'''
+    <form method="POST">
+        <input type="hidden" name="tab" value="1">
+        <input type="hidden" name="vbtn" value="{name}">
+        <div class="input-field col s6 left">
+            <select name="{name}" id="{name}" onchange="this.form.submit()">
+                {selections}
+            </select>
+            <label for="{name}">{label}</label>
+        </div>
+    </form>
+    '''
+    return dropdown
+
+@app.template_global()
+def create_button_with_modal(
+        classes: str, icon: str, modal_idx: int, iter: int, tab: int, btn_name: str, btn_value: str, message: str) -> str:
+
+    btn_classes = f'{classes} waves-effect waves-light modal-trigger'
+
+    # note: hidden input for button value is to add forward compatibility with the new form validation system
+    button = f'''
+    <a class="{btn_classes}" href="#modal{modal_idx}-{iter}"><i class="material-icons">{icon}</i></a>
+    <div id="modal{modal_idx}-{iter}" class="modal">
+        <div class="modal-content"><h5 class="{context_global.theme['modal_text']}">{message}</h5></div>
+        <form method="POST">
+            <input type="hidden" name="tab" value="{tab}">
+            <input type="hidden" name="vbtn" value="{btn_name}">
+            <div class="modal-footer">
+                <button name="{btn_name}" value="{btn_value}" class="btn waves-effect waves-light">YES</button>
+                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+            </div>
+        </form>
+    </div>
+    '''
+
+    return button
+
+@app.template_global()
+def increment_wrap_positive(i: int, max: int) -> int:
+    '''increments the passed in value by 1, wrapping around to 1 if the value equals "max".
+
+    note: zero is not included in the positive range.
+    '''
+    return 1 if i == max else i + 1
+
+@app.template_global()
+def decrement_wrap_positive(i: int, max: int) -> int:
+    '''decrements the passed in value by 1, wrapping around to max if the value == 1.
+
+    note: zero is not included in the positive range.
+    '''
+    return max if i == 1 else i - 1
+
+@app.template_global()
+def merged_field_index(idx: int, field: str, *, sep: str = '/') -> str:
+    '''returns a string containing the merged index and field name.
+    '''
+    field_l = field.split(sep)
+
+    if (idx < 0):
+        raise ValueError('field index must be a positive integer.')
+
+    elif idx >= len(field_l):  # inclusivity covers index offset.
+        return '-'
+
+    return field_l[idx]
 
 @app.template_global()
 def merge_items(a1, a2):

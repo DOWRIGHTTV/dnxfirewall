@@ -5,9 +5,12 @@ from __future__ import annotations
 import os
 import urllib.request as requests
 
-from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_namedtuples import SigFile
 from dnx_gentools.file_operations import ConfigurationManager, calculate_file_hash
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import SIGNATURE_MANIFEST
 
 # update signature files from the github dnxfirewall-signatures repo.
 # a version check will be done to ensure the signatures are compatible with the current system version.
@@ -94,11 +97,11 @@ def validate_file_download(filename: str, remote_file_hash: str) -> bool:
 
     return True
 
-# todo: now that we include a local version of the COMPATIBLE_VERSION file, we should be able to remove the system
-#  update bypass flag because during the update, the version will be updated and the check vs remote will pass.
-#    - this should also ensure that if the signature repo is updated before the system repo, the system updater will
-#      not be able to pull the new signatures until the system repo is updated and updater is ran again.
-def compare_signature_version(remote_version: int, *, system_update: bool = False) -> bool:
+# -security: any override to this check should be heavily scrutinized.
+#  a condition can be met where the remote signatures are not compatible with the current system version.
+#    -> signatures are updated with an API breaking change and the system updater is ran before the repo is updated.
+#  note: the system updater will not be able to pull the new signatures until the system repo has been updated.
+def compare_signature_version(remote_version: int) -> bool:
     with open(f'dnx_profile/signatures/COMPATIBLE_VERSION', 'r') as file:
         local_version = int(file.read().strip())
 
@@ -145,8 +148,7 @@ def get_remote_signature_manifest(manifest_name: str) -> SIGNATURE_MANIFEST:
 def check_for_file_changes(manifest_name: str, remote_signature_manifest: SIGNATURE_MANIFEST) -> tuple[SIGNATURE_MANIFEST, SIGNATURE_MANIFEST]:
     '''return list of signature files that have changed or are missing from the local system.
     '''
-
-    # if file doesnt exist, but we made it to this point, then it is safe to proceed with updating all signature sets.
+    # if the file doesn't exist, but we are here, then it is safe to proceed with updating all signature sets.
     try:
         with open(f'dnx_profile/signatures/{manifest_name}', 'r') as file:
             local_signature_manifest = file.read().splitlines()

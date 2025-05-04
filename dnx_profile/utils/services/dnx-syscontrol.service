@@ -1,13 +1,13 @@
 [Unit]
-Description=DNXFIREWALL System Control Service (issue system level commands)
+Description=DNXFIREWALL System Control Proxy Service
 After=network.target
-StartLimitIntervalSec=10
+StartLimitBurst=2
+StartLimitIntervalSec=3
 
 [Service]
-Type=simple
+Type=notify
 Restart=always
-RestartSec=3
-StartLimitBurst=3
+RestartSec=69ms
 User=root
 ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli syscontrol
 Environment=HOME_DIR=/home/dnx/dnxfirewall

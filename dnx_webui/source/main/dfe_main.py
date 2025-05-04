@@ -2,29 +2,44 @@
 
 from __future__ import annotations
 
-import os
 import traceback
 from datetime import timedelta
 
-from source.web_typing import *
+from source.web_typing import web_module_import_callout, web_module_import_checkpoint
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
-from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, ppt
-from dnx_gentools.def_enums import CFG
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, FIVE_SEC, WEBUI_DEVELOPMENT
+from dnx_gentools.def_enums import CFG, DB_MODE_ALL
 from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration
+from dnx_gentools.system_info import System
+
+web_module_import_checkpoint(__file__, 'DNX General Utilities initialized.')
 
 from dnx_iptools.interface_ops import InterfaceManager
 from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
 
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+web_module_import_checkpoint(__file__, 'DNX IP Utilities initialized.')
+
 from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.database import DBConnector
+
+DBConnector.init_routines(DB_MODE_ALL)
+
+web_module_import_checkpoint(__file__, 'DNX Routines initialized.')
 
 import source.web_validate as validate
+
+if (TYPE_CHECKING):
+    from source.web_typing import Union
+
+    from source.web_typing import StandardWebPage, LogWebPage, RulesWebPage, ConfigChain
 
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
 # ========================================
+web_module_import_checkpoint(__file__, 'Starting FLASK API Import.')
+
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for, g as context_global
 
 app = Flask(
@@ -42,9 +57,13 @@ app.permanent_session_lifetime = timedelta(minutes=app_config['flask->session_ti
 app.jinja_env.trim_blocks   = True
 app.jinja_env.lstrip_blocks = True
 
+web_module_import_checkpoint(__file__, 'Flask API initialized.')
+
 # =========================================
 # DNX API - LOGGING / FIREWALL / CONFIG
 # =========================================
+web_module_import_checkpoint(__file__, 'Starting DNX API Import.')
+
 from dnx_control.control.ctl_action import system_action
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 from dnx_secmods.cfirewall.fw_analyze import FirewallAnalyze
@@ -70,9 +89,13 @@ cfirewall_analyze = FirewallAnalyze()
 
 FirewallAnalyze.cfirewall_analyze = cfirewall_analyze
 
+web_module_import_checkpoint(__file__, 'DNX API initialized.')
+
 # =========================================
 # WEBUI COMPONENTS
 # =========================================
+web_module_import_checkpoint(__file__, 'Starting WEBUI Components Import.')
+
 from source.main.dfe_dashboard import WebPage as webui_dashboard
 from source.rules.dfe_firewall import WebPage as dnx_fwall  # non standard -> firewall page logic
 from source.rules.dfe_nat import WebPage as dnx_nat
@@ -80,7 +103,7 @@ from source.intrusion.dfe_ip import WebPage as ip_proxy
 from source.intrusion.domain.dfe_domain import WebPage as dns_proxy
 from source.intrusion.domain.dfe_xlist import WebPage as xlist
 from source.intrusion.domain.dfe_categories import WebPage as category_settings
-from source.intrusion.dfe_ids_ips import WebPage as dnx_ips
+from source.intrusion.dfe_ids_ips import WebPage as ids_ips
 from source.system.settings.dfe_dns import WebPage as dns_settings
 from source.system.settings.dfe_dhcp import WebPage as dhcp_settings
 from source.system.settings.dfe_interface import WebPage as interface_settings
@@ -95,6 +118,8 @@ from source.system.dfe_services import WebPage as dnx_services
 from source.system.dfe_users import WebPage as dfe_users
 
 from source.main.dfe_authentication import *
+
+web_module_import_checkpoint(__file__, 'WEBUI Components initialized.')
 
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS
@@ -119,19 +144,15 @@ def dnx_dashboard(session_info: dict):
 @app.route('/rules/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_firewall(session_info: dict):
-
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
+    page_specific_info = {
         'ajax': True, 'dnx_table': True, 'auto_colorize': True,
-        'tab': validate.get_convert_int(request.args, 'tab'),
         'dnx_network_objects': {},
         'dnx_service_objects': {},
-        'selected': 'MAIN',
-        'sections': ['BEFORE', 'MAIN', 'AFTER'],
-        'uri_path': ['rules', 'firewall']
+        'selected':            'MAIN',
+        'sections':            ['BEFORE', 'MAIN', 'AFTER']
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['rules', 'firewall'])
 
     page_action = firewall_page_logic(
         dnx_fwall, page_settings, 'firewall_settings', page_name='rules/firewall/firewall.html'
@@ -175,16 +196,12 @@ def rules_firewall_diff(session_info: dict):
 @app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_nat(session_info: dict):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_convert_int(request.args, 'tab'),
-        'menu': validate.get_convert_int(request.args, 'menu'),
+    page_specific_info = {
         'selected': 'WAN_ZONE',
         'zones': ['WAN', 'DMZ', 'LAN'],
-        'uri_path': ['rules', 'nat']
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['rules', 'nat'])
 
     page_action = firewall_page_logic(
         dnx_nat, page_settings, 'nat_settings', page_name='rules/nat.html'
@@ -289,13 +306,13 @@ def intrusion_domain_categories(session_info: dict):
 
     #  END OF DOMAIN SUB MENU
     # ----------------------------------------- #
-@app.route('/intrusion/ips', methods=['GET', 'POST'])
+@app.route('/intrusion/ids-ips', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_ips(session_info: dict):
-    page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'ips'])
+    page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'ids-ips'])
 
     page_action = standard_page_logic(
-        dnx_ips, page_settings, 'ips_settings', page_name='intrusion/ips.html'
+        ids_ips, page_settings, 'ips_settings', page_name='intrusion/ids_ips.html'
     )
 
     return page_action
@@ -318,14 +335,11 @@ def system_backups(session_info: dict):
 @app.route('/system/log/traffic', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
 def system_logs_traffic(session_info: dict):
-    page_settings = {
-        'navi':        True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu':        '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
-        'table_types': ['firewall', '.nat'],
-        'uri_path':    ['system', 'log', 'traffic']
+    page_specific_info = {
+        'log_timeout': True, 'dnx_table': True, 'ajax': False, 'auto_colorize': True  # 'menu': '1', 'table': '1',
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['system', 'log', 'traffic'])
 
     page_action = log_page_logic(traffic_logs, page_settings, page_name='system/log/traffic/traffic.html')
 
@@ -333,15 +347,12 @@ def system_logs_traffic(session_info: dict):
 
 @app.route('/system/log/events', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs_traffic_events(session_info: dict):
-    page_settings = {
-        'navi':        True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu':        '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
-        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
-        'uri_path':    ['system', 'log', 'events']
+def system_logs_events(session_info: dict):
+    page_specific_info = {
+        'log_timeout': True, 'ajax': False, 'dnx_table': True, 'auto_colorize': True,  # 'menu': '1', 'table': '1',
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['system', 'log', 'events'])
 
     page_action = log_page_logic(sec_events, page_settings, page_name='system/log/events/events.html')
 
@@ -350,16 +361,11 @@ def system_logs_traffic_events(session_info: dict):
 @app.route('/system/log/system', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
 def system_logs_system(session_info: dict):
-    page_settings = {
-        'navi':      True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu':      '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
-        'log_files': [
-            'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server',  # 'syslog'
-        ],
-        'uri_path':  ['system', 'log', 'system']
+    page_specific_info = {
+        'log_timeout': True, 'ajax': True, 'dnx_table': True, 'auto_colorize': True,  # 'menu':      '1',
     }
 
-    page_settings.update(session_info)
+    page_settings = get_default_page_settings(session_info, page_specific_info, uri_path=['system', 'log', 'system'])
 
     page_action = log_page_logic(sys_logs, page_settings, page_name='system/log/system/system.html')
 
@@ -370,9 +376,9 @@ def system_logs_system(session_info: dict):
 def system_logs_get(session_info: dict):
     json_data = request.get_json(force=True)
 
-    _, _, table_data = sys_logs.handle_ajax(json_data)
+    status, response = sys_logs.handle_ajax(json_data)
 
-    return ajax_response(status=True, data=table_data)
+    return ajax_response(status=status, data=response)
     #  END OF LOG SUB MENU
     # ----------------------------------------- #
 
@@ -545,8 +551,8 @@ def dnx_blocked() -> str:
     # if a domain block event is not associated with the request (user navigated to this page manually) then a not
     #  authorized page will be served.
     # If the domain is not valid (regex) then the request will be redirected back to the blocked page without a domain.
-    # NOTE: this is a crazy bit of code that should be tested much more as it is possible to do a sql injection here
-    #  if the validations below are bypassed.
+    # !security: this is a crazy bit of code that should be tested much more as it is possible to do a sql injection
+    #  here if the validations below are bypassed (should be limited to the domain "blocked" table).
     blocked_domain = request.args.get('dom', None)
     if (not blocked_domain):
         session.pop('user', None)
@@ -578,7 +584,6 @@ def dnx_blocked() -> str:
 
 # --------------------------------------------- #
 # --------------------------------------------- #
-
 @app.post('/refresh/session')
 @user_restrict('user', 'admin')
 def refresh_session(session_info: dict):
@@ -600,8 +605,14 @@ def page_not_found(error):
 def internal_server_error(error):
     # --------------------------------------------- #
     # LABEL: DEVELOPMENT_ONLY_CODE
-    if (server_type == 'development'):
-        error = traceback.format_exc()
+    if (WEBUI_DEVELOPMENT):
+        tb = traceback.format_exc()[:-1].split('\n')
+
+        error = '\n'.join([
+            tb[0], '-' * 32,
+            *[f'{s}\n' if (i % 2) else s for i, s in enumerate(tb[1:-1])],
+            '=' * 32, tb[-1], '=' * 32
+        ])
 
         return render_template('main/dev_error.html', theme=context_global.theme, general_error=error)
     # --------------------------------------------- #
@@ -612,12 +623,16 @@ def internal_server_error(error):
 # all standard page loads use this logic to decide the page action/ call the correct
 # lower level functions residing in each page's module
 def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key: str, *, page_name: str) -> str:
-
+    # todo: err_as_value semantic will bypass the application error exception and show it in std_error.
+    #  we should check the error type and send application error page if it is a ConfigurationError.
+    #  this also means we should return the exception itself and not the message string.
     if (request.method == 'POST'):
         try:
             error, err_msg = dnx_page.update(request.form)
         except ConfigurationError as ce:
-            return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+            return render_template(
+                application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+            )
 
         std_error = f'{err_msg} code={error}' if err_msg else ''
 
@@ -629,20 +644,28 @@ def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key
     try:
         page_settings[data_key] = dnx_page.load(request.form)
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+        return render_template(
+            application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+        )
+
+    # --------------------------------------------- #
+    # LABEL: DEVELOPMENT_ONLY_CODE
+    if (WEBUI_DEVELOPMENT):
+        print(f'{"=" * 16}\npage_settings\n{"=" * 16}\n{page_settings}')
+    # --------------------------------------------- #
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
 def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: str, *, page_name: str) -> str:
-
     if (request.method == 'POST'):
         try:
             error, selected = dnx_page.update(request.form)
         except ConfigurationError as ce:
-            return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+            return render_template(
+                application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+            )
 
         page_settings.update({
-            'tab': validate.get_convert_int(request.form, 'tab'),
             'selected': selected,
             'standard_error': error
         })
@@ -650,26 +673,31 @@ def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: s
     try:
         page_settings[data_key] = dnx_page.load(page_settings['selected'])
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+        return render_template(
+            application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+        )
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
+# note: log pages do not have a data_key in the page_settings dict.
 def log_page_logic(log_page: LogWebPage, page_settings: dict, *, page_name: str) -> str:
-    # can now accept redirects from other places on the webui to load specific tables directly on load
-    # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
+    if (request.method == 'POST'):
+        try:
+            error, err_msg = log_page.update(request.form)
+        except ConfigurationError as ce:
+            return render_template(
+                application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+            )
 
-    # TODO: we dont have explicit logic for "GET" and rely on exception handling to load page via GET. fix???
+        page_settings['standard_error'] = f'{err_msg} code={error}' if err_msg else ''
 
+    # can accept redirects from other places on the webui to load specific tables directly on load using uri queries.
     try:
-        table, menu, table_data = log_page.update(request.form)
+        page_settings.update(log_page.load(request.form, page_settings['standard_error'], request.args))
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
-
-    page_settings.update({
-        'table': table,
-        'menu': menu,
-        'table_data': table_data
-    })
+        return render_template(
+            application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+        )
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
@@ -678,7 +706,9 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
         try:
             error, menu_option = dnx_page.update(request.form)
         except ConfigurationError as ce:
-            return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+            return render_template(
+                application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+            )
 
         page_settings.update({
             'tab': validate.get_convert_int(request.args, 'tab'),
@@ -689,10 +719,13 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
     try:
         page_settings['category_settings'] = dnx_page.load(page_settings['menu'])
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
+        return render_template(
+            application_error_page, application_error=ce, theme=context_global.theme, **page_settings
+        )
 
     return render_template('intrusion/domain/categories.html', theme=context_global.theme, **page_settings)
 
+# !security: code can shutdown or restart the system. -> ensure this cannot be abused.
 # function called by restart/shutdown pages. will ensure the user-specified operation gets executed
 def handle_system_action(page_settings: dict):
 
@@ -702,7 +735,10 @@ def handle_system_action(page_settings: dict):
 
         response = request.form.get(f'system_{action}', '')
         if (not response):
-            return render_template(application_error_page, application_error='device action invalid.', theme=context_global.theme, **page_settings)
+            return render_template(
+                application_error_page, application_error='device action invalid.',
+                theme=context_global.theme, **page_settings
+            )
 
         if (response == 'YES'):
             page_settings.pop('control', None)
@@ -729,7 +765,7 @@ def handle_system_action(page_settings: dict):
 # =================================
 # HELPERS
 # =================================
-def get_default_page_settings(session_info, *, uri_path: list[str]) -> dict:
+def get_default_page_settings(session_info: dict, page_specific_info: dict = None, *, uri_path: list[str]) -> dict:
     '''sets the following values:
 
         - navi->True
@@ -737,7 +773,8 @@ def get_default_page_settings(session_info, *, uri_path: list[str]) -> dict:
         - standard_error->None
         - tab from request args "?tab".
 
-    page_settings will be updated with passed in session data.
+    page_settings will be updated with passed in session data and page_specific_info [if provided].
+    page_specific_info can be passed in to update page_settings with the page-specific info.
     '''
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
@@ -746,6 +783,9 @@ def get_default_page_settings(session_info, *, uri_path: list[str]) -> dict:
     }
 
     page_settings.update(session_info)
+
+    if (page_specific_info):
+        page_settings.update(page_specific_info)
 
     return page_settings
 
@@ -777,7 +817,7 @@ def set_user_settings() -> None:
 
         if new_theme not in ['light', 'dark']: return
 
-        with ConfigurationManager('logins', file_path='/dnx_webui/data') as webui:
+        with ConfigurationManager('logins', dir='dnx_webui/data') as webui:
             webui_settings: ConfigChain = webui.load_configuration()
 
             # this check prevents issues with login/out transitions
@@ -810,6 +850,10 @@ import source.main.dfe_template_globals
 # webui themes
 import source.main.dfe_themes
 
+# LABEL: DEVELOPMENT_ONLY_CODE
+# webui development helpers
+import source.main.dfe_main_dev
+
 # LABEL: CODE_NOT_STABLE
 # secure messenger extension
 import source.messenger.msg_main
@@ -818,36 +862,4 @@ import source.messenger.msg_main
 # JINJA2 API - CUSTOM TEMPLATES
 # =================================
 app.jinja_env.filters['itoip'] = itoip
-
-# =================================
-# LABEL: DEVELOPMENT_ONLY_CODE
-# =================================
-# will only be registered if running on dev branch using flask dev server
-server_type = os.environ.get('FLASK_ENV')
-if (server_type == 'development'):
-
-    @app.before_request
-    def print_forms() -> None:
-        if (request.method != 'POST'):
-            return None
-
-        print(f'form data\n{"=" * 12}')
-        if ajax_data := request.get_json(silent=True):
-            ppt(ajax_data)
-
-        elif form_data := dict(request.form):
-
-            if private_data := form_data.pop('password', ''):
-                form_data['password'] = '*' * len(private_data)
-
-            ppt(form_data)
-
-        else: print('[no data]')
-
-    @app.after_request
-    def no_store_http_header(response):
-        # matches primary html files only
-        if ('.' not in request.path):
-            response.headers.add('Cache-Control', 'no-store')
-
-        return response
+app.jinja_env.filters['ts_offset_format'] = System.offset_and_format

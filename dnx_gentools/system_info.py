@@ -11,22 +11,31 @@ from datetime import datetime, timedelta
 from typing import NamedTuple
 from subprocess import run, CalledProcessError, DEVNULL
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, ONE_HOUR
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, fast_time, str_join, NO_DELAY, ONE_HOUR
 from dnx_gentools.file_operations import load_configuration, load_data
 
-# prior to system install this will not be available.
+# note: prior to system install, this will not be available.
 try:
     from dnx_iptools.cprotocol_tools import iptoi
 except ImportError:
     pass
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Union, Optional
+    from dnx_gentools.def_typing import ConfigChain
+
+    Timestamp = Union[int, float]
+
 
 __all__ = (
     'Interface', 'System', 'Services'
 )
 
 util_shell = partial(run, shell=True, capture_output=True, text=True)
-Timestamp = Union[int, float]
 
 class DiskStats(NamedTuple):
     size: tuple[float, float]
@@ -198,7 +207,7 @@ class System:
         return f'{ctime(epoch).split()[3]}'
 
     @staticmethod
-    def date(timestamp: Optional[Timestamp] = None, string: bool = False) -> Union[str, list[str, str, str]]:
+    def date(timestamp: Optional[Timestamp] = None, string: bool = False) -> Union[str, tuple[str, str, str]]:
         '''return list of year, month, day of current system time as a list of strings.
 
             ['2019', '06', '24']
@@ -207,21 +216,19 @@ class System:
 
         setting string=True will return a joined list.
         '''
-        dt = datetime.now()
-        if (timestamp):
-            dt = datetime.fromtimestamp(timestamp)
+        dt = datetime.now() if not timestamp else datetime.fromtimestamp(timestamp)
 
-        dt_list = [f'{dt.year}', f'{dt.month:02}', f'{dt.day:02}']
+        dt_list = (f'{dt.year}', f'{dt.month:02}', f'{dt.day:02}')
         if (string):
             return str_join(dt_list)
 
         return dt_list
 
     @staticmethod
-    def time() -> list[int, int]:
+    def time() -> tuple[int, int]:
         time = datetime.now()
 
-        return [time.hour, time.minute]
+        return (time.hour, time.minute)
 
     @staticmethod
     def dns_status() -> dict:
@@ -270,13 +277,17 @@ class System:
         return backups
 
     @staticmethod
-    def ips_passively_blocked(*, table: str = 'raw', block_length: int = NO_DELAY) -> list[tuple[int, int]]:
+    def ips_passively_blocked(
+            *, table: str = 'raw', profile_idx: int = 0, block_length: int = NO_DELAY) -> list[tuple[int, int, int]]:
         '''return list of currently blocked hosts in the specific iptables table.
 
         the default table is 'raw'.
 
-        if block_length is defined, only hosts that have reached point of expiration will be returned.
-        block_length should be an integer value of the number of seconds that represent the time to expire.
+        if profile_idx is defined, only rules within the matching profile will be returned.
+        profile_idx of 0 will return all rules.
+
+        if block_length is defined, only hosts that have reached the point of expiration will be returned.
+        block_length is an integer value in seconds that represents the length of time a host will be blocked.
 
             blocked_hosts = System.ips_passivley_blocked(block_length=100)
         '''
@@ -288,14 +299,18 @@ class System:
         for line in output[2:]:
             line = line.split()
 
-            blocked_host, timestamp = iptoi(line[3]), int(line[6])
+            blocked_host, comment = iptoi(line[3]), line[6]
+
+            profile, timestamp = (int(x) for x in comment.split('-'))
+            if (profile != profile_idx and profile_idx != 0):
+                continue
 
             # check whether the host rule has reach point of expiration. if not, loop will continue. for NO_DELAY
             # this condition will eval to False immediately, which marks rule for deletion.
             if (timestamp + block_length > current_time):
                 continue
 
-            host_list.append((blocked_host, timestamp))
+            host_list.append((blocked_host, profile, timestamp))
 
         return host_list
 

@@ -9,13 +9,16 @@ from collections import deque
 from struct import Struct
 from functools import wraps
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, str_join, space_join, comma_join
+from dnx_gentools.def_constants import TYPE_CHECKING, RUN_FOREVER, MSEC
+from dnx_gentools.def_constants import fast_time, fast_sleep, str_join, space_join, comma_join
 
 # ===============
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import NoReturn, Any, Callable, Optional, Union
+    from dnx_gentools.def_typing import Event_T, ListenerPackets, ProxyPackets, ModuleClasses
+
     from dnx_routines.logging import LogHandler_T
 
 __all__ = [
@@ -28,10 +31,10 @@ __all__ = [
 
 
 def looper(sleep_len: int, **kwargs):
-    '''
-    loop decorator calling sleeping for specified length. length is sent in on decorator argument. if no value
-    is sent in the loop will continue immediately. kwargs can be sent in to provide locally assigned var access. the
-    kwargs will be converted to args before passing to function.
+    '''loop decorator calling sleeping for specified length.
+
+    sleep_len will block for the specified amount. a zero value causes the loop to continue immediately.
+    kwargs can provide locally assigned var access and will be converted to args before passing to function.
 
         @looper(NO_DELAY, some_var=10)
         def func(some_var):
@@ -116,7 +119,7 @@ class ConfigurationMixinBase:
 
         self.module_class = module_class
 
-        # subclass hooke will provide log handler reference and threads to start
+        # subclass hook will provide log handler reference and threads to start
         log, thread_info, thread_count = self._configure()
 
         # ===============
@@ -169,7 +172,7 @@ class Initialize:
         self._name = name
 
     def wait_for_threads(self, *, count: int, timeout: int = 0) -> None:
-        '''blocks until the checked in threads count has reached the wait for amount.
+        '''a blocking call that returns when the specified number of threads has checked in.
         '''
         if (not self._is_initializing or self.has_ran):
             raise RuntimeError('run has already been called for this instance.')
@@ -189,6 +192,9 @@ class Initialize:
                     f'{self._thread_count-len(self._thread_ready)}/{self._thread_count} threads'
                 )
 
+                # note: this ensures the process will not hang indefinitely if a thread fails to check in.
+                raise RuntimeError(f'{self._name} initialization timed out. Cannot continue.')
+
             fast_sleep(1)
 
         self.has_ran = True
@@ -203,7 +209,7 @@ class Initialize:
     def done(self) -> None:
         '''inform the handler a thread has been initialized.
 
-        using default thread name as dict key.
+        using the default thread name as dict key.
         '''
         # initialization is complete
         if (not self._is_initializing):
@@ -224,7 +230,7 @@ class Initialize:
     def done2(self) -> bool:
         '''new form of dealing with thread initialization check-in.
 
-        for short term compatibility, this will functionally wrap done(), providing identical functionality.
+        for short-term compatibility, this will functionally wrap done(), providing identical functionality.
 
         because this is in property form, True will always be returned.
         once initialization is complete, the property reference will be overloaded with "None" to reduce code execution
@@ -318,7 +324,7 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable[[...], Any]:
 def request_queue():
     '''basic queueing mechanism for requests received by a server.
 
-    alternate [Event based] version to the "InspectionQueue" mechanism used by the security modules.
+    alternate [Event-based] version to the "InspectionQueue" mechanism used by the security modules.
     optimized for single thread performance.
     '''
     request_q = deque()
@@ -341,7 +347,7 @@ def request_queue():
             wait_for_request()
 
             # immediately clearing event, so we don't have to worry about it after loop. this prevents having to deal
-            # with scenarios where a request was received in just after while loop, but just before reset. in this case
+            # with scenarios where a request was received in just after while loop, but just before reset. in this case,
             # the request would be stuck until another was received.
             clear_ready()
 
@@ -368,7 +374,7 @@ def inspection_queue():
     1 worker can be used for sequential processing of packets
             - see "RequestQueue" for an alternative to this
     >1 worker will allow packets to be processed concurrently
-            - performance of threads will depend on ratio of holding gil to not holding gil
+            - performance of threads will depend on the ratio of holding gil to not holding gil
     '''
 
     queue = deque()
@@ -413,10 +419,10 @@ def structure(obj_name: str, fields: Union[list, str]):
     if not isinstance(fields, list):
         fields = fields.split()
 
-    # used to lock in size of structure and associate struct packing functions for each field
+    # used to lock in the size of structure and associate struct packing functions for each field
     _formats = {'B': 1, 'H': 2, 'L': 4}
 
-    # parsing arguments, splitting format with field name and building list(converted to tuple after) for each, and
+    # parsing arguments, splitting format with the field name, building a list (converted to tuple after) for each, and
     # calculating the container size as it is in packed byte form.
     size_of, field_names, field_formats = 0, [], []
     for field in fields:

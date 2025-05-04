@@ -8,10 +8,11 @@ import select
 
 from threading import Thread
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import PROTO, ICMP, DECISION, DIRECTION
-from dnx_gentools.def_exceptions import ProtocolError
+from dnx_gentools.def_exceptions import ProtocolError, TerminateSignal
+from dnx_gentools.def_constants import TYPE_CHECKING, RUN_FOREVER, FIVE_SEC, LAST_ATTEMPT, ATTEMPTS
+from dnx_gentools.def_constants import WAN_IN, HEARTBEAT_FAIL_LIMIT, fast_sleep, fast_time, console_log
+from dnx_gentools.def_enums import ICMP, DECISION, DIRECTION
+from dnx_gentools.def_enums import PROTO_NOT_SET, PROTO_TCP, PROTO_UDP, PROTO_ICMP, PROTO_DNS_TLS
 from dnx_gentools.standard_tools import looper, inspection_queue
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK, DNS_SEND
 
@@ -23,6 +24,13 @@ from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import NetfilterQueue
 
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import TypeAlias, ClassVar, NoReturn, Bytes, Optional, Callable
+    from dnx_gentools.def_typing import Epoll_T, ListenerParser, ListenerPackets, ListenerCallback
+    from dnx_gentools.def_typing import Socket_T, ProxyParser, ProxyPackets, ProxyCallback
+    from dnx_gentools.def_typing import IP_ADDRINT, NET_ADDRESS, NET_PORT, SEC_PROFILE
+
+    from dnx_gentools.def_enums import NETWORK_PROTOCOL, GEOID
+
     from dnx_netmods.dnx_netfilter import CPacket
     from dnx_secmods.dns_proxy import DNSServer_T
     from dnx_routines.logging import LogHandler_T
@@ -56,7 +64,7 @@ class Listener:
     def __register(self, intf: tuple[int, int, str]) -> None:
         '''registers an interface with the listener.
 
-        once registration is complete the thread will exit.
+        once registration is complete, the thread will exit.
         '''
         # this is being defined here so the listener will be able to correlate socket back to interface and send in.
         # NOTE: we can probably _ the first 2 vars, but they may actually come in handy for something so check to see
@@ -95,7 +103,7 @@ class Listener:
         recv_buffer = memoryview(recv_buf)
 
         nbytes: int
-        address: Address
+        address: NET_ADDRESS
 
         # custom iterator
         for _ in RUN_FOREVER:
@@ -103,6 +111,8 @@ class Listener:
             for fd, _ in l_socks:
 
                 sock_info: L_SOCK = registered_socks_get(fd)
+
+                # todo: we should handle a socket error better.
                 try:
                     nbytes, address = sock_info.recvfrom(recv_buffer)
                 except OSError:
@@ -115,6 +125,8 @@ class Listener:
                     packet: ListenerPackets = listener_parser(address, sock_info)
                     try:
                         packet.parse(recv_buffer[:nbytes])
+                    except (KeyboardInterrupt, TerminateSignal):
+                        raise
                     except:
                         traceback.print_exc()
                         continue
@@ -138,7 +150,7 @@ class Listener:
         '''
         raise NotImplementedError('the listener_sock method must be overridden in subclass.')
 
-    def request_handler(self, request: Any) -> None:
+    def request_handler(self, request) -> None:
         '''must be overriden by the subclass and implemented with the dnx_queue decorator.
 
         example:
@@ -171,7 +183,11 @@ class Listener:
             Thread(target=listener.__register, args=(intf,)).start()
 
         # running main epoll/ socket loop.
-        listener.__run_listener(always_on)
+        try:
+            listener.__run_listener(always_on)
+        except (KeyboardInterrupt, TerminateSignal):
+            log.notice(f'{cls.__class__.__name__} listener stopped via signal.')
+            raise
 
     @classmethod
     def enable(cls, sock_fd: int, intf: str) -> None:
@@ -204,7 +220,7 @@ class ProtoRelay:
     provides standard built in methods to start, check status, or add jobs to the work queue.
     _dns_queue object must be overwritten by subclasses.
     '''
-    _protocol: ClassVar[PROTO] = PROTO.NOT_SET
+    _protocol: ClassVar[NETWORK_PROTOCOL] = PROTO_NOT_SET
     _relay_conn: RELAY_CONN
 
     __slots__ = (
@@ -234,8 +250,9 @@ class ProtoRelay:
         '''starts the protocol relay.
 
         DNSServer object is the class handling client side requests which we can call back to and fallback is a
-        secondary relay that can get forwarded a request post failure. initialize will be called to run any subclass
-        specific processing then query handler will run indefinitely.
+        secondary relay that can get forwarded a request on failure.
+
+        Initialize will be called to run any subclass specific processing then query handler will run indefinitely.
         '''
         self = cls(dns_server, fallback_relay)
 
@@ -296,7 +313,7 @@ class ProtoRelay:
         # if servers could change during runtime, this has a slight race condition potential, but it shouldn't matter
         # because, when changing a server, it would be initially set to down (essentially a no-op)
         server = primary if primary['ip_address'] == remote_server else self._dns_server.public_resolvers.secondary
-        server[PROTO.DNS_TLS] = False
+        server[PROTO_DNS_TLS] = False
 
         try:
             self._relay_conn.sock.close()
@@ -380,6 +397,10 @@ class NFQueue:
             # this is a blocking call that interacts with the system via callback.
             try:
                 nfqueue.nf_run()
+            except (KeyboardInterrupt, TerminateSignal):
+                self._log.notice('Netfilter binding stopped via signal.')
+                raise
+
             except:
                 nfqueue.nf_break()
 
@@ -420,10 +441,10 @@ class NFPacket:
     action:    DECISION
     direction: DIRECTION
 
-    tracked_geo: int
-    ipp_profile: int
-    dns_profile: int
-    ips_profile: int
+    tracked_geo: GEOID
+    ipp_profile: SEC_PROFILE
+    dns_profile: SEC_PROFILE
+    ids_profile: SEC_PROFILE
 
     # HW FIELDS
     in_intf:   int
@@ -432,20 +453,20 @@ class NFPacket:
     timestamp: int
 
     # IP FIELDS
-    protocol: PROTO
-    src_ip: int
-    dst_ip: int
-    src_port: int
-    dst_port: int
+    protocol: NETWORK_PROTOCOL
+    src_ip:   IP_ADDRINT
+    dst_ip:   IP_ADDRINT
+    src_port: NET_PORT
+    dst_port: NET_PORT
 
     # TCP FIELDS
     seq_number: int
     ack_number: int
 
     # UDP FIELDS
-    ip_header:   ByteString
-    udp_header:  ByteString
-    udp_payload: ByteString
+    ip_header:   Bytes
+    udp_header:  Bytes
+    udp_payload: Bytes
 
     # ICMP FIELDS
     icmp_type: ICMP
@@ -454,7 +475,7 @@ class NFPacket:
         'nfqueue', 'mark',
 
         'action', 'direction', 'tracked_geo',
-        'ipp_profile', 'dns_profile', 'ips_profile',
+        'ipp_profile', 'dns_profile', 'ids_profile',
 
         'in_intf', 'out_intf',
         'src_mac', 'timestamp',
@@ -494,7 +515,7 @@ class NFPacket:
         self.tracked_geo = mark >>  4 & 255
         self.ipp_profile = mark >> 16 & 15
         self.dns_profile = mark >> 20 & 15
-        self.ips_profile = mark >> 24 & 15
+        self.ids_profile = mark >> 24 & 15
 
         hw_info = cpacket.get_hw()
         self.in_intf   = hw_info[0]
@@ -503,11 +524,11 @@ class NFPacket:
         self.timestamp = hw_info[3]
 
         ip_header = cpacket.get_ip_header()
-        self.protocol = PROTO(ip_header[6])
+        self.protocol = ip_header[6]
         self.src_ip = ip_header[8]
         self.dst_ip = ip_header[9]
 
-        if (self.protocol is PROTO.TCP):
+        if (self.protocol == PROTO_TCP):
             proto_header = cpacket.get_tcp_header()
 
             self.src_port   = proto_header[0]
@@ -515,7 +536,7 @@ class NFPacket:
             self.seq_number = proto_header[2]
             self.ack_number = proto_header[3]
 
-        elif (self.protocol is PROTO.UDP):
+        elif (self.protocol == PROTO_UDP):
             proto_header = cpacket.get_udp_header()
 
             self.src_port = proto_header[0]
@@ -532,7 +553,7 @@ class NFPacket:
             # data payload used by IPS/IDS (portscan detection) and DNSProxy
             self.udp_payload = cpacket.get_payload()
 
-        elif (self.protocol is PROTO.ICMP):
+        elif (self.protocol == PROTO_ICMP):
             proto_header = cpacket.get_icmp_header()
 
             self.icmp_type = ICMP(proto_header[0])
@@ -578,7 +599,7 @@ class RawResponse:
     _intfs: IntfList = load_interfaces()
 
     _log: LogHandler_T = None
-    _open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {PROTO.TCP: {}, PROTO.UDP: {}}
+    _open_ports: ClassVar[dict[NETWORK_PROTOCOL, dict[int, int]]] = {PROTO_TCP: {}, PROTO_UDP: {}}
 
     _registered_socks: dict[int, NFQ_SEND_SOCK] = {}
     _registered_socks_get = _registered_socks.get
@@ -586,7 +607,7 @@ class RawResponse:
     __slots__ = ()
 
     @classmethod
-    def setup(cls, log: LogHandler_T, open_ports: dict[PROTO, dict[int, int]] = None) -> None:
+    def setup(cls, log: LogHandler_T, open_ports: dict[NETWORK_PROTOCOL, dict[int, int]] = None) -> None:
         '''register all available interfaces in a separate thread for each.
 
         registration will wait for the interface to become available before finalizing.
@@ -653,8 +674,8 @@ class RawResponse:
     def _prepare_packet(packet: ProxyPackets, dnx_src_ip: int) -> bytearray:
 
         # TCP HEADER
-        if (packet.protocol is PROTO.TCP):
-            response_protocol = PROTO.TCP
+        if (packet.protocol == PROTO_TCP):
+            response_protocol = PROTO_TCP
             proto_len = 20
 
             # new instance of header byte container template
@@ -678,9 +699,9 @@ class RawResponse:
             proto_header[16:18] = calc_checksum(pseudo_header + proto_header)
 
         # ICMP HEADER
-        # elif (packet.protocol is PROTO.UDP):
+        # elif (packet.protocol is PROTO_UDP):
         else:
-            response_protocol = PROTO.ICMP
+            response_protocol = PROTO_ICMP
             proto_len = 8 + 28
 
             # new instance of header byte container template
@@ -708,11 +729,11 @@ class RawResponse:
 
     @staticmethod
     def _packet_override(packet: ProxyPackets, dnx_src_ip: int, port_override: int) -> None:
-        if (packet.protocol is PROTO.TCP):
+        if (packet.protocol == PROTO_TCP):
             packet.dst_port = port_override
 
         # in byte form since they are included in icmp payload in raw form
-        elif (packet.protocol is PROTO.UDP):
+        elif (packet.protocol == PROTO_UDP):
             packet.udp_header[2:4] = short_pack(port_override)
 
             # NOTE: did we skip udp checksum because it's not required?? prob should do it to be "legit"... someday

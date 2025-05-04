@@ -5,21 +5,22 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_constants import INITIALIZE_MODULE
+from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('dns-proxy'):
     __all__ = ('run',)
 
     import threading
 
+    from dns_proxy_log import Log
+
+    Log.run(name='dns_proxy')
+
+    from dnx_gentools.def_exceptions import TerminateSignal
     from dnx_gentools.def_enums import Queue
     from dnx_gentools.signature_operations import generate_domain
 
     from dnx_iptools.hash_trie import HashTrie_Value
-
-    from dns_proxy_log import Log
-
-    Log.run(name='dns_proxy')
 
     dns_cat_signatures = generate_domain(Log)
 
@@ -46,16 +47,20 @@ def run():
         target=dns_proxy_server.DNSServer.run, args=(Log,), kwargs={'always_on': True}
     ).start()
 
-    dns_proxy.DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
+    try:
+        dns_proxy.DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
+    except (KeyboardInterrupt, TerminateSignal):
+        raise
 
+    except Exception as e:
+        Log.error(f'Error in DNSProxy.run: {e}')
+        raise
 
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
-    from typing import Type, TypeAlias
+    from dnx_gentools.def_typing import Type, TypeAlias
 
     __all__ = (
         'DNSProxy', 'DNSServer',

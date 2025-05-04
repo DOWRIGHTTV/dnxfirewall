@@ -177,7 +177,7 @@ class FirewallAnalyze:
     # todo: separate file loading into separate function, considering using context manager so we can have it check
     #   before any call to analyze methods
     def diff(self):
-        with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
+        with ConfigurationManager(DEFAULT_VERSION, ext='firewall', dir=DEFAULT_PATH) as dnx_fw:
 
             pending_hash = calculate_file_hash(PENDING_RULE_FILE, full_path=True)
             if (pending_hash != self.pending_hash):

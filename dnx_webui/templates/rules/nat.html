@@ -24,22 +24,22 @@
               <input type="hidden" name="tab" value="1">
               <input type="hidden" name="nat_type" value="DSTNAT">
               <div class="row">
-                <div class="input-field col offset-m1 s3 m2 {{input_color}}">
+                <div class="input-field col offset-m1 s3 m2 {{ input_color}}">
                   <select name="src_zone">
                     <option value="wan">WAN</option>
                     <option value="lan">LAN</option>
                   </select>
                   <label>Source Zone</label>
                 </div>
-                <div class="input-field col s3 m2 {{input_color}}">
+                <div class="input-field col s3 m2 {{ input_color }}">
                   <label for="dst_ip">Destination IP (Optional)</label>
-                  <input type="text" id="dst_ip" name="dst_ip" {{ip_addr_validate}} placeholder="1.1.1.1">
+                  <input type="text" id="dst_ip" name="dst_ip" {{ ip_addr_validate }} placeholder="1.1.1.1">
                 </div>
-                <div class="input-field col s3 m2 {{input_color}}">
+                <div class="input-field col s3 m2 {{ input_color }}">
                   <label for="dst_port">Destination Port</label>
-                  <input type="text" id="dst_port" name="dst_port" {{port_validate}} placeholder="80" required>
+                  <input type="text" id="dst_port" name="dst_port" {{ port_validate }} placeholder="80" required>
                 </div>
-                <div class="input-field col offset-m2 s3 m2 {{input_color}}">
+                <div class="input-field col offset-m2 s3 m2 {{ input_color }}">
                   <select name="protocol">
                     <option value="tcp">TCP</option>
                     <option value="udp">UDP</option>
@@ -55,13 +55,13 @@
                   </select>
                   <label>Dst Zone</label>
                 </div>
-                <div class="input-field col s3 m2 {{input_color}}">
+                <div class="input-field col s3 m2 {{ input_color }}">
                   <label for="host_ip">Host IP</label>
-                  <input type="text" id="host_ip" name="host_ip" {{ip_addr_validate}} placeholder="127.0.0.10" required>
+                  <input type="text" id="host_ip" name="host_ip" {{ ip_addr_validate }} placeholder="127.0.0.10" required>
                 </div>
-                <div class="input-field col s3 m2 {{input_color}}">
+                <div class="input-field col s3 m2 {{ input_color }}">
                   <label for="host_port">Host Port</label>
-                  <input type="text" id="host_port" name="host_port" {{port_validate}} placeholder="80" required>
+                  <input type="text" id="host_port" name="host_port" {{ port_validate }} placeholder="80" required>
                 </div>
                 <div class="input-field col offset-m2 s3 m2">
                   <button class="btn waves-effect waves-light col s12" name="action" value="add">Add</button>
@@ -85,24 +85,25 @@
               </tr>
               </thead>
               <tbody>
-              {% for i, rule in nat_settings['dmz_dnat_rules'] %}
+              {% for i, rule in nat_settings.dmz_dnat_rules %}
                 <tr>
                   <td>
                     <form method="POST">
                       <input type="hidden" name="tab" value="1">
                       <input type="hidden" name="nat_type" value="DSTNAT">
-                      <input type="hidden" name="position" value="{{i}}">
-                      <input type="hidden" name="proto_port" value="{{rule['-p']}}/{{rule['--dport']}}">
+                      <input type="hidden" name="position" value="{{ i }}">
+                      <input type="hidden" name="src_intf" value="{{ rule['-i'] }}">
+                      <input type="hidden" name="proto_port" value="{{ rule['-p'] }}/{{ rule['--dport'] }}">
                       <button class="btn-floating btn-small waves-effect waves-light red" name="action" value="remove">
                         <i class="material-icons">remove</i>
                       </button>
                     </form>
                   </td>
-                  <td>{{i}}</td>
-                  <td>{{rule['-p']}}</td>
-                  <td>{{rule['-i']}}</td>
-                  <td>{{rule.get('-d', 'interface').rstrip('/32')}}:{{rule['--dport']}}</td>
-                  <td>{{rule['--to-dest']}}:{{rule['--to-port']}}</td>
+                  <td>{{ i }}</td>
+                  <td>{{ rule['-p'] }}</td>
+                  <td>{{ rule['-i'] }}</td>
+                  <td>{{ rule.get('-d', 'interface').rstrip('/32') }}:{{ rule['--dport'] }}</td>
+                  <td>{{ rule['--to-dest']}}:{{ rule['--to-port']  }}</td>
                 </tr>
               {% else %}
                 <tr>
@@ -128,15 +129,15 @@
               <input type="hidden" name="tab" value="2">
               <input type="hidden" name="nat_type" value="SRCNAT">
               <div class="row">
-                <div class="input-field col offset-m1 s3 m2 {{input_color}}">
+                <div class="input-field col offset-m1 s3 m2 {{ input_color }}">
                   <label for="orig_src_ip">Original Source IP</label>
-                  <input type="text" id="orig_src_ip" name="orig_src_ip" {{ip_addr_validate}} placeholder="127.0.0.10">
+                  <input type="text" id="orig_src_ip" name="orig_src_ip" {{ ip_addr_validate }} placeholder="127.0.0.10">
                 </div>
-                <div class="input-field col s3 m2 {{input_color}}">
+                <div class="input-field col s3 m2 {{ input_color }}">
                   <label for="orig_src_port">Original Source Port</label>
                   <input type="text" id="orig_src_port" name="orig_src_port" placeholder="any" disabled>
                 </div>
-                <div class="input-field col s3 m2 {{input_color}}">
+                <div class="input-field col s3 m2 {{ input_color }}">
                   <select name="src_zone">
                     <option value="dmz">DMZ</option>
                     <option value="lan">LAN</option>
@@ -145,15 +146,15 @@
                 </div>
               </div>
               <div class="row">
-                <div class="input-field col offset-m1 s3 m2 {{input_color}}">
+                <div class="input-field col offset-m1 s3 m2 {{ input_color }}">
                   <label for="new_src_ip">New Source IP</label>
-                  <input type="text" id="new_src_ip" name="new_src_ip" {{ip_addr_validate}} placeholder="127.0.0.10">
+                  <input type="text" id="new_src_ip" name="new_src_ip" {{ ip_addr_validate }} placeholder="127.0.0.10">
                 </div>
-                <div class="input-field col s3 m2 {{input_color}}" disabled>
+                <div class="input-field col s3 m2 {{ input_color }}" disabled>
                   <label for="new_src_port">New Source Port</label>
                   <input type="text" id="new_src_port" name="new_src_port" placeholder="original" disabled>
                 </div>
-                <div class="input-field col s3 m2 {{input_color}}">
+                <div class="input-field col s3 m2 {{ input_color }}">
                   <select name="dst_zone" disabled>
                     <option value="wan">WAN</option>
                   </select>
@@ -181,7 +182,7 @@
               </tr>
               </thead>
               <tbody>
-              {% for i, rule in nat_settings['local_snat_rules'] %}
+              {% for i, rule in nat_settings.local_snat_rules %}
                 <tr>
                   <td>
                     <form method="post">

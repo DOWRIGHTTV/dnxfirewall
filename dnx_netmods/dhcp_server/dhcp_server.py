@@ -5,9 +5,9 @@ from __future__ import annotations
 import threading
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import DHCP, PROTO
+from dnx_gentools.def_typing import cast
+from dnx_gentools.def_constants import TYPE_CHECKING, INADDR_ANY, BROADCAST, fast_time
+from dnx_gentools.def_enums import DHCP, PROTO_DHCP_SVR
 from dnx_gentools.def_namedtuples import DHCP_RECORD
 from dnx_gentools.standard_tools import dnx_queue
 
@@ -16,6 +16,8 @@ from dnx_iptools.cprotocol_tools import itoip
 
 from dnx_routines.logging.log_client import Log
 
+from dnx_control.system.systemd import sysd_notify_ready
+
 from dhcp_server_requests import ServerResponse, ClientRequest
 from dhcp_server_automate import ServerConfiguration
 
@@ -23,6 +25,9 @@ from dhcp_server_automate import ServerConfiguration
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import ClassVar
+    from dnx_gentools.def_typing import Socket_T
+
     from dnx_netmods.dhcp_server import ClientRequest_T, RequestID
 
 __all__ = (
@@ -57,6 +62,9 @@ class DHCPServer(ServerConfiguration, Listener):
         ServerResponse.set_server_reference(self.__class__)
 
         threading.Thread(target=self.request_handler).start()
+
+        # note: this is not a complete startup, but it is enough to signal systemd
+        sysd_notify_ready()
 
     def _pre_inspect(self, packet: ClientRequest) -> bool:
         if (packet.mtype in VALID_MTYPES and packet.svr_ident in self.valid_idents):
@@ -155,7 +163,7 @@ class DHCPServer(ServerConfiguration, Listener):
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf_ident}\0'.encode('utf-8'))
-        l_sock.bind((itoip(INADDR_ANY), PROTO.DHCP_SVR))
+        l_sock.bind((itoip(INADDR_ANY), PROTO_DHCP_SVR))
 
         Log.debug(
             f'[{intf_ident}][{sock_fd}] {self.__class__.__name__} interface bound: {self.interfaces[intf_ident]}'

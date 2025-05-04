@@ -8,15 +8,18 @@ import threading
 from functools import wraps
 from flask import redirect, render_template, request, session, url_for, g as context_global
 
-from source.web_typing import *
+from source.web_typing import web_module_import_callout
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
-from dnx_gentools.def_constants import fast_time, fast_sleep
+from dnx_gentools.def_constants import TYPE_CHECKING, fast_time, fast_sleep
 from dnx_gentools.def_enums import LOG, CFG
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, load_data
 
 from dnx_routines.logging.log_client import direct_log
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 
 __all__ = (
@@ -192,7 +195,7 @@ def update_session_tracker(
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')
 
-    with ConfigurationManager('session_tracker', file_path='dnx_webui/data') as session_tracker:
+    with ConfigurationManager('session_tracker', dir='dnx_webui/data') as session_tracker:
         persistent_tracker: ConfigChain = session_tracker.load_configuration(strict=False)
 
         user_path = f'active_users->{name}'

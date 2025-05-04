@@ -4,12 +4,9 @@ from __future__ import annotations
 
 import threading
 
-from array import array
-
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import ppt
+from dnx_gentools.def_constants import TYPE_CHECKING, ppt
 from dnx_gentools.standard_tools import Initialize
-from dnx_gentools.file_operations import cfg_read_poller, load_configuration
+from dnx_gentools.file_operations import cfg_read_poller
 
 from dnx_routines.logging.log_client import Log
 
@@ -17,9 +14,15 @@ from dnx_routines.logging.log_client import Log
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
     from dnx_routines.logging import LogHandler_T
     from dnx_secmods.cfirewall import CFirewall
 
+
+# temp constants
+TABLE_FW = 0
+TABLE_NAT = 1
 
 # =========================================
 # AUTOMATE - used within cfirewall process
@@ -65,10 +68,11 @@ class FirewallAutomate:
         ppt(self.PRE_ROUTE)
         ppt(self.POST_ROUTE)
 
-    # threads will be started and other basic setup functions will be done before releasing control back to the
-    # inspection context.
     def run(self) -> None:
+        '''threads will be started.
 
+        waits until basic setup functions are completed before returning.
+        '''
         threading.Thread(target=self._monitor_zones).start()
         threading.Thread(target=self._monitor_system_rules).start()
         threading.Thread(target=self._monitor_standard_rules).start()
@@ -82,14 +86,13 @@ class FirewallAutomate:
         '''Monitors the firewall zone file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block.
-        the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
+        the GIL must be maintained on the Cython side or the Python interpreter will crash on PyObject access.
         '''
         # converting the list to a python array, then sending to Cython to update the C array.
         # this format is required due to transitioning between python and C. python arrays are
         # compatible in C via memory views and Cython can handle the initial list.
         dnx_zones: list[list[int, str]] = loaded_zones['map']
 
-        # NOTE: gil must be held on the other side of this call
         error: int = self.cfirewall.update_zones(dnx_zones)
         if (error):
             Log.error('Zone map update failure in CFirewall.')
@@ -119,11 +122,7 @@ class FirewallAutomate:
 
         self.log.notice('DNXFIREWALL system rule update job starting.')
 
-        # NOTE: 0 is index of SYSTEM RULES
-        table_type = 0
-
-        error = self.cfirewall.update_rules(table_type, 0, system_set)
-        if (error):
+        if error := self.cfirewall.update_rules(TABLE_FW, 0, system_set):
             Log.error(f'Rules section "SYSTEM" update failure in CFirewall.')
         else:
             Log.notice(f'Rule section "SYSTEM" updated successfully.')
@@ -135,7 +134,7 @@ class FirewallAutomate:
         '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block.
-        the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
+        the GIL must be maintained on the Cython side or the Python interpreter will crash on PyObject access.
         '''
         # checking each group for change to reduce C interaction.
         for table_idx, rule_group in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
@@ -154,10 +153,7 @@ class FirewallAutomate:
 
             self.log.notice(f'DNXFIREWALL {rule_group} rule update job starting.')
 
-            table_type = 0 # temp
-
-            error = self.cfirewall.update_rules(table_type, table_idx, ruleset)
-            if (error):
+            if error := self.cfirewall.update_rules(TABLE_FW, table_idx, ruleset):
                 Log.error(f'FIREWALL rule group ({rule_group}) failed to update')
             else:
                 Log.notice(f'FIREWALL rule group ({rule_group}) updated successfully.')
@@ -166,10 +162,10 @@ class FirewallAutomate:
 
     @cfg_read_poller('active', ext='nat', filepath='dnx_profile/iptables')
     def _monitor_nat_rules(self, loaded_rules: ConfigChain) -> None:
-        '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
+        '''Monitors the active nat rules file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block.
-        the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
+        the GIL must be maintained on the Cython side or the Python interpreter will crash on PyObject access.
         '''
         # checking each group for change to reduce C interaction.
         for table_idx, rule_group in enumerate(['PRE_ROUTE', 'POST_ROUTE']):
@@ -188,11 +184,7 @@ class FirewallAutomate:
 
             self.log.notice(f'DNXFIREWALL NAT {rule_group} rule update job starting.')
 
-            table_type = 1 # temp
-
-            # NOTE: gil must be held throughout this call
-            error = self.cfirewall.update_rules(table_type, table_idx, ruleset)
-            if (error):
+            if error := self.cfirewall.update_rules(TABLE_NAT, table_idx, ruleset):
                 Log.error(f'NAT rule group ({rule_group}) failed to update')
             else:
                 Log.notice(f'NAT rule group ({rule_group}) updated successfully.')

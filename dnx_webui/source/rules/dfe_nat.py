@@ -4,19 +4,22 @@ from __future__ import annotations
 
 from subprocess import run
 
-from source.web_typing import *
+from source.web_typing import web_module_import_callout
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
-from source.web_validate import *
-
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
-
-from dnx_iptools.iptables import IPTablesManager
 from dnx_gentools.system_info import System
 
+from dnx_iptools.iptables import IPTablesManager
+
+from source.web_validate import *
 from source.web_interfaces import RulesWebPage
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 __all__ = ('WebPage',)
 
@@ -60,7 +63,7 @@ def _dnat_rules(form: Form, action: str) -> str:
     fields = config(**form)
     if (action == 'add'):
         # checking all required fields are present and some other basic rules are followed
-        # before validating values of standard fields.
+        # before validating the values of standard fields.
         if error := validate_dnat_rule(fields, action=CFG.ADD):
             return error.message + ' code=1'
 
@@ -80,19 +83,22 @@ def _dnat_rules(form: Form, action: str) -> str:
         with IPTablesManager() as iptables:
             iptables.add_nat(fields)
 
-            configure_open_wan_protocol(fields, action=CFG.ADD)
+            # note: only wan interface rules should impact the open ports tracker.
+            if (fields.src_zone == 'wan'):
+                configure_open_wan_protocol(fields, action=CFG.ADD)
 
     elif (action == 'remove'):
         fields.position = convert_int(fields.position)
 
-        # NOTE: validation needs to know the zone, so it can ensure the position is valid
         if error := validate_dnat_rule(fields, action=CFG.DEL):
             return error.message + ' code=3'
 
         with IPTablesManager() as iptables:
-            iptables.delete_nat(fields)
+            src_zone = iptables.delete_nat(fields)
 
-            configure_open_wan_protocol(fields, action=CFG.DEL)
+            # note: only wan interface rules should impact the open ports tracker.
+            if (src_zone == 'wan'):
+                configure_open_wan_protocol(fields, action=CFG.DEL)
 
     else:
         return INVALID_FORM + ' code=98'
@@ -134,6 +140,7 @@ def _snat_rules(form: Form, action: str) -> str:
 # ===========
 # VALIDATION
 # ===========
+# !bug: currently port 80,443 dnat rules will be accepted if specifying a dst ip of of lan interface.
 def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError]:
 
     if (action is CFG.ADD):
@@ -148,8 +155,8 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
         if (rule.protocol not in ['tcp', 'udp', 'icmp']):
             return ValidationError(INVALID_FORM)
 
-        if (not rule.dst_ip and rule.dst_port in ['443', '80']):
-            return ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
+        if (not rule.dst_ip and (rule.src_zone != 'wan' and rule.dst_port in ['443', '80'])):
+            return ValidationError('Interface dnat on ports 80,443 are only available on the wan interface.')
 
         if (rule.protocol == 'icmp'):
 
@@ -160,6 +167,13 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
                 )
 
     elif (action is CFG.DEL):
+        valid_fields = [
+            'nat_type', 'position', 'src_intf', 'proto_port'
+        ]
+
+        if not all([hasattr(rule, x) for x in valid_fields]):
+            return ValidationError(INVALID_FORM)
+
         output = run(
             f'sudo iptables -t nat -nL {rule.nat_type} --line-number', shell=True, capture_output=True
         ).stdout.splitlines()[1:]
@@ -174,13 +188,13 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
         except:
             return ValidationError(INVALID_FORM)
 
-        open_protocol_settings: ConfigChain = load_configuration('global', cfg_type='security/ids_ips', strict=False)
-        # check tcp/udp first, then icmp if it fails. if both fail, the form data is invalid.
-        try:
-            open_protocol_settings[f'open_protocols->{rule.protocol}->{rule.port}']
-        except:
-            if (rule.protocol != 'icmp' and rule.port != '0'):
-                return ValidationError(INVALID_FORM)
+        # open_protocol_settings: ConfigChain = load_configuration('global', cfg_type='security/ids_ips', strict=False)
+        # # check tcp/udp first, then icmp if it fails. if both fail, the form data is invalid.
+        # try:
+        #     open_protocol_settings[f'open_protocols->{rule.protocol}->{rule.port}']
+        # except:
+        #     if (rule.protocol != 'icmp' and rule.port != '0'):
+        #         return ValidationError(INVALID_FORM)
 
 def validate_snat_rule(rule: config, /, action: CFG) -> Optional[ValidationError]:
 

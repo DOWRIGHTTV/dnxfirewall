@@ -3,41 +3,37 @@
 from __future__ import annotations
 
 import os
-import sys
 import time
-import json
 import socket
 import readline
 
 from dataclasses import dataclass
-from functools import partial
-from subprocess import run as _run, DEVNULL, CalledProcessError
+from subprocess import CalledProcessError
 
-from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, INITIALIZE_MODULE, hardout, str_join
-from dnx_gentools.def_namedtuples import SigFile
-from dnx_gentools.file_operations import ConfigurationManager, write_configuration, json_to_yaml
-from dnx_gentools.file_operations import read_file, write_file, load_data, write_data,  change_file_owner
+from dnx_gentools.def_exceptions import hardout
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, INITIALIZE_MODULE, str_join
+from dnx_gentools.file_operations import ConfigurationManager, json_to_yaml
+from dnx_gentools.file_operations import write_file, load_data, write_data, change_file_owner
 
 from dnx_iptools.iptables import IPTablesManager
+
 from dnx_routines.logging.log_client import Log
 
 from dnx_cli.utils.shell_colors import text
+from dnx_cli.utils.io import dnx_run, dnx_run_v, flash_input_error, title_print, line_print, ts_print, err_print
+from dnx_cli.utils.ux import create_progress_bar
 
 # todo: rework this module to hot reload if the file was changed/updated within the current update session.
+#  - this includes not using hardout() directly and raises a SystemExit exception instead.
 
 # ===============
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Optional
+    from dnx_gentools.def_typing import SIGNATURE_MANIFEST, bint
+
     from dnx_gentools.file_operations import ConfigChain
-
-ERROR_SHOW_TIME = .33
-
-srun = partial(_run, shell=True, check=True)
-def lprint(sep: str = '-'): print(text.lightblue(f'{sep}' * os.get_terminal_size().columns))
-
-def tprint(s: str, /) -> None: lprint(); print(s); lprint()
 
 # ===============
 # BANNER
@@ -50,86 +46,39 @@ BANNER = text.lightblue('\n'.join([
 
 @dataclass
 class Args:
-    v: int = 0
-    verbose: int = 0
-    packages: int = 0
-    iptables: int = 0
+    v: bint = 0
+    verbose: bint = 0
+    packages: bint = 0
+    iptables: bint = 0
 
-    _update_system: int = 0
-    _update_signatures: int = 0
+    force: bint = 0  # only applies to signature updates at this time
+
+    _update_system: bint = 0
+    _update_signatures: bint = 0
 
     @property
     def verbose_set(self):
         return self.v or self.verbose
 
-
-LOG_NAME: str = 'system'
-PROGRESS_TOTAL_COUNT: int = 1  # set permissions count added here
-
-LINEBREAK: str = text.lightblue('-' * 32)
-
-SYSTEM_DIR:  str = 'dnx_profile'
-UTILITY_DIR: str = 'dnx_profile/utils'
-
 # ----------------------------
 # UTILS
 # ----------------------------
-def flash_input_error(error: str, space_ct: int) -> None:
-    # moves cursor up one space in the terminal
-    sys.stdout.write('\033[1A')
-
-    sys.stdout.write(f'\033[{space_ct}C')
-    sys.stdout.write(text.orange(f'{error}\r', style=None))
-
-    time.sleep(ERROR_SHOW_TIME)
-
-    sys.stdout.write(f'{" " * os.get_terminal_size().columns}\r')
-
-def sprint(s: str, /) -> None:
-    '''setup print. includes timestamp before arg str.
-
-    the passed in message will be automatically colorized.
-    '''
-    print(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') + text.yellow(f'{s}'))
-
-def eprint(s: str, /) -> None:
-    '''error print. includes timestamp and alert before arg str.
-
-    the passed in message will not be automatically colorized. this should be handled by the caller.
-    '''
-    while True:
-        sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') + text.red(f'!!! {s} '))
-        answer: str = input(
-            text.lightgrey('continue? [y/', style=None) +
-            text.lightblue('N') +
-            text.lightgrey(']: ', style=None)
-        )
-        if (answer.lower() == 'y'):
-            return
-
-        elif (answer.lower() in ['n', '']):
-            sprint(text.red('exiting...'))
-            hardout()
-
-        else:
-            flash_input_error('invalid selection', 13 + len(s))  # length of raw text
-
-def dnx_run(s: str, /) -> None:
+def shell_run(s: str, /) -> None:
     '''convenience function, subprocess run wrapper adding additional args.
     '''
     try:
         if (args.verbose_set):
-            srun(s)
+            dnx_run_v(s, shell=True)
 
         else:
-            srun(s, stdout=DEVNULL, stderr=DEVNULL)
+            dnx_run(s, shell=True)
 
     except CalledProcessError as cpe:
-        eprint(f'{cpe}')
+        err_print(f'{cpe}')
 
 def check_run_as_root() -> None:
     if (os.getuid()):
-        eprint(
+        err_print(
             text.yellow('dnxfirewall auto loader requires') +
             text.red('root') +
             text.yellow('permissions.')
@@ -140,7 +89,7 @@ def check_dnx_user() -> None:
         passwd: list[str] = passwd_f.read().splitlines()
 
     if not any([usr for usr in passwd if usr.split(':', 1)[0] == 'dnx']):
-        eprint(
+        err_print(
             text.green('dnx ') +
             text.yellow('user does ') +
             text.red('not ') +
@@ -150,7 +99,7 @@ def check_dnx_user() -> None:
 def check_clone_location() -> None:
 
     if (not os.path.isdir(HOME_DIR)):
-        eprint(
+        err_print(
             text.yellow('dnxfirewall filesystem ') +
             text.red('must ') +
             text.yellow('be located at /home/dnx.')
@@ -161,24 +110,24 @@ def check_already_ran() -> None:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
     if (not args._update_system and dnx_settings['auto_loader']):
-        eprint(
+        err_print(
             text.red('dnxfirewall has already been installed.')
         )
 
     elif (args._update_system and not dnx_settings['auto_loader']):
-        eprint(
+        err_print(
              text.red('dnxfirewall has not been installed. see readme for guidance.')
         )
 
 def set_branch() -> None:
     available_branches = ['development', 'stable']
 
-    tprint(text.yellow('available branches'))
+    title_print(text.yellow('available branches'))
 
     print(text.yellow('1. development'))
     print(text.yellow('2. stable'))
 
-    lprint()
+    line_print()
 
     question = 'branch selection: '
     while True:
@@ -194,91 +143,6 @@ def set_branch() -> None:
         dnx_settings['branch'] = available_branches[int(selection) - 1]
 
         dnx.write_configuration(dnx_settings.expanded_user_data)
-
-# ----------------------------
-# PROGRESS BAR
-# ----------------------------
-def clear_line() -> None:
-    '''clears the current line in the terminal.
-
-        useful for writes that are not on a new line to prevent previous character overflow.
-    '''
-    sys.stdout.write(' ' * os.get_terminal_size().columns + '\r')
-
-    sys.stdout.flush()
-
-
-# starting at -1 to compensate for the first process. todo: (we arent though....)
-bar_len: int = 30
-completed_count: int = 0
-def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int] = None) -> None:
-    '''prints a progress bar to the terminal.
-
-    if complete and total are not passed in, the global completed_count and PROGRESS_TOTAL_COUNT will be used.
-    '''
-    global completed_count
-
-    primary_progress_bar = completed is None and total is None
-
-    if (primary_progress_bar):
-        completed = completed_count
-        total = PROGRESS_TOTAL_COUNT
-
-    # this will ensure completed count does not exceed total count when rendering.
-    # this would only happen if I miscalculated the total count somewhere. (happens too often LOL :/)
-    if (completed > total):
-        completed = total
-
-    # calculating bar %
-    ratio: float = completed / total
-    filled_len: int = int(bar_len * ratio)
-
-    # COLORIZING COMPLETION STATUS BAR
-    # --------------------------------------------------------------------
-    perc = f'{int(100 * ratio)}'.rjust(3)
-    filled = '#' * filled_len
-    if (ratio < .34):
-        progress_fill = text.red(filled, style=None)
-        percentage = text.red(perc, style=None)
-
-    elif (ratio < .67):
-        progress_fill = text.orange(filled, style=None)
-        percentage = text.orange(perc, style=None)
-
-    elif (ratio < 1):
-        progress_fill = text.green(filled, style=None)
-        percentage = text.yellow(perc, style=None)
-
-    else:
-        progress_fill = text.green(filled, style=None)
-        percentage = text.green(perc, style=None)
-
-    progress_fill += text.lightgrey('=' * (bar_len - filled_len))
-
-    # RENDERING UPDATED TIMESTAMP, BAR, DESCRIPTION
-    # --------------------------------------------------------------------
-    clear_line()
-
-    # 1. timestamp, 2. x/total | 3. | [##########] 4. 100% | 5. | description
-    bar  = text.lightgrey(f'{time.strftime("%H:%M:%S")}| ')
-    bar += text.yellow(f'{completed}'.rjust(2), style=None) + text.lightgrey(f'/{total} |')
-    bar += text.lightgrey(f'| [', style=None) + progress_fill + text.lightgrey(f'] ', style=None)
-    bar += percentage + text.lightgrey('% |', style=None)
-    bar += text.yellow(f'| {desc}\r')
-
-    sys.stdout.write(bar)
-
-    # allows for rendering bar without moving the completion %.
-    if (primary_progress_bar and desc):
-        completed_count += 1
-
-    # prevents bar from being overwritten once complete
-    if (filled_len == bar_len):
-        sys.stdout.write('\n')
-
-    # forces current stdout buffer to be written to terminal
-    sys.stdout.flush()
-
 
 # ============================
 # INTERFACE CONFIGURATION
@@ -348,7 +212,7 @@ def get_system_interfaces() -> tuple[str, list[str]]:
 
     if (len(interfaces_detected) == 1):
         intf_mode = 'local'
-        eprint(
+        err_print(
             text.yellow('only ') +
             text.red('1 ') +
             text.yellow('interface detected. the system will run in local only mode until an additional interface is set.')
@@ -356,7 +220,7 @@ def get_system_interfaces() -> tuple[str, list[str]]:
 
     elif (len(interfaces_detected) == 2):
         intf_mode = 'no-dmz'
-        eprint(
+        err_print(
             text.yellow('only ') +
             text.red('2 ') +
             text.yellow('interfaces detected. the system will run in no-dmz mode until an additional interface is set.')
@@ -365,12 +229,12 @@ def get_system_interfaces() -> tuple[str, list[str]]:
     return intf_mode, interfaces_detected
 
 def get_interface_associations(intf_mode, interfaces_detected: list[str]) -> dict[str, str]:
-    tprint(text.yellow('available interfaces'))
+    title_print(text.yellow('available interfaces'))
 
     for i, interface in enumerate(interfaces_detected, 1):
         print(text.yellow(f'{i}. {interface}'))
 
-    lprint()
+    line_print()
 
     interface_config: dict[str, str] = {'LAN': ''}
     if (intf_mode == 'no-dmz'):
@@ -404,7 +268,7 @@ def get_interface_associations(intf_mode, interfaces_detected: list[str]) -> dic
 
 # takes interface config as dict, converts to yaml, then writes to system folder
 def write_net_config(interface_configs: str) -> None:
-    sprint('configuring netplan service...')
+    ts_print('configuring netplan service...')
 
     # write config file to netplan
     with open('/etc/netplan/01-dnx-interfaces.yaml', 'w') as intf_config:
@@ -413,12 +277,12 @@ def write_net_config(interface_configs: str) -> None:
     # removing the default configuration set during os install.
     try:
         os.remove('/etc/netplan/00-installer-config.yaml')
-    except:
+    except FileNotFoundError:
         pass
 
 # modifying dnx configuration files with the user specified interface names and their corresponding zones
 def set_dnx_interfaces(user_intf_config: dict[str, str]) -> None:
-    sprint('configuring dnxfirewall network interfaces...')
+    ts_print('configuring dnxfirewall network interfaces...')
 
     with ConfigurationManager('system', cfg_type='global') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
@@ -465,11 +329,11 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 #   - alternatively can create a sim link in cfirewall then include that dir in the cython compile script.
 #   - note: it is currently specified as a libdir in the compiling script.
 def build_libraries(*, count_only: bool = False) -> None:
-    global PROGRESS_TOTAL_COUNT
+    global NUMBER_OF_IU_TASKS
 
     # NOTE: this needs to be updated as libs get added to this function
     if (count_only):
-        PROGRESS_TOTAL_COUNT += 3
+        NUMBER_OF_IU_TASKS += 3
 
         return
 
@@ -491,15 +355,15 @@ def build_libraries(*, count_only: bool = False) -> None:
         os.chdir(libdir)
         for command, desc in commands:
             if (desc):
-                progress(desc)
+                system_iu_progress(desc)
 
-            dnx_run(command)
+            shell_run(command)
 
         os.chdir(HOME_DIR)
 
     # libnetfilter_conntrack will be installed via package manager for now.
-    progress('building netfilter conntrack (lib)')
-    dnx_run('sudo apt install libnetfilter-conntrack-dev')
+    system_iu_progress('building netfilter conntrack (lib)')
+    shell_run('sudo apt install libnetfilter-conntrack-dev')
 
 # ============================
 # INSTALL PACKAGES
@@ -526,21 +390,21 @@ def checkout_configured_branch() -> str:
 
     branch_name = 'dnxfirewall-dev' if configured_branch == 'development' else 'dnxfirewall'
 
-    dnx_run(f'git checkout {branch_name}')
+    shell_run(f'git checkout {branch_name}')
 
     return branch_name
 
-def update_local_branch(branch: str) -> list[tuple]:
+def update_local_branch(branch: str) -> list[tuple[str, Optional[str]]]:
 
     commands: list[tuple[str, str]] = [
         ('git stash', None),  # resetting any local changes before pulling
-        (f'git pull origin {branch}', 'downloading updates')
+        (f'git pull origin {branch} --force', 'downloading updates')
     ]
 
     return commands
 
 def compile_extensions(*, count_only: bool = False) -> Optional[list[tuple]]:
-    global PROGRESS_TOTAL_COUNT
+    global NUMBER_OF_IU_TASKS
 
     commands: list[tuple[str, str]] = [
         ('sudo python3 dnx_run.py compile cprotocol-tools _autoloader_', 'compiling cprotocol tools'),
@@ -551,13 +415,13 @@ def compile_extensions(*, count_only: bool = False) -> Optional[list[tuple]]:
 
     # incrementing progress total count to ensure the progress bar is accurate
     if (count_only):
-        PROGRESS_TOTAL_COUNT += len(commands)
+        NUMBER_OF_IU_TASKS += len(commands)
 
         return
 
     return commands
 
-def configure_webui() -> list[tuple]:
+def configure_webui() -> list[tuple[str, Optional[str]]]:
     cert_subject: str = str_join([
         '/C=US',
         '/ST=Arizona',
@@ -590,7 +454,7 @@ def configure_webui() -> list[tuple]:
 # ============================
 def set_permissions() -> None:
 
-    progress('configuring dnxfirewall permissions')
+    system_iu_progress('configuring dnxfirewall permissions')
 
     commands: list[str] = [
 
@@ -619,13 +483,13 @@ def set_permissions() -> None:
     ]
 
     for command in commands:
-        dnx_run(command)
+        shell_run(command)
 
     # testing sudoer file as a precaution. if this fails, the build itself is bad.
     # this should never happen, but humans make mistakes, so at least this will not brick the system if root wasn't
     # set with a password.
     try:
-        srun(f'sudo visudo -cf {SYSTEM_DIR}/admin/dnx', stderr=DEVNULL, stdout=DEVNULL)
+        shell_run(f'sudo visudo -cf {SYSTEM_DIR}/admin/dnx')
     except CalledProcessError:
         hardout(
             text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') +
@@ -633,7 +497,7 @@ def set_permissions() -> None:
         )
 
     # configure sudoers.d to allow dnx user "no-pass" for specific system functions
-    dnx_run(f'sudo cp -n {SYSTEM_DIR}/admin/dnx /etc/sudoers.d/')
+    shell_run(f'sudo cp -n {SYSTEM_DIR}/admin/dnx /etc/sudoers.d/')
 
 def set_signature_permissions() -> None:
     commands: list[str] = [
@@ -646,32 +510,58 @@ def set_signature_permissions() -> None:
     ]
 
     for command in commands:
-        dnx_run(command)
+        shell_run(command)
 
 # ============================
 # SERVICE FILE SETUP
 # ============================
-def set_services() -> None:
+# todo: add check to diff the installed vs local file to reduce unnecessary copies.
+#  - if all are the same, we can skip the daemon-reload.
+def set_services(update: bint = 0) -> None:
     ignore_list = ['dnx-syslog.service']
 
-    progress('creating dnxfirewall services')
+    action = 'updating' if update else 'building'
 
-    services = os.listdir(f'{UTILITY_DIR}/services')
-    for service in services:
+    system_iu_progress(f'{action} dnxfirewall services')
 
-        if (service not in ignore_list):
+    installed_services = [f for f in os.listdir('/etc/systemd/system/') if f.startswith('dnx-')]
 
-            dnx_run(f'cp -n {UTILITY_DIR}/services/{service} /etc/systemd/system/')
-            dnx_run(f'systemctl enable {service}')
+    # ===========================================
+    # INSTALL / UPDATING SERVICE FILES
+    # ===========================================
+    local_services = [f for f in os.listdir(f'{UTILITY_DIR}/services') if f not in ignore_list]
+    for service in local_services:
 
-    dnx_run(f'systemctl enable nginx')
+        shell_run(f'cp {UTILITY_DIR}/services/{service} /etc/systemd/system/')
 
+        if (service not in installed_services):
+            shell_run(f'systemctl enable {service}')
+
+    # required for systemd
+    shell_run('systemctl daemon-reload')
+
+    if (not update):
+        shell_run(f'systemctl enable nginx')
+
+    # ===========================================
+    # REMOVE DEPRECATED SERVICE FILES
+    # ===========================================
+    deprecated_services = [f for f in installed_services if f not in local_services]
+    for service in deprecated_services:
+
+        # this isn't a big deal. it's possible to have already been done, so we can ignore any error.
+        try:
+            shell_run(f'systemctl disable {service}')
+        except CalledProcessError:
+            pass
+
+        shell_run(f'rm /etc/systemd/system/{service}')
 
 # ============================
 # INITIAL IPTABLES SETUP
 # ============================
 def configure_iptables() -> None:
-    progress('loading default iptables')
+    system_iu_progress('loading default iptables')
 
     with IPTablesManager() as iptables:
         iptables.apply_defaults(suppress=True)
@@ -692,29 +582,29 @@ def mark_completion_flag() -> None:
 def store_default_mac():
     pass
 
-def signature_update(system_update: bool = False) -> bool:
+def signature_update(force: bool = False, system_update: bool = False) -> bool:
     import dnx_control.system.signature_update as signature_updater
 
-    sprint('security signature updater initiated.')
+    ts_print('security signature updater initiated.')
     # ===========================================
     # INITIAL FILE CHECKSUM INFORMATION DOWNLOAD
     # ===========================================
-    sprint('downloading initial file integrity information from remote server.')
+    ts_print('downloading initial file integrity information from remote server.')
     file_validations: list[tuple] = []
     for attempt in range(1, 4):
         if file_validations := signature_updater.get_file_validations():
             break
 
-        eprint(f'unable to download file validation information. tries: {attempt}/3')
+        err_print(f'unable to download file validation information. tries: {attempt}/3')
 
     else:
-        sprint(f'retry limit reached.')
+        ts_print(f'retry limit reached.')
         hardout('try again later. exiting...')
 
     # ===========================================
     # REMOTE SIGNATURE VERSION INFORMATION
     # ===========================================
-    sprint('looking up remote signature version for compatibility.')
+    ts_print('looking up remote signature version for compatibility.')
     remote_version = 99991231
     rsv_name, rsv_hash = file_validations[0]
     for attempt in range(1, 4):
@@ -725,20 +615,20 @@ def signature_update(system_update: bool = False) -> bool:
             if signature_updater.validate_file_download(f'{rsv_name}_TEMP', rsv_hash):
                 break
 
-        eprint(f'unable to validate signature versioning information. tries: {attempt}/3')
+        err_print(f'unable to validate signature versioning information. tries: {attempt}/3')
 
     else:
-        sprint(f'retry limit reached. check connection and try again later.')
+        ts_print(f'retry limit reached. check connection and try again later.')
         hardout('exiting...')
 
     # system update will ignore the signature version check and force the update.
-    if not signature_updater.compare_signature_version(remote_version, system_update=True):
+    if not signature_updater.compare_signature_version(remote_version):
         hardout('a system update is required to support the latest signature sets.')
 
     # ===========================================
     # REMOTE SIGNATURE MANIFEST
     # ===========================================
-    sprint('downloading remote signature manifest.')
+    ts_print('downloading remote signature manifest.')
     remote_manifest: SIGNATURE_MANIFEST = []
     rsm_name, rsm_hash = file_validations[1]
     for attempt in range(1, 4):
@@ -750,15 +640,19 @@ def signature_update(system_update: bool = False) -> bool:
             if signature_updater.validate_file_download(f'{rsm_name}_TEMP', rsm_hash):
                 break
 
-        eprint(f'unable to validate remote signature manifest. tries: {attempt}/3')
+        err_print(f'unable to validate remote signature manifest. tries: {attempt}/3')
 
     else:
-        sprint(f'retry limit reached. check connection and try again later.')
+        ts_print(f'retry limit reached. check connection and try again later.')
         hardout('exiting...')
 
     # ===========================================
     # FILTERING UNCHANGED FILES - EARLY EXIT
     # ===========================================
+    # note: a force removes the local manifest file which makes the file check think we need to download everything.
+    if (force):
+        os.remove(f'dnx_profile/signatures/{rsm_name}')
+
     update_msg = []
     # checking local manifest for files that have not changed and removing them from the list.
     # separate lists are for better reporting to the user.
@@ -773,10 +667,10 @@ def signature_update(system_update: bool = False) -> bool:
 
     download_targets: SIGNATURE_MANIFEST = [*missing_files, *changed_files]
     if (download_targets):
-        sprint(f'identified {update_msg}. starting download...')
+        ts_print(f'identified {update_msg}. starting download...')
 
     else:
-        sprint('there are no signature updates available.')
+        ts_print('there are no signature updates available.')
 
         signature_updater.cleanup_temp_files()
 
@@ -791,30 +685,34 @@ def signature_update(system_update: bool = False) -> bool:
     download_failure_list: SIGNATURE_MANIFEST = []
     checksum_failure_list: SIGNATURE_MANIFEST = []
 
+    signature_update_progress = create_progress_bar(len(download_targets))
+
     for attempt in range(3):
 
         success = 0
         # retries only need to download the files that are remaining
         # converting to set to remove duplicates
         if (attempt > 0):
-            progress('incomplete', completed=success, total=len(download_targets))
-            eprint(f'({len(checksum_failure_list)}) signature download errors detected. tries: {attempt}/3')
+            signature_update_progress('incomplete', success)
+            err_print(f'({len(checksum_failure_list)}) signature download errors detected. tries: {attempt}/3')
 
             # dedup with a set then converting back to a list
             download_targets = list({*download_failure_list, *checksum_failure_list})
+
+            signature_update_progress = create_progress_bar(len(download_targets))
 
             # clearing trackers for the next attempt if needed.
             download_failure_list.clear()
             checksum_failure_list.clear()
 
         for target in download_targets:
-            progress(f'downloading {target.name}', completed=success, total=len(download_targets))
+            signature_update_progress(f'downloading {target.name}', progress_override=success)
 
             # downloading signatures and running checksum validation.
             if not signature_updater.download_signature_file(target):
                 download_failure_list.append(target)
                 # if (args.verbose_set):
-                #     sprint(f'download failed for {file}')
+                #     ts_print(f'download failed for {file}')
 
             else:
                 check_passed = signature_updater.validate_signature_file(target)
@@ -824,32 +722,32 @@ def signature_update(system_update: bool = False) -> bool:
                 else:
                     success += 1
                     # if (args.verbose_set):
-                    #     sprint(f'checksum failed for {file}')
+                    #     ts_print(f'checksum failed for {file}')
 
         if (not download_failure_list and not checksum_failure_list):
-            progress('done. installing...', completed=success, total=len(download_targets))
+            signature_update_progress('done. installing...', progress_override=success, final=True)
             break
 
     # will give the user the option to load the signatures that downloaded successfully or exit.
     # TODO: i do not see where the option is actually given for this. it looks like it will just continue on its own.
     #   either current me is dumb or past me was dumb. i'm not sure which.
     else:
-        sprint(f'retry limit reached.')
-        sprint(f'{len(download_failure_list)} signatures failed to download.')
-        sprint(f'{len(checksum_failure_list)} signatures failed checksum validation.')
+        ts_print(f'retry limit reached.')
+        ts_print(f'{len(download_failure_list)} signatures failed to download.')
+        ts_print(f'{len(checksum_failure_list)} signatures failed checksum validation.')
 
     # ===========================================
     # COPYING DOWNLOADED FILES TO SIGNATURE DIR
     # ===========================================
     # settings the flag to identify a file move in progress or partial signature update.
     if not signature_updater.set_signature_update_flag():
-        eprint('signature update may already be in in progress or a previous update was interrupted.')
+        err_print('signature update may already be in in progress or a previous update was interrupted.')
 
         signature_updater.set_signature_update_flag(override=True)
 
     signature_updater.move_signature_files(download_targets, checksum_failure_list)
 
-    sprint('signatures installed. setting permissions.')
+    ts_print('signatures installed. setting permissions.')
 
     # probably not needed, but doing anyway for consistency.
     set_signature_permissions()
@@ -864,7 +762,8 @@ def signature_update(system_update: bool = False) -> bool:
 
     ipp_default_profile['geolocation'] = geolocation_cfg['geolocation']
 
-    # writing to temp file, changing the owner and permissions, the renaming over the original file.
+    # :bug: this is not terrible, but overwrites a file tracked by git, and can make some operations more difficult.
+    # writing to temp file, changing the owner and permissions, then renaming over the original file.
     write_data(ipp_default_profile, 'profile_0.temp', cfg_type='system/security/ip/profiles')
 
     geo_cfg_path_temp = 'dnx_profile/data/system/security/ip/profiles/profile_0.temp'
@@ -883,7 +782,7 @@ def signature_update(system_update: bool = False) -> bool:
     if (not system_update):
         final_msg += ' restart security modules to apply the changes.'
 
-    sprint(final_msg)
+    ts_print(final_msg)
 
     return True
 
@@ -892,24 +791,25 @@ def signature_update(system_update: bool = False) -> bool:
 #    cython does this automatically, but the updater will still run the compile steps and show the progress bar as if
 #    it is doing something.
 def run():
-    global PROGRESS_TOTAL_COUNT
+    global NUMBER_OF_IU_TASKS
+    global system_iu_progress
 
     # to simplify folder/file naming
     os.chdir(HOME_DIR)
 
     # signature updates are handled separately from the rest of the build process unless the system is being updated.
     if (args._update_signatures):
-        signature_update()
+        signature_update(args.force)
 
         return
 
+    NUMBER_OF_IU_TASKS += 1  # copying service files
     if (not args._update_system):
-        PROGRESS_TOTAL_COUNT += 1  # copying service files
         set_branch()
         configure_interfaces()
 
     if (not args._update_system) and (args._update_system and args.iptables):
-        PROGRESS_TOTAL_COUNT += 1  # building iptables
+        NUMBER_OF_IU_TASKS += 1  # building iptables
 
     # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
     dynamic_commands: list[tuple[str, Optional[str]]] = []
@@ -933,23 +833,25 @@ def run():
 
     compile_extensions(count_only=True)
 
-    PROGRESS_TOTAL_COUNT += len([1 for k, v in dynamic_commands if v])
+    NUMBER_OF_IU_TASKS += len([1 for k, v in dynamic_commands if v])
 
     action = 'update' if args._update_system else 'deployment'
-    sprint(f'starting dnxfirewall {action}...')
-    lprint()
+    ts_print(f'starting dnxfirewall {action}...')
+    line_print()
 
     # NOTE: ensuring the progress bar count is properly reflected.
     if (not args._update_system):
         build_libraries(count_only=True)
 
-    progress('')  # this will render 0% bar, so we don't need to use offsets.
+    system_iu_progress = create_progress_bar(NUMBER_OF_IU_TASKS)
+
+    system_iu_progress('')  # this will render 0% bar, so we don't need to use offsets.
     for command, desc in dynamic_commands:
 
         if (desc):
-            progress(desc)
+            system_iu_progress(desc)
 
-        dnx_run(command)
+        shell_run(command)
 
     # building netfilter libs from source.
     # keeping this separate from packages since we cannot guarantee the user distro's versioning meets the minimum
@@ -961,38 +863,41 @@ def run():
     for command, desc in compile_extensions():
 
         if (desc):
-            progress(desc)
+            system_iu_progress(desc)
 
-        dnx_run(command)
+        shell_run(command)
 
     if (not args._update_system) or (args._update_system and args.iptables):
         configure_iptables()
 
     set_permissions()
 
+    set_services(args._update_system)
     if (not args._update_system):
-        set_services()
         mark_completion_flag()
 
-    progress(f'dnxfirewall {action} complete...')
+    system_iu_progress(f'dnxfirewall {action} complete...', final=True)
 
     # signatures will be updated during initial installation or system update automatically.
     signatures_updated = signature_update(system_update=True)
 
     if (not args._update_system):
-        sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
-        sprint('use the webui to configure a static ip or enable ssh access if needed.')
-        sprint('restart the system then navigate to https://192.168.83.1 from LAN to manage.')
+        ts_print('control of the WAN interface configuration has been taken by dnxfirewall.')
+        ts_print('use the webui to configure a static ip or enable ssh access if needed.')
+        ts_print('restart the system then navigate to https://192.168.83.1 from LAN to manage.')
 
     else:
-        sprint('dnxfirewall services restart required. a full system restart is recommended.')
+        ts_print('dnxfirewall services restart required. a full system restart is recommended.')
 
     hardout()
 
 
 if INITIALIZE_MODULE('autoloader'):
-    print(BANNER)
+    LOG_NAME: str = 'system'
+    SYSTEM_DIR: str = 'dnx_profile'
+    UTILITY_DIR: str = 'dnx_profile/utils'
 
+    print(BANNER)
     # stripping "-" will allow standard syntax args to be accepted
     try:
         args = Args(**{a.lstrip('-'): 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
@@ -1011,6 +916,10 @@ if INITIALIZE_MODULE('autoloader'):
     Log.run(name=LOG_NAME, suppress_output=True)
     ConfigurationManager.set_log_reference(Log)
 
+    # checks that do not apply to signature update command.
     if (not args._update_signatures):
         # this uses the config manager, so must be called after log initialization
         check_already_ran()
+
+    NUMBER_OF_IU_TASKS = 0
+    system_iu_progress = create_progress_bar(NUMBER_OF_IU_TASKS)  # dummy bar

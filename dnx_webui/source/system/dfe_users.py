@@ -6,21 +6,24 @@ import re
 
 from flask import session
 
-from source.web_typing import *
+from source.web_typing import web_module_import_callout
 
-web_module_load_callout(__file__)
+web_module_import_callout(__file__)
 
-from source.web_validate import *
-
+from dnx_gentools.def_constants import TYPE_CHECKING
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from source.main.dfe_authentication import Authentication
+from source.web_validate import *
 from source.web_interfaces import StandardWebPage
+from source.main.dfe_authentication import Authentication
 
 __all__ = ('WebPage',)
 
 _VALID_ACCT_ROLES = ['admin', 'user', 'messenger', 'cli']
+
+if (TYPE_CHECKING):
+    from source.web_typing import *
 
 
 class WebPage(StandardWebPage):
@@ -124,7 +127,7 @@ def user_role(role: str, /) -> Optional[ValidationError]:
 # ==============
 def configure_user_account(account: config, action: CFG) -> Optional[ValidationError]:
 
-    with ConfigurationManager('logins', file_path='/dnx_webui/data') as dnx:
+    with ConfigurationManager('logins', dir='dnx_webui/data') as dnx:
         accounts: ConfigChain = dnx.load_configuration(strict=False)
 
         users = accounts.get_list('users')

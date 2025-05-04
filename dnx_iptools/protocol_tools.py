@@ -12,10 +12,13 @@ from random import getrandbits
 from socket import socket, AF_INET, SOCK_RAW, SCM_CREDENTIALS
 from subprocess import run, CalledProcessError, DEVNULL
 
-from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import module_import_callout
+
+module_import_callout(__file__)
+
 from dnx_gentools.def_exceptions import ParseError
-from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX, str_join
-from dnx_gentools.def_enums import PROTO
+from dnx_gentools.def_constants import TYPE_CHECKING, USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX
+from dnx_gentools.def_enums import PROTO_ICMP
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
@@ -25,6 +28,8 @@ from dnx_iptools.cprotocol_tools import calc_checksum, itoip
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import *
+
     from dnx_gentools import Structure_T
 
 __all__ = (
@@ -42,7 +47,8 @@ __all__ = (
     'Route', 'strtoroute'
 )
 
-btoia: Callable[[ByteString|int], int] = partial(int.from_bytes, byteorder='big', signed=False)
+# todo: why is int included as a valid input type?
+btoia: Callable[[Bytes|int], int] = partial(int.from_bytes, byteorder='big', signed=False)
 # itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 
@@ -253,7 +259,7 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
 
     not thread safe within a single ping object, but is thread safe between multiple ping objects.
     '''
-    ping_sock = socket(AF_INET, SOCK_RAW, PROTO.ICMP)
+    ping_sock = socket(AF_INET, SOCK_RAW, PROTO_ICMP)
     ping_sock.settimeout(timeout)
 
     ping_send = ping_sock.sendto

@@ -7,19 +7,19 @@
           <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('unique domains')|safe }}
             <div class="row">
-              <a><img src="/static/dashboard/dash_pi-{{dashboard['dc_graph'][0]}}{{dashboard['dc_graph'][1]}}.png" {{dash_icon_std}}></a>
+              <a><img src="/static/dashboard/dash_pi-{{ dashboard['dc_graph'][0] }}{{ dashboard['dc_graph'][1] }}.png" {{ dash_icon_std }}></a>
             </div>
             <div class="row">
               <div class="col s6">
                 <ul>
                   <li><h5>Blocked</h5></li>
-                  <li><h2>{{dashboard['domain_counts'][0]}}</h2></li>
+                  <li><h2>{{ dashboard['domain_counts'][0] }}</h2></li>
                 </ul>
               </div>
               <div class="col s6">
                 <ul>
                   <li><h5>Allowed</h5></li>
-                  <li><h2>{{dashboard['domain_counts'][1]}}</h2></li>
+                  <li><h2>{{ dashboard['domain_counts'][1] }}</h2></li>
                 </ul>
               </div>
             </div>
@@ -29,19 +29,19 @@
           <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('total domains')|safe }}
             <div class="row">
-              <a><img src="/static/dashboard/dash_pi-{{dashboard['rc_graph'][0]}}{{dashboard['rc_graph'][1]}}.png" {{dash_icon_std}}></a>
+              <a><img src="/static/dashboard/dash_pi-{{ dashboard['rc_graph'][0] }}{{ dashboard['rc_graph'][1] }}.png" {{ dash_icon_std }}></a>
             </div>
             <div class="row">
               <div class="col s6">
                 <ul>
                   <li><h5>Blocked</h5></li>
-                  <li><h2>{{dashboard['request_counts'][0]}}</h2></li>
+                  <li><h2>{{ dashboard['request_counts'][0] }}</h2></li>
                 </ul>
               </div>
               <div class="col s6">
                 <ul>
                   <li><h5>Allowed</h5></li>
-                  <li><h2>{{dashboard['request_counts'][1]}}</h2></li>
+                  <li><h2>{{ dashboard['request_counts'][1] }}</h2></li>
                 </ul>
               </div>
             </div>
@@ -49,12 +49,12 @@
         </div>
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
-            <a><img src="/static/dashboard/dash_search1.png" {{dash_icon_zoom}}></a>
+            <a><img src="/static/dashboard/dash_search1.png" {{ dash_icon_zoom }}></a>
             <h4 class="card-title">Most Searched Domains</h4>
             <div class="row">
             {% for action, data in dashboard['top_domains'] %}
               <div class="col s6">
-                <h5>{{action.title()}}</h5>
+                <h5>{{ action.title() }}</h5>
                 <div class="divider"></div>
                 <table class="striped centered">
                   <thead>
@@ -67,14 +67,14 @@
                   <tbody>
                   {% for domain, category in data %}
                     <tr>
-                      <td>{{loop.index}}.</td>
-                      <td>{{domain}}</td>
-                      <td>{{category}}</td>
+                      <td>{{ loop.index }}.</td>
+                      <td>{{ domain }}</td>
+                      <td>{{ category }}</td>
                     </tr>
                   {% else %}
                     <tr>
                       <td></td>
-                      <td>No domains {{action}}</td>
+                      <td>No domains {{ action }}</td>
                       <td></td>
                     </tr>
                   {% endfor %}
@@ -157,7 +157,7 @@
               {{ create_title('system information', classes='center')|safe }}
               <div class="row">
                 <div class="col s6 offset-s3">
-                  <h6 class="center blue lighten-1">Uptime> {{dashboard['uptime']}}</h6>
+                  <h6 class="center blue lighten-5">Uptime> {{ dashboard['uptime'] }}</h6>
                 </div>
               </div>
               <thead>

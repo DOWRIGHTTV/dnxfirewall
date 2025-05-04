@@ -1,7 +1,7 @@
 {% extends('layout.html') %}
+{# aliasing for now so we can reuse template #}
+{% set page_settings = ips_settings %}
 {% block body %}
-  {# aliasing for now so we can reuse template #}
-  {% set page_settings = ips_settings %}
   <section id="tabs-bar">
     <div class="container">
       <div class="row">
@@ -26,37 +26,33 @@
             <h4 class="{{ theme.title }}">Denial Of Service</h4>
             <form method="post" id="ddos-limits">
               <input type="hidden" name="tab" value="1">
-              <input type="hidden" name="ddos_limits">
               <div class="row">
-                <div class="input-field col s12 {{input_color}}">
+                <div class="input-field col s12 {{ input_color }}">
                   <p class="range-field">
-                    <input type="range" name="tcp_limit" id="tcp-l" min="5" max="100"
-                           value="{{ips_settings['ddos']['tcp']}}">
-                    <label for="tcp-l">TCP Source Limit (conns/sec) | Current: {{ips_settings['ddos']['tcp']}}</label>
+                    <input type="range" name="tcp_limit" id="tcp-l" min="5" max="100" value="{{ ips_settings.ddos.tcp }}">
+                    <label for="tcp-l">TCP Source Limit (conns/sec) | Current: {{ ips_settings.ddos.tcp }}</label>
                   </p>
                 </div>
               </div>
               <div class="row">
-                <div class="input-field col s12 {{input_color}}">
+                <div class="input-field col s12 {{ input_color }}">
                   <p class="range-field">
-                    <input type="range" name="udp_limit" id="udp-l" min="5" max="100"
-                           value="{{ips_settings['ddos']['udp']}}">
-                    <label for="udp-l">UDP Source Limit (unique/sec) | Current: {{ips_settings['ddos']['udp']}}</label>
+                    <input type="range" name="udp_limit" id="udp-l" min="5" max="100" value="{{ ips_settings.ddos.udp }}">
+                    <label for="udp-l">UDP Source Limit (unique/sec) | Current: {{ ips_settings.ddos.udp }}</label>
                   </p>
                 </div>
               </div>
               <div class="row">
-                <div class="input-field col s12 {{input_color}}">
+                <div class="input-field col s12 {{ input_color }}">
                   <p class="range-field">
-                    <input type="range" name="icmp_limit" id="icmp-l" min="5" max="100"
-                           value="{{ips_settings['ddos']['icmp']}}">
-                    <label for="icmp-l">ICMP Source Limit (packets/sec) | Current: {{ips_settings['ddos']['icmp']}}</label>
+                    <input type="range" name="icmp_limit" id="icmp-l" min="5" max="100" value="{{ ips_settings.ddos.icmp }}">
+                    <label for="icmp-l">ICMP Source Limit (packets/sec) | Current: {{ ips_settings.ddos.icmp }}</label>
                   </p>
                 </div>
               </div>
             </form>
             <div class="row">
-              <button class="btn waves-effect waves-light col s4" form="ddos-limits">Update</button>
+              <button class="btn waves-effect waves-light col s4" name="vbtn" value="ddos_limits" form="ddos-limits">Update</button>
               {{ create_switch('Enabled', 'ddos_enabled', checked=ips_settings.ddos.enabled)|safe }}
             </div>
           </div>
@@ -66,22 +62,8 @@
             <h4 class="{{ theme.title }}">General Settings</h4>
             <div class="row">
               {{ create_switch('IDS Mode', 'ids_mode', checked=ips_settings.ids_mode)|safe }}
-              <form method="POST">
-                <input type="hidden" name="tab" value="1">
-                <div class="input-field col s6 left {{input_color}}">
-                  <select name="passive_block_length" id="pbl" onchange="this.form.submit()">
-                    <option value="0" {% if ips_settings['length']==0 %} selected {% endif %}
-                    >disabled</option>
-                    <option value="24" {% if ips_settings['length']==24 %} selected {% endif %}
-                    >24 hours</option>
-                    <option value="48" {% if ips_settings['length']==48 %} selected {% endif %}
-                    >48 hours</option>
-                    <option value="72" {% if ips_settings['length']==72 %} selected {% endif %}
-                    >72 hours</option>
-                  </select>
-                  <label for="pbl">Passive Block</label>
-                </div>
-              </form>
+              {{ create_dropdown('Passive Block', 'passive_block_length', ips_settings.length,
+                            options=[('disabled', 0), ('24 hours', 24), ('48 hours', 48), ('72 hours', 72)])|safe }}
             </div>
           </div>
           <div class="card-panel hoverable {{ theme.card }}">
@@ -102,19 +84,17 @@
         <div class="col s8">
           <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
             <h4 class="{{ theme.title }}">Add IPS Whitelist</h4>
-            <form method="POST">
+            <form method="post">
               <input type="hidden" name="tab" value="2">
               <div class="row">
-                <div class="input-field col s4 {{input_color}}">
+                <div class="input-field col s4 {{ input_color }}">
                   <label>
-                    IP Address
-                    <input type="text" name="ips_wl_ip" class="validate" placeholder="127.0.0.1" required>
+                    IP Address<input type="text" name="ips_wl_ip" class="validate" placeholder="127.0.0.1" required>
                   </label>
                 </div>
-                <div class="input-field col s4 {{input_color}}">
+                <div class="input-field col s4 {{ input_color }}">
                   <label>
-                    Name
-                    <input type="text" name="ips_wl_name" class="validate" placeholder=dns required>
+                    Name<input type="text" name="ips_wl_name" class="validate" placeholder=dns required>
                   </label>
                 </div>
                 <div class="input-field col s4">
@@ -128,8 +108,7 @@
         <div class="col s4">
           <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
             <h4 class="{{ theme.title }}">Includes</h4>
-            {{ create_switch('DNS Servers', 'dns_svr_wl', tab=2,
-                        checked=ips_settings.dns_server_whitelist)|safe }}
+            {{ create_switch('DNS Servers', 'dns_svr_wl', tab=2, checked=ips_settings.dns_server_whitelist)|safe }}
           </div>
         </div>
         <div class="col s12">
@@ -144,27 +123,15 @@
               </tr>
               </thead>
               <tbody>
+              {% set message = 'Are you sure you want to remove the IDS/IPS whitelist rule?' %}
               {% for ip_address, name in ips_settings.ip_whitelist %}
                 <tr>
                   <td>
-                    <a class="btn-floating btn-small red waves-effect waves-light modal-trigger"
-                       href="#ips-modal3-{{loop.index}}"><i class="material-icons">remove</i></a>
-                    <div id="ips-modal3-{{loop.index}}" class="modal">
-                      <div class="modal-content">
-                        <h5 class="{{modal_text_style}}">Are you sure you want to remove the IPS whitelist rule?</h5>
-                      </div>
-                      <form method="POST">
-                        <input type="hidden" name="tab" value="2">
-                        <input type="hidden" name="ips_wl_ip" value="{{ip_address}}">
-                        <div class="modal-footer">
-                          <button class="btn waves-effect waves-light" name="ips_wl_remove">YES</button>
-                          <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                        </div>
-                      </form>
-                    </div>
+                    {{ create_button_with_modal('btn-floating btn-small red',
+                        'remove', 1, loop.index, 2, 'ips_wl_remove', ip_address, message)|safe }}
                   </td>
-                  <td>{{ip_address}}</td>
-                  <td>{{name}}</td>
+                  <td>{{ ip_address }}</td>
+                  <td>{{ name }}</td>
                 </tr>
               {% else %}
                 <tr>
@@ -189,35 +156,27 @@
             <table class="striped centered">
               <thead>
               <tr>
-                <th style="width:25%"></th>
-                <th style="width:50%">Host IP Address</th>
+                <th style="width:20%"></th>
+                <th style="width:15%">Profile</th>
+                <th style="width:40%">Host IP Address</th>
                 <th style="width:25%">Time Entered</th>
               </tr>
               </thead>
               <tbody>
-              {% for host, timestamp, ftime in ips_settings.passively_blocked_hosts %}
+              {% set message = 'Are you sure you want to remove the passively blocked host?' %}
+              {% for host, profile, timestamp in ips_settings.passively_blocked_hosts %}
                 <tr>
                   <td>
-                    <a class="btn-floating btn-small red waves-effect waves-light modal-trigger"
-                       href="#ips-modal4-{{loop.index}}"><i class="material-icons">remove</i></a>
-                    <div id="ips-modal4-{{loop.index}}" class="modal">
-                      <div class="modal-content">
-                        <h5 class="{{modal_text_style}}">Are you sure you want to remove the passively blocked host?</h5>
-                      </div>
-                      <form method="POST">
-                        <input type="hidden" name="tab" value="3">
-                        <div class="modal-footer">
-                          <button class="btn waves-effect waves-light" name="ips_pbl_remove" value="{{host}}/{{timestamp}}">YES</button>
-                          <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                        </div>
-                      </form>
-                    </div>
-                  </td>
-                  <td>{{host}}</td>
-                  <td>{{ftime}}</td>
+                    {% set val = host|itoip + '/' + profile + '/' + timestamp %}
+                    {{ create_button_with_modal('btn-floating btn-small red',
+                        'remove', 2, loop.index, 3, 'ips_wl_remove', val, message)|safe }}
+                  <td>{{ profile }}</td>
+                  <td>{{ host|itoip }}</td>
+                  <td>{{ timestamp|ts_offset_format }}</td>
                 </tr>
               {% else %}
                 <tr>
+                  <td></td>
                   <td></td>
                   <td></td>
                   <td></td>

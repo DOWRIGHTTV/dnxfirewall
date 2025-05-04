@@ -5,19 +5,25 @@ from __future__ import annotations
 # ================
 # RUNTIME IMPORTS
 # ================
-from dnx_gentools.def_constants import INITIALIZE_MODULE
+from dnx_gentools.def_constants import TYPE_CHECKING, INITIALIZE_MODULE
 def run():
-    LogService.run()
+    try:
+        LogService.run()
+    except (KeyboardInterrupt, TerminateSignal):
+        raise
 
+    except Exception as e:
+        print(f'Error in LogService.run: {e}')
+        raise
 
 if INITIALIZE_MODULE('logging'):
     __all__ = (
         'LogHandler', 'Log',
         'direct_log', 'message', 'db_message', 'convert_level',
         # 'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',
-
-        'LogService',
     )
+
+    from dnx_gentools.def_exceptions import TerminateSignal
 
     from dnx_routines.logging.log_main import LogService
     from dnx_routines.logging.log_client import *
@@ -27,19 +33,13 @@ if INITIALIZE_MODULE('logging'):
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
-    # from typing import Type, TypeAlias
+    from typing import Type, TypeAlias
 
     __all__ = (
-        'LogHandler', 'LogHandler_T', 'LogService',
+        'LogHandler_T',
     )
 
-    from log_client import *
-    from log_main import *
+    from log_client import LogHandler
 
-    # ======
-    # TYPES
-    # ======
-    # LogHandler_T: TypeAlias = Type[_LogHandlerBase]
+    LogHandler_T: TypeAlias = Type[LogHandler]
