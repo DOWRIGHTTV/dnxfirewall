@@ -238,8 +238,10 @@ class IPTablesManager:
 
         shell(nat_rule, check=True)
 
-    def delete_nat(self, rule: config) -> None:
+    def delete_nat(self, rule: config) -> Optional[str]:
         shell(f'sudo iptables -t nat -D {rule.nat_type} {rule.position}', check=True)
+
+        return self._intf_to_zone.get(f'{rule.src_intf}', None)
 
     def remove_passive_block(self, host: int, profile_idx: int, timestamp: int) -> None:
         comment = f'-m comment --comment {profile_idx}-{timestamp}'

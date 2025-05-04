@@ -90,16 +90,14 @@ def _dnat_rules(form: Form, action: str) -> str:
     elif (action == 'remove'):
         fields.position = convert_int(fields.position)
 
-        # NOTE: validation needs to know the zone, so it can ensure the position is valid
-        #  - todo: we arent even looking at the exact position just that its in range. is this comment old?
         if error := validate_dnat_rule(fields, action=CFG.DEL):
             return error.message + ' code=3'
 
         with IPTablesManager() as iptables:
-            iptables.delete_nat(fields)
+            src_zone = iptables.delete_nat(fields)
 
             # note: only wan interface rules should impact the open ports tracker.
-            if (fields.src_zone == 'wan'):
+            if (src_zone == 'wan'):
                 configure_open_wan_protocol(fields, action=CFG.DEL)
 
     else:
@@ -169,6 +167,13 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
                 )
 
     elif (action is CFG.DEL):
+        valid_fields = [
+            'nat_type', 'position', 'src_intf', 'proto_port'
+        ]
+
+        if not all([hasattr(rule, x) for x in valid_fields]):
+            return ValidationError(INVALID_FORM)
+
         output = run(
             f'sudo iptables -t nat -nL {rule.nat_type} --line-number', shell=True, capture_output=True
         ).stdout.splitlines()[1:]
@@ -183,13 +188,13 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
         except:
             return ValidationError(INVALID_FORM)
 
-        open_protocol_settings: ConfigChain = load_configuration('global', cfg_type='security/ids_ips', strict=False)
-        # check tcp/udp first, then icmp if it fails. if both fail, the form data is invalid.
-        try:
-            open_protocol_settings[f'open_protocols->{rule.protocol}->{rule.port}']
-        except:
-            if (rule.protocol != 'icmp' and rule.port != '0'):
-                return ValidationError(INVALID_FORM)
+        # open_protocol_settings: ConfigChain = load_configuration('global', cfg_type='security/ids_ips', strict=False)
+        # # check tcp/udp first, then icmp if it fails. if both fail, the form data is invalid.
+        # try:
+        #     open_protocol_settings[f'open_protocols->{rule.protocol}->{rule.port}']
+        # except:
+        #     if (rule.protocol != 'icmp' and rule.port != '0'):
+        #         return ValidationError(INVALID_FORM)
 
 def validate_snat_rule(rule: config, /, action: CFG) -> Optional[ValidationError]:
 
