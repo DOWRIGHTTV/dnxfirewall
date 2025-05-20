@@ -340,7 +340,7 @@ class ConfigChain:
         self.__config = (user, system)
         self.__flat_config = (user_flat, system_flat)
 
-        self.__reference_config = copy(self.__flat_config[0])  # used for strict mode validation/lookups
+        self.__reference_config = system_flat  # used for strict mode validation/lookups
         # self.__mutable_config = copy(self.__flat_config[0])
         self.__mutable_config = user_flat
 
