@@ -144,7 +144,7 @@ COMMANDS: dict[str, Command] = {
     'status': Command(module_required=True, priv_required=True, module_list=['all', *SERVICE_LIST]),
     'journal': Command(module_required=True, priv_required=True, module_list=SERVICE_LIST),
 
-    'cli': Command(module_required=True, priv_required=False, module_list=SERVICE_LIST),
+    'cli': Command(module_required=True, priv_required=False, module_list=['startup', *SERVICE_LIST]),
 
     'install': Command(module_required=False, priv_required=True, module_list=['system']),
     'update': Command(module_required=True, priv_required=True, module_list=['system', 'signatures']),
