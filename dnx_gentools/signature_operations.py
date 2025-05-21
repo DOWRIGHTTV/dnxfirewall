@@ -7,7 +7,7 @@ from struct import Struct
 from collections import defaultdict
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, MSB, LSB, UINT32_MAX, RFC1918
+from dnx_gentools.def_constants import TYPE_CHECKING, HOME_DIR, MSB, LSB, UINT32_MAX, RFC1918
 from dnx_gentools.def_enums import GEO, REP, DNS_CAT
 from dnx_gentools.file_operations import load_configuration
 
