@@ -359,6 +359,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
             for ix in range(fw_rule.s_services.objects[i].svc_list.len):
                 # [0] START INDEX ON FW RULE SIZE
                 # [1] START INDEX PYTHON DICT SIDE (to first index for size)
+                print(rule['src_service'][i][ix + 1])
                 fw_rule.s_services.objects[i].svc_list.services[ix].protocol = <uintf16_t>rule['src_service'][i][ix + 1][0]
                 if fw_rule.s_services.objects[i].svc_list.services[ix].protocol == 1:  # ICMP Protocol
                     fw_rule.s_services.objects[i].svc_list.services[ix].type = <uintf8_t>rule['src_service'][i][ix + 1][1]
