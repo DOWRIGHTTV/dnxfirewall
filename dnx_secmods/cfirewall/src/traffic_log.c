@@ -43,6 +43,9 @@ log_write_firewall(int logger_idx, struct dnx_pktb *pkt)
     char    saddr[18];
     char    daddr[18];
 
+    uint16_t sport;
+    uint16_t dport;
+
     gettimeofday(&timestamp, NULL);
 
     log_enter(logger, &timestamp);
@@ -51,10 +54,18 @@ log_write_firewall(int logger_idx, struct dnx_pktb *pkt)
     itoip(pkt->iphdr->saddr, saddr);
     itoip(pkt->iphdr->daddr, daddr);
 
+    if (pkt->iphdr->protocol == IPPROTO_ICMP) {
+        sport = pkt->protohdr->type;
+        dport = pkt->protohdr->code;
+    } else {
+        sport = ntohs(pkt->protohdr->sport);
+        dport = ntohs(pkt->protohdr->dport);
+    }
+
     fprintf(logger->buf, FW_LOG_FORMAT, timestamp.tv_sec, timestamp.tv_usec,
         pkt->rule_name, action_map[pkt->action], dir_map[pkt->geo.dir], pkt->iphdr->protocol,
-        pkt->hw.iif, pkt->hw.in_zone.name, pkt->geo.src, saddr, ntohs(pkt->protohdr->sport),
-        pkt->hw.oif, pkt->hw.out_zone.name, pkt->geo.dst, daddr, ntohs(pkt->protohdr->dport)
+        pkt->hw.iif, pkt->hw.in_zone.name, pkt->geo.src, saddr, sport,
+        pkt->hw.oif, pkt->hw.out_zone.name, pkt->geo.dst, daddr, dport)
     );
     logger->cnt++;
 
