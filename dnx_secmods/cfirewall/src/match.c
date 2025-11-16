@@ -102,7 +102,7 @@ network_match(NetArray *net_array, uint32_t iph_ip, uint8_t country)
 
 // icmp service matching. only supports single object or list of objects.
 inline int
-service_match_icmp(SvcArray *svc_array, struct S_icmp *icmp)
+service_match_icmp(SvcArray *svc_array, uint8_t icmp_type, uint8_t icmp_code)
 {
     SvcObject   svc_object;
     struct Svc   svc; // service list iter
@@ -115,7 +115,7 @@ service_match_icmp(SvcArray *svc_array, struct S_icmp *icmp)
             // TYPE -> SOLO (1)
             // --------------------
             case SVC_SOLO:
-                if (icmp->type == svc_object.svc.icmp.type) { return MATCH; }
+                if (icmp_type == svc_object.svc.type) { return MATCH; }
                 // todo: no code matching for now.
                 break;
             // --------------------
@@ -124,7 +124,7 @@ service_match_icmp(SvcArray *svc_array, struct S_icmp *icmp)
             case SVC_LIST:
                 for (uintf16_t idx = 0; idx < svc_object.svc_list.len; idx++) {
                     svc = svc_object.svc_list.services[idx];
-                    if (icmp->type == svc.icmp.type) { return MATCH; }
+                    if (icmp_type == svc.type) { return MATCH; }
                     // todo: no code matching for now.
                 }
                 break;
@@ -150,14 +150,14 @@ service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
             // --------------------
             case SVC_SOLO:
                 if (pkt_protocol != svc_object.svc.protocol && svc_object.svc.protocol != ANY_PROTOCOL) { continue; }
-                if (pkt_svc == svc_object.svc.std.start_port) { return MATCH; }
+                if (pkt_svc == svc_object.svc.start_port) { return MATCH; }
                 break;
             // --------------------
             // TYPE -> RANGE (2)
             // --------------------
             case SVC_RANGE:
                 if (pkt_protocol != svc_object.svc.protocol && svc_object.svc.protocol != ANY_PROTOCOL) { continue; }
-                if (pkt_svc >= svc_object.svc.std.start_port && pkt_svc <= svc_object.svc.std.end_port) { return MATCH; }
+                if (pkt_svc >= svc_object.svc.start_port && pkt_svc <= svc_object.svc.end_port) { return MATCH; }
                 break;
 
             // --------------------
@@ -167,7 +167,7 @@ service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
                 for (uintf16_t idx = 0; idx < svc_object.svc_list.len; idx++) {
                     svc = svc_object.svc_list.services[idx];
                     if (svc.protocol != pkt_protocol && svc.protocol != ANY_PROTOCOL) { continue; }
-                    if (pkt_svc >= svc.std.start_port && pkt_svc <= svc.std.end_port) { return MATCH; }
+                    if (pkt_svc >= svc.start_port && pkt_svc <= svc.end_port) { return MATCH; }
 //                    if (pkt_svc == svc.std.start_port) { return MATCH; } # !bug: should be this?
                 }
                 break;

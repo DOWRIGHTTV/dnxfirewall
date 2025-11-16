@@ -201,13 +201,13 @@ cdef extern from "rules.h" nogil:
         uintf8_t    len
         NetObject   objects[FIELD_MAX_NETWORKS]
 
-    struct S_icmp:
-        uint8_t     type
-        uint8_t     code
-
-    struct S_std:
-        uintf16_t   start_port
-        uintf16_t   end_port
+    # struct S_icmp:
+    #     uint8_t     type
+    #     uint8_t     code
+    #
+    # struct S_std:
+    #     uintf16_t   start_port
+    #     uintf16_t   end_port
 
     # struct S1:
     #     uint8_t     type
@@ -216,8 +216,15 @@ cdef extern from "rules.h" nogil:
     struct Svc:
         uintf16_t   protocol
 
-        S_icmp      icmp
-        S_std       std
+        # flattened union
+        uintf16_t   start_port
+        uint8_t     type
+
+        # flattened union
+        uintf16_t   end_port
+        uint8_t     code
+        # S_icmp      icmp
+        # S_std       std
 
         # uintf16_t   start_port
         # uintf16_t   end_port

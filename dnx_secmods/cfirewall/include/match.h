@@ -3,7 +3,7 @@
 
 extern int zone_match(struct ZoneArray *zone_array, uint8_t pkt_zone);
 extern int network_match(struct NetArray *net_array, uint32_t iph_ip, uint8_t country);
-extern int service_match_icmp(SvcArray *svc_array, struct S_icmp *icmp);
+extern int service_match_icmp(SvcArray *svc_array, uint8_t icmp_type, uint8_t icmp_code);
 extern int service_match(struct SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc);
 
 #endif

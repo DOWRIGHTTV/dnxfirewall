@@ -64,23 +64,31 @@ typedef struct NetArray {
     NetObject   objects[FIELD_MAX_NETWORKS];
 } NetArray;
 
-struct S_icmp {
-    uint8_t     type;
-    uint8_t     code;
-};
-
-struct S_std {
-    uintf16_t   start_port;
-    uintf16_t   end_port;
-};
+//struct S_icmp {
+//    uint8_t     type;
+//    uint8_t     code;
+//};
+//
+//struct S_std {
+//    uintf16_t   start_port;
+//    uintf16_t   end_port;
+//};
 
 // STANDARD SERVICE OBJECT (TCP/UDP) (SOLO or RANGE)
 struct Svc {
     uintf16_t   protocol;
     union {
-        struct S_icmp   icmp;
-        struct S_std    std;
+        uint16_t    start_port;
+        uint8_t     type;
     };
+    union {
+        uint16_t    end_port;
+        uint8_t     code;
+    };
+//    union {
+//        struct S_icmp   icmp;
+//        struct S_std    std;
+//    };
 };
 
 // SERVICE OBJECT LIST (tcp/80:tcp/443)
