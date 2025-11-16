@@ -230,8 +230,8 @@ cdef extern from "rules.h" nogil:
         uintf8_t    type
         # flattened union
         # S1          icmp
-        S_icmp      icmp
-        S_std       std
+        Svc         scv
+        SvcList     svc_list
 
     # MAIN SERVICE ARRAY
     struct SvcArray:
