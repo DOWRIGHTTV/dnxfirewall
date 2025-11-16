@@ -131,7 +131,7 @@ struct Protohdr {
     union {
         uint16_t    sport;
         uint8_t     type;   // ICMP
-    }
+    };
     union {
         uint16_t    dport;
         uint8_t     code;   // ICMP
