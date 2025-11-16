@@ -149,7 +149,7 @@ service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
             // TYPE -> SOLO (1)
             // --------------------
             case SVC_SOLO:
-                if (pkt_protocol != svc_object.svc.std.protocol && svc_object.svc.std.protocol != ANY_PROTOCOL) { continue; }
+                if (pkt_protocol != svc_object.svc.protocol && svc_object.svc.protocol != ANY_PROTOCOL) { continue; }
                 if (pkt_svc == svc_object.svc.std.start_port) { return MATCH; }
                 break;
             // --------------------
