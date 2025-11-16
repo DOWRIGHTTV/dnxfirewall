@@ -65,20 +65,20 @@ typedef struct NetArray {
 } NetArray;
 
 struct S_icmp {
-    uint8_t     type
-    uint8_t     code
+    uint8_t     type;
+    uint8_t     code;
 };
 
 struct S_std {
-    uintf16_t   protocol
-    uintf16_t   port
+    uintf16_t   protocol;
+    uintf16_t   port;
 };
 
 struct Svc
-    uintf16_t   protocol
+    uintf16_t   protocol;
 
-    struct S_icmp      icmp
-    struct S_std       std
+    struct S_icmp      icmp;
+    struct S_std       std;
 };
 
 // STANDARD SERVICE OBJECT (TCP/UDP) (SOLO or RANGE)
