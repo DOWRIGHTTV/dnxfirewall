@@ -332,16 +332,18 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
     for i in range(fw_rule.s_services.len):
         # svc_object = &fw_rule.s_services.objects[i]
 
+        fw_rule.s_services.objects[i].type = <uintf8_t> rule['src_service'][i][0]
+
         # TYPE 1 (SOLO) OBJECT ASSIGNMENT [SPECIAL CASE FOR ICMP]
         if (fw_rule.s_services.objects[i].type == SVC_SOLO):
             fw_rule.s_services.objects[i].svc.protocol = <uintf16_t>rule['src_service'][i][1]
 
             if fw_rule.s_services.objects[i].svc.protocol == 1:  # ICMP Protocol
-                fw_rule.s_services.objects[i].svc.type = <uintf8_t>rule['src_service'][i][2]
-                fw_rule.s_services.objects[i].svc.code = <uintf8_t>rule['src_service'][i][3]
+                fw_rule.s_services.objects[i].svc.icmp.type = <uintf8_t>rule['src_service'][i][2]
+                fw_rule.s_services.objects[i].svc.icmp.code = <uintf8_t>rule['src_service'][i][3]
             else:
-                fw_rule.s_services.objects[i].svc.start_port = <uintf16_t>rule['src_service'][i][2]
-                fw_rule.s_services.objects[i].svc.end_port   = <uintf16_t>rule['src_service'][i][3]
+                fw_rule.s_services.objects[i].svc.std.start_port = <uintf16_t>rule['src_service'][i][2]
+                fw_rule.s_services.objects[i].svc.std.end_port   = <uintf16_t>rule['src_service'][i][3]
 
 
         # TYPE 2 (RANGE) OBJECT ASSIGNMENT [ICMP EXCLUDED]
@@ -351,8 +353,8 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
             if fw_rule.s_services.objects[i].svc.protocol == 1:  # ICMP Protocol
                 continue  # this should not need to be here, but will keep it while implementing.
 
-            fw_rule.s_services.objects[i].svc.start_port = <uintf16_t>rule['src_service'][i][2]
-            fw_rule.s_services.objects[i].svc.end_port   = <uintf16_t>rule['src_service'][i][3]
+            fw_rule.s_services.objects[i].svc.std.start_port = <uintf16_t>rule['src_service'][i][2]
+            fw_rule.s_services.objects[i].svc.std.end_port   = <uintf16_t>rule['src_service'][i][3]
 
         # TYPE 3 (LIST) OBJECT ASSIGNMENT
         elif (fw_rule.s_services.objects[i].type == SVC_LIST):
@@ -362,17 +364,16 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
                 # [1] START INDEX PYTHON DICT SIDE (to first index for size) # todo: this makes no sense. fix comment
                 fw_rule.s_services.objects[i].svc_list.services[ix].protocol = <uintf16_t>rule['src_service'][i][ix + 1][0]
                 if fw_rule.s_services.objects[i].svc_list.services[ix].protocol == 1:  # ICMP Protocol
-                    fw_rule.s_services.objects[i].svc_list.services[ix].type = <uintf8_t>rule['src_service'][i][ix + 1][1]
-                    fw_rule.s_services.objects[i].svc_list.services[ix].code = <uintf8_t>rule['src_service'][i][ix + 1][2]
+                    fw_rule.s_services.objects[i].svc_list.services[ix].icmp.type = <uintf8_t>rule['src_service'][i][ix + 1][1]
+                    fw_rule.s_services.objects[i].svc_list.services[ix].icmp.code = <uintf8_t>rule['src_service'][i][ix + 1][2]
 
                 else:
-                    fw_rule.s_services.objects[i].svc_list.services[ix].start_port = <uintf16_t>rule['src_service'][i][ix + 1][1]
-                    fw_rule.s_services.objects[i].svc_list.services[ix].end_port   = <uintf16_t>rule['src_service'][i][ix + 1][2]
+                    fw_rule.s_services.objects[i].svc_list.services[ix].std.start_port = <uintf16_t>rule['src_service'][i][ix + 1][1]
+                    fw_rule.s_services.objects[i].svc_list.services[ix].std.end_port   = <uintf16_t>rule['src_service'][i][ix + 1][2]
 
         else:
             ppt(fw_rule.s_services)
-            # ppt(fw_rule.s_services.objects[i])
-            sleep(100)
+
     # ===========
     # DESTINATION
     # ===========
