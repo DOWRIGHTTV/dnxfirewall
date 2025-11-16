@@ -381,8 +381,8 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
         else if (rule.s_services.objects[i].type == SVC_RANGE) {
             printf("(%u, %u, %u) ",
                 (uint16_t) rule.s_services.objects[i].svc.protocol,
-                (uint16_t) rule.s_services.objects[i].svc.start_port,
-                (uint16_t) rule.s_services.objects[i].svc.end_port);
+                (uint16_t) rule.s_services.objects[i].svc.std.start_port,
+                (uint16_t) rule.s_services.objects[i].svc.std.end_port);
         }
         // TYPE 3 (LIST) OBJECT ASSIGNMENT
         else {
@@ -427,7 +427,7 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
     FOR_LOOP(0, rule.d_services.len, 1, i) {
         printf("dst_services->[ ");
         // TYPE 1 (SOLO) OBJECT ASSIGNMENT
-        else if (rule.d_services.objects[i].type == SVC_SOLO || rule.d_services.objects[i].type == SVC_RANGE) {
+        if (rule.d_services.objects[i].type == SVC_SOLO || rule.d_services.objects[i].type == SVC_RANGE) {
             if (rule.d_services.objects[i].svc.protocol == IPPROTO_ICMP) {
                 printf("(1, %u, %u) ",
                     (uint8_t) rule.d_services.objects[i].svc.icmp.type,
@@ -443,8 +443,8 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
         else if (rule.d_services.objects[i].type == SVC_SOLO || rule.d_services.objects[i].type == SVC_RANGE) {
             printf("(%u, %u, %u) ",
                 (uint16_t) rule.d_services.objects[i].svc.protocol,
-                (uint16_t) rule.d_services.objects[i].svc.start_port,
-                (uint16_t) rule.d_services.objects[i].svc.end_port);
+                (uint16_t) rule.d_services.objects[i].svc.std.start_port,
+                (uint16_t) rule.d_services.objects[i].svc.std.end_port);
         }
         // TYPE 3 (LIST) OBJECT ASSIGNMENT
         else {
