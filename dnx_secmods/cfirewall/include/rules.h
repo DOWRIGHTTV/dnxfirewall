@@ -86,7 +86,7 @@ struct Svc {
 // SERVICE OBJECT LIST (tcp/80:tcp/443)
 struct SvcList {
     uintf8_t    len;
-    struct S2   services[FIELD_MAX_SVC_LIST_MEMBERS];
+    struct Svc  services[FIELD_MAX_SVC_LIST_MEMBERS];
 };
 
 typedef struct SvcObject {
