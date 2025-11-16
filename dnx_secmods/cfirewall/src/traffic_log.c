@@ -65,7 +65,7 @@ log_write_firewall(int logger_idx, struct dnx_pktb *pkt)
     fprintf(logger->buf, FW_LOG_FORMAT, timestamp.tv_sec, timestamp.tv_usec,
         pkt->rule_name, action_map[pkt->action], dir_map[pkt->geo.dir], pkt->iphdr->protocol,
         pkt->hw.iif, pkt->hw.in_zone.name, pkt->geo.src, saddr, sport,
-        pkt->hw.oif, pkt->hw.out_zone.name, pkt->geo.dst, daddr, dport)
+        pkt->hw.oif, pkt->hw.out_zone.name, pkt->geo.dst, daddr, dport
     );
     logger->cnt++;
 
