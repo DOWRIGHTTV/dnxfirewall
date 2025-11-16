@@ -102,7 +102,7 @@ network_match(NetArray *net_array, uint32_t iph_ip, uint8_t country)
 
 // icmp service matching. only supports single object or list of objects.
 inline int
-service_match_icmp(SvcArray *svc_array, S_icmp *icmp)
+service_match_icmp(SvcArray *svc_array, struct S_icmp *icmp)
 {
     SvcObject   svc_object;
     struct Svc   svc; // service list iter
