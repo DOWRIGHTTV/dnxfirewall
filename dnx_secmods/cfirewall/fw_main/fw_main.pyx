@@ -354,7 +354,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
             fw_rule.s_services.objects[i].svc.end_port   = <uintf16_t>rule['src_service'][i][3]
 
         # TYPE 3 (LIST) OBJECT ASSIGNMENT
-        else:
+        elif (fw_rule.s_services.objects[i].type == SVC_LIST):
             fw_rule.s_services.objects[i].svc_list.len = <uintf8_t>(len(rule['src_service'][i]) - 1)
             for ix in range(fw_rule.s_services.objects[i].svc_list.len):
                 # [0] START INDEX ON FW RULE SIZE
@@ -367,6 +367,9 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
                 else:
                     fw_rule.s_services.objects[i].svc_list.services[ix].start_port = <uintf16_t>rule['src_service'][i][ix + 1][1]
                     fw_rule.s_services.objects[i].svc_list.services[ix].end_port   = <uintf16_t>rule['src_service'][i][ix + 1][2]
+
+        else:
+            ppt(fw_rule.s_services.objects[i])
 
     # ===========
     # DESTINATION
@@ -402,7 +405,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
                 fw_rule.d_services.objects[i].svc.end_port = <uintf16_t>rule['dst_service'][i][3]
 
         # TYPE 2 (RANGE) OBJECT ASSIGNMENT [ICMP EXCLUDED]
-        if (fw_rule.d_services.objects[i].type == SVC_RANGE):
+        elif (fw_rule.d_services.objects[i].type == SVC_RANGE):
 
             fw_rule.d_services.objects[i].svc.protocol = <uintf16_t> rule['dst_service'][i][1]
             if fw_rule.d_services.objects[i].svc.protocol == 1:  # ICMP Protocol
@@ -412,7 +415,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
             fw_rule.d_services.objects[i].svc.end_port = <uintf16_t> rule['dst_service'][i][3]
 
         # TYPE 3 (LIST) OBJECT ASSIGNMENT
-        else:
+        elif (fw_rule.s_services.objects[i].type == SVC_LIST):
             fw_rule.d_services.objects[i].svc_list.len = <uintf8_t> (len(rule['dst_service'][i]) - 1)
             for ix in range(fw_rule.d_services.objects[i].svc_list.len):
                 # [0] START INDEX ON FW RULE SIZE
@@ -425,6 +428,9 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
                 else:
                     fw_rule.d_services.objects[i].svc_list.services[ix].start_port = <uintf16_t>rule['dst_service'][i][ix + 1][1]
                     fw_rule.d_services.objects[i].svc_list.services[ix].end_port = <uintf16_t>rule['dst_service'][i][ix + 1][2]
+
+        else:
+            ppt(fw_rule.s_services.objects[i])
 
     # --------------------------
     # RULE PROFILES AND ACTIONS
