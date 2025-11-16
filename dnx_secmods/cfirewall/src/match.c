@@ -156,7 +156,7 @@ service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
             // TYPE -> RANGE (2)
             // --------------------
             case SVC_RANGE:
-                if (pkt_protocol != svc_object.svc.std.protocol && svc_object.svc.std.protocol != ANY_PROTOCOL) { continue; }
+                if (pkt_protocol != svc_object.svc.protocol && svc_object.svc.protocol != ANY_PROTOCOL) { continue; }
                 if (pkt_svc >= svc_object.svc.std.start_port && pkt_svc <= svc_object.svc.std.end_port) { return MATCH; }
                 break;
 
@@ -168,6 +168,7 @@ service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
                     svc = svc_object.svc_list.services[idx];
                     if (svc.protocol != pkt_protocol && svc.std.protocol != ANY_PROTOCOL) { continue; }
                     if (pkt_svc >= svc.std.start_port && pkt_svc <= svc.std.end_port) { return MATCH; }
+//                    if (pkt_svc == svc.std.start_port) { return MATCH; } # !bug: should be this?
                 }
                 break;
         }
