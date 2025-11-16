@@ -426,13 +426,20 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
     // DST SERVICES
     FOR_LOOP(0, rule.d_services.len, 1, i) {
         printf("dst_services->[ ");
-        // TYPE 4 (ICMP) OBJECT ASSIGNMENT
-        if (rule.d_services.objects[i].type == SVC_ICMP) {
-            printf("(1, %u, %u) ",
-                (uint8_t) rule.d_services.objects[i].icmp.type,
-                (uint8_t) rule.d_services.objects[i].icmp.code);
+        // TYPE 1 (SOLO) OBJECT ASSIGNMENT
+        else if (rule.d_services.objects[i].type == SVC_SOLO || rule.d_services.objects[i].type == SVC_RANGE) {
+            if (rule.d_services.objects[i].svc.protocol == IPPROTO_ICMP) {
+                printf("(1, %u, %u) ",
+                    (uint8_t) rule.d_services.objects[i].svc.icmp.type,
+                    (uint8_t) rule.d_services.objects[i].svc.icmp.code);
+            } else {
+                printf("(%u, %u, %u) ",
+                    (uint16_t) rule.d_services.objects[i].svc.protocol,
+                    (uint16_t) rule.d_services.objects[i].svc.std.start_port,
+                    (uint16_t) rule.d_services.objects[i].svc.std.end_port);
+            }
         }
-        // TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
+        // TYPE 2 (RANGE) OBJECT ASSIGNMENT
         else if (rule.d_services.objects[i].type == SVC_SOLO || rule.d_services.objects[i].type == SVC_RANGE) {
             printf("(%u, %u, %u) ",
                 (uint16_t) rule.d_services.objects[i].svc.protocol,
@@ -443,10 +450,16 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
         else {
             printf("< ");
             FOR_LOOP(0, rule.d_services.objects[i].svc_list.len, 1, ix) {
-                printf("(%u, %u, %u) ",
-                    (uint16_t) rule.d_services.objects[i].svc_list.services[ix].protocol,
-                    (uint16_t) rule.d_services.objects[i].svc_list.services[ix].start_port,
-                    (uint16_t) rule.d_services.objects[i].svc_list.services[ix].end_port);
+                if (rule.d_services.objects[i].svc_list.services[ix].protocol == IPPROTO_ICMP) {
+                    printf("(1, %u, %u) ",
+                        (uint8_t) rule.d_services.objects[i].svc_list.services[ix].icmp.type,
+                        (uint8_t) rule.d_services.objects[i].svc_list.services[ix].icmp.code);
+                } else {
+                    printf("(%u, %u, %u) ",
+                        (uint16_t) rule.d_services.objects[i].svc_list.services[ix].protocol,
+                        (uint16_t) rule.d_services.objects[i].svc_list.services[ix].std.start_port,
+                        (uint16_t) rule.d_services.objects[i].svc_list.services[ix].std.end_port);
+                }
             }
             printf("> ");
         }
