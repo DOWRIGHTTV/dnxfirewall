@@ -234,7 +234,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt)
             if (pkt->iphdr->protocol == IPPROTO_ICMP) {
                 // shifting 8 bits get type byte then casting to uint8_t
                 // casting
-                if (service_match_icmp(&rule->s_services, pkt->protohdr->type, (pkt->protohdr->code) != MATCH) continue;
+                if (service_match_icmp(&rule->s_services, pkt->protohdr->type, pkt->protohdr->code) != MATCH) continue;
             } else {
                 if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) continue;
             }
