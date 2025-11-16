@@ -206,8 +206,8 @@ cdef extern from "rules.h" nogil:
         uint8_t     code
 
     struct S_std:
-        uintf16_t   protocol
-        uintf16_t   port
+        uintf16_t   start_port
+        uintf16_t   end_port
 
     # struct S1:
     #     uint8_t     type

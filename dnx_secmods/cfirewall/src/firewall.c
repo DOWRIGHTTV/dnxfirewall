@@ -232,7 +232,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt)
             // PROTOCOL / PORT
             // ------------------------------------------------------------------
             if (pkt->iphdr->protocol == IPPROTO_ICMP) {
-                if (service_match_icmp(&rule->s_services, (S_icmp*)(&pkt->protohdr->sport)) != MATCH) continue;
+                if (service_match_icmp(&rule->s_services, (struct S_icmp*)(&pkt->protohdr->sport)) != MATCH) continue;
             } else {
                 if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) continue;
             }
@@ -364,14 +364,8 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
     // SRC SERVICES
     FOR_LOOP(0, rule.s_services.len, 1, i) {
         printf("src_services->[ ");
-        // TYPE 4 (ICMP) OBJECT ASSIGNMENT
-        if (rule.s_services.objects[i].type == SVC_ICMP) {
-            printf("(1, %u, %u) ",
-                (uint8_t) rule.s_services.objects[i].icmp.type,
-                (uint8_t) rule.s_services.objects[i].icmp.code);
-        }
         // TYPE 1 (SOLO) OBJECT ASSIGNMENT
-        else if (rule.s_services.objects[i].type == SVC_SOLO) {
+        if (rule.s_services.objects[i].type == SVC_SOLO) {
             if (rule.s_services.objects[i].svc.protocol == IPPROTO_ICMP) {
                 printf("(1, %u, %u) ",
                     (uint8_t) rule.s_services.objects[i].svc.icmp.type,

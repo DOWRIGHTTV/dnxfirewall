@@ -70,8 +70,8 @@ struct S_icmp {
 };
 
 struct S_std {
-    uintf16_t   protocol;
-    uintf16_t   port;
+    uintf16_t   start_port;
+    uintf16_t   end_port;
 };
 
 // STANDARD SERVICE OBJECT (TCP/UDP) (SOLO or RANGE)
