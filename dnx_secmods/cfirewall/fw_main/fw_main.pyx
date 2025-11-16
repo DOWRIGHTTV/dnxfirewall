@@ -433,7 +433,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
                     fw_rule.d_services.objects[i].svc_list.services[ix].end_port = <uintf16_t>rule['dst_service'][i][ix + 1][2]
 
         else:
-            ppt(fw_rule.s_services.objects[i])
+            ppt(rule['dst_service'])
 
     # --------------------------
     # RULE PROFILES AND ACTIONS
