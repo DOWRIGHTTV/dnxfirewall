@@ -10,6 +10,7 @@ from libc.stdint cimport uint8_t, uint16_t, uint32_t
 # ===============================
 # VERBOSE T-SHOOT ASSISTANCE
 # ===============================
+from time import sleep
 from pprint import PrettyPrinter
 ppt = PrettyPrinter(sort_dicts=False).pprint
 # ===============================
@@ -369,8 +370,9 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
                     fw_rule.s_services.objects[i].svc_list.services[ix].end_port   = <uintf16_t>rule['src_service'][i][ix + 1][2]
 
         else:
-            ppt(fw_rule.s_services.objects[i])
-
+            ppt(fw_rule.s_services)
+            # ppt(fw_rule.s_services.objects[i])
+            sleep(100)
     # ===========
     # DESTINATION
     # ===========
