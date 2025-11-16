@@ -460,6 +460,10 @@ def network_port(port, port_range=False):
         if (port not in range(1, 65536)):
             raise ValidationError(f'TCP/UDP port must be between 1-65535{additional}.')
 
+# todo: expand validation to more properly handle icmp types/codes.
+#  separate functions for icmp type/code vs proto/port valid type var is here as a temporary solution to get the webui
+#  to properly handle icmp definitions.
+valid_icmp_types = (0, 3, 8, 9, 10, 11, 12, 13, 14)
 def proto_port(port_str):
 
     try:
@@ -472,8 +476,8 @@ def proto_port(port_str):
         raise ValidationError('Invalid protocol. Use [any, tcp, udp, icmp].')
 
     # ensuring icmp definitions conform to the required format.
-    if (proto_int == PROTO.ICMP and convert_int(port) != 0):
-        raise ValidationError('ICMP does not support ports. Use icmp/0.')
+    if (proto_int == PROTO.ICMP and convert_int(port) not in valid_icmp_types):
+        raise ValidationError(f'Invalid ICMP type code. Use icmp/{valid_icmp_types}.')
 
     # splitting str after the "/" on "-" which is port range operator. this will make range or singular definition
     # handling the same.
