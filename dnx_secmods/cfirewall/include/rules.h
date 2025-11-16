@@ -74,13 +74,6 @@ struct S_std {
     uintf16_t   port;
 };
 
-struct Svc {
-    uintf16_t   protocol;
-
-    struct S_icmp      icmp;
-    struct S_std       std;
-};
-
 // STANDARD SERVICE OBJECT (TCP/UDP) (SOLO or RANGE)
 struct Svc {
     uintf16_t   protocol;
