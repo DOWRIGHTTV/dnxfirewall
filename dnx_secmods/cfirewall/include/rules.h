@@ -74,7 +74,7 @@ struct S_std {
     uintf16_t   port;
 };
 
-struct Svc
+struct Svc {
     uintf16_t   protocol;
 
     struct S_icmp      icmp;
