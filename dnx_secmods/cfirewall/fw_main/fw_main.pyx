@@ -418,7 +418,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
             fw_rule.d_services.objects[i].svc.end_port = <uintf16_t> rule['dst_service'][i][3]
 
         # TYPE 3 (LIST) OBJECT ASSIGNMENT
-        elif (fw_rule.s_services.objects[i].type == SVC_LIST):
+        elif (fw_rule.d_services.objects[i].type == SVC_LIST):
             fw_rule.d_services.objects[i].svc_list.len = <uintf8_t> (len(rule['dst_service'][i]) - 1)
             for ix in range(fw_rule.d_services.objects[i].svc_list.len):
                 # [0] START INDEX ON FW RULE SIZE
