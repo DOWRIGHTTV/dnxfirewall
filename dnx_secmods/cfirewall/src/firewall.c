@@ -231,7 +231,11 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt)
             // ------------------------------------------------------------------
             // PROTOCOL / PORT
             // ------------------------------------------------------------------
-            if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) continue;
+            if (pkt->iphdr->protocol == IPPROTO_ICMP) {
+                if (service_match_icmp(&rule->s_services, (S_icmp*)(&pkt->protohdr->sport)) != MATCH) continue;
+            } else {
+                if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) continue;
+            }
 
             // icmp checked in source only.
             if (pkt->iphdr->protocol != IPPROTO_ICMP) {

@@ -100,13 +100,12 @@ network_match(NetArray *net_array, uint32_t iph_ip, uint8_t country)
     return NO_MATCH;
 }
 
-// generic function that can handle source OR destination proto/port matching
+// icmp service matching. only supports single object or list of objects.
 inline int
-service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
+service_match_icmp(SvcArray *svc_array, S_icmp *icmp)
 {
     SvcObject   svc_object;
-    struct S2   svc; // service list iter
-    uint8_t     pkt_type, pkt_code;
+    struct Svc   svc; // service list iter
 
     for (uintf16_t idx = 0; idx < svc_array->len; idx++) {
 
@@ -116,36 +115,61 @@ service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
             // TYPE -> SOLO (1)
             // --------------------
             case SVC_SOLO:
-                if (pkt_protocol != svc_object.svc.protocol && svc_object.svc.protocol != ANY_PROTOCOL) { continue; }
-                if (pkt_svc == svc_object.svc.start_port) { return MATCH; }
+                if (icmp->type == svc_object.svc.icmp.type) { return MATCH; }
+                // todo: no code matching for now.
                 break;
-            // --------------------
-            // TYPE -> RANGE (2)
-            // --------------------
-            case SVC_RANGE:
-                if (pkt_protocol != svc_object.svc.protocol && svc_object.svc.protocol != ANY_PROTOCOL) { continue; }
-                if (pkt_svc >= svc_object.svc.start_port && pkt_svc <= svc_object.svc.end_port) { return MATCH; }
-                break;
-
             // --------------------
             // TYPE -> LIST (3)
             // --------------------
             case SVC_LIST:
                 for (uintf16_t idx = 0; idx < svc_object.svc_list.len; idx++) {
                     svc = svc_object.svc_list.services[idx];
-                    if (svc.protocol != pkt_protocol && svc.protocol != ANY_PROTOCOL) { continue; }
-                    if (pkt_svc >= svc.start_port && pkt_svc <= svc.end_port) { return MATCH; }
+                    if (icmp->type == svc.icmp.type) { return MATCH; }
+                    // todo: no code matching for now.
                 }
                 break;
-            // --------------------
-            // TYPE -> ICMP (4)
-            // --------------------
-            case SVC_ICMP:
-                pkt_type = (uint8_t) (pkt_svc >> 8); // can C implicitly cast this?
-                pkt_code = (uint8_t) pkt_svc;
+        }
+    }
+    //default action
+    return NO_MATCH;
+}
+// generic function that can handle source OR destination proto/port matching
+inline int
+service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
+{
+    SvcObject   svc_object;
+    struct Svc   svc; // service list iter
+//    uint8_t     pkt_type, pkt_code;
 
-                if (pkt_protocol != IPPROTO_ICMP) { continue; }
-                if (svc_object.icmp.type == pkt_type && svc_object.icmp.code == pkt_code) { return MATCH; }
+    for (uintf16_t idx = 0; idx < svc_array->len; idx++) {
+
+        svc_object = svc_array->objects[idx];
+        switch (svc_object.type) {
+            // --------------------
+            // TYPE -> SOLO (1)
+            // --------------------
+            case SVC_SOLO:
+                if (pkt_protocol != svc_object.svc.std.protocol && svc_object.svc.std.protocol != ANY_PROTOCOL) { continue; }
+                if (pkt_svc == svc_object.svc.std.start_port) { return MATCH; }
+                break;
+            // --------------------
+            // TYPE -> RANGE (2)
+            // --------------------
+            case SVC_RANGE:
+                if (pkt_protocol != svc_object.svc.std.protocol && svc_object.svc.std.protocol != ANY_PROTOCOL) { continue; }
+                if (pkt_svc >= svc_object.svc.std.start_port && pkt_svc <= svc_object.svc.std.end_port) { return MATCH; }
+                break;
+
+            // --------------------
+            // TYPE -> LIST (3) !bug: this looks like it will only check for range objects in the list. not solo.
+            // --------------------
+            case SVC_LIST:
+                for (uintf16_t idx = 0; idx < svc_object.svc_list.len; idx++) {
+                    svc = svc_object.svc_list.services[idx];
+                    if (svc.protocol != pkt_protocol && svc.std.protocol != ANY_PROTOCOL) { continue; }
+                    if (pkt_svc >= svc.std.start_port && pkt_svc <= svc.std.end_port) { return MATCH; }
+                }
+                break;
         }
     }
     //default action

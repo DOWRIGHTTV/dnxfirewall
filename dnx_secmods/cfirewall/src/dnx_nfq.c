@@ -44,7 +44,7 @@ dnx_parse_pkt_headers(struct dnx_pktb *pkt)
     pkt->iphdr_len = (pkt->iphdr->ver_ihl & FOUR_BIT_MASK) * 4;
 
     /* ---------------------
-       L4 - PROTOCOL HEADER
+       L4 - PROTOCOL HEADER todo: expand this for icmp with union.
     --------------------- */
     // ICMP type/code will be contained in src port. dst port contain checksum.
     pkt->protohdr = (struct Protohdr*) (pkt->iphdr + 1);

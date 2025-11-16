@@ -201,25 +201,37 @@ cdef extern from "rules.h" nogil:
         uintf8_t    len
         NetObject   objects[FIELD_MAX_NETWORKS]
 
-    struct S1:
+    struct S_icmp:
         uint8_t     type
         uint8_t     code
 
-    struct S2:
+    struct S_std:
         uintf16_t   protocol
-        uintf16_t   start_port
-        uintf16_t   end_port
+        uintf16_t   port
 
-    struct S3:
+    # struct S1:
+    #     uint8_t     type
+    #     uint8_t     code
+
+    struct Svc:
+        uintf16_t   protocol
+
+        S_icmp      icmp
+        S_std       std
+
+        # uintf16_t   start_port
+        # uintf16_t   end_port
+
+    struct SvcList:
         uintf8_t    len
-        S2          services[FIELD_MAX_SVC_LIST_MEMBERS]
+        Svc         services[FIELD_MAX_SVC_LIST_MEMBERS]
 
     struct SvcObject:
         uintf8_t    type
         # flattened union
-        S1          icmp
-        S2          svc
-        S3          svc_list
+        # S1          icmp
+        S_icmp      icmp
+        S_std       std
 
     # MAIN SERVICE ARRAY
     struct SvcArray:
