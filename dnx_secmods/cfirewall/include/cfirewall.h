@@ -126,10 +126,18 @@ struct IPhdr {
 //    uint8_t     code;
 //};
 
-// TCP/UDP
+// ICMP/TCP/UDP
 struct Protohdr {
-    uint16_t    sport;
-    uint16_t    dport;
+    union {
+        uint16_t    sport;
+        uint8_t     type;   // ICMP
+    }
+    union {
+        uint16_t    dport;
+        uint8_t     code;   // ICMP
+    };
+//    uint16_t    sport;
+//    uint16_t    dport;
 };
 
 struct geolocation {
