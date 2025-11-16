@@ -166,7 +166,7 @@ service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
             case SVC_LIST:
                 for (uintf16_t idx = 0; idx < svc_object.svc_list.len; idx++) {
                     svc = svc_object.svc_list.services[idx];
-                    if (svc.protocol != pkt_protocol && svc.std.protocol != ANY_PROTOCOL) { continue; }
+                    if (svc.protocol != pkt_protocol && svc.protocol != ANY_PROTOCOL) { continue; }
                     if (pkt_svc >= svc.std.start_port && pkt_svc <= svc.std.end_port) { return MATCH; }
 //                    if (pkt_svc == svc.std.start_port) { return MATCH; } # !bug: should be this?
                 }
